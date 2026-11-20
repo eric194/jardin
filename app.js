@@ -410,7 +410,7 @@ function buildScene(data, thiesMapTex) {
     }
   }
 
-  // 2. 352 immeubles voisins de Thiès (base strictement > top routes, hors emprises des 3 édifices de contexte détaillés)
+  // 2. 352 immeubles voisins de Thiès : hauteurs normalisées à 3 m (1 niveau), 6 m (2 niveaux) ou 9 m (3 niveaux)
   const buildingGeoms = [];
   for (const b of data.buildings) {
     try {
@@ -419,10 +419,18 @@ function buildScene(data, thiesMapTex) {
       if (p0) {
         const cx = b.poly.reduce((s, p) => s + p[0], 0) / b.poly.length;
         const cz = b.poly.reduce((s, p) => s + p[1], 0) / b.poly.length;
-        if (Math.hypot(cx + 241.5, cz + 73.6) < 8) continue;
-        if (Math.hypot(cx + 302.9, cz + 6.8) < 6) continue;
-        if (Math.hypot(cx + 120.6, cz + 73.1) < 5) continue;
+        if (
+          Math.hypot(cx + 241.5, cz + 73.6) < 8 ||
+          Math.hypot(cx + 302.9, cz + 6.8) < 6 ||
+          Math.hypot(cx + 120.6, cz + 73.1) < 5
+        ) {
+          b.isContextSkip = true;
+          continue;
+        }
       }
+      const levels = b.h < 5.2 ? 1 : b.h < 6.8 ? 2 : 3;
+      b.levels = levels;
+      b.h = levels * 3.0;
       buildingGeoms.push(extrudePoly(b.poly, b.h, 0.055));
     } catch (_) {}
   }

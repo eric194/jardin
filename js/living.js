@@ -703,6 +703,27 @@ function pointInPoly2D(pt, poly) {
   return inside;
 }
 
+function distToSegment2D(px, pz, ax, az, bx, bz) {
+  const dx = bx - ax;
+  const dz = bz - az;
+  const l2 = dx * dx + dz * dz;
+  if (l2 < 1e-8) return Math.hypot(px - ax, pz - az);
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / l2));
+  return Math.hypot(px - (ax + t * dx), pz - (az + t * dz));
+}
+
+function pointNearPoly2D(pt, poly, margin) {
+  if (pointInPoly2D(pt, poly)) return true;
+  if (margin <= 0) return false;
+  const [px, pz] = pt;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % poly.length];
+    if (distToSegment2D(px, pz, a[0], a[1], b[0], b[1]) < margin) return true;
+  }
+  return false;
+}
+
 export function buildLightingNetwork(scene, data, textures, isMobile = false) {
   const bollards = [];
   const parkPoles = [];
@@ -787,6 +808,68 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     roadPoles.push([258, z, -Math.PI / 2]);
   }
 
+  // 4b. Quelques lampadaires à faible luminosité dans les rues secondaires des quartiers voisins
+  const streetPoles = [];
+  const nearBlds = data.buildings || [];
+  const cantines = data.parkingDetails?.cantines || [];
+  const isClearStreetPole = (x, z) => {
+    if (x > -256 && x < 256 && z > -31 && z < 31) return false;
+    if (x > -68 && x < 328 && z > -66 && z < -41) return false;
+    if (x > -136 && x < -105 && z > -86 && z < -60) return false;
+    if (x > -276 && x < -198 && z > -98 && z < -42) return false;
+    if (x > -320 && x < -270 && z > -17 && z < 1) return false;
+    if (roadPoles.some(([rx, rz]) => Math.hypot(x - rx, z - rz) < 17)) return false;
+    if (parkPoles.some(([px, pz]) => Math.hypot(x - px, z - pz) < 16)) return false;
+    if (streetPoles.some(([sx, sz]) => Math.hypot(x - sx, z - sz) < 28)) return false;
+    if (cantines.some((c) => pointNearPoly2D([x, z], c, 2.0))) return false;
+    if (nearBlds.some((b) => !b.isContextSkip && pointNearPoly2D([x, z], b.poly, 1.8))) return false;
+    return true;
+  };
+
+  // Trottoirs des îlots des rues Sud (data.roads.slice(1))
+  const roadBlocks = (data.roads || []).slice(1);
+  for (const blk of roadBlocks) {
+    if (!blk || blk.length < 3) continue;
+    for (let i = 0; i < blk.length; i++) {
+      const a = blk[i];
+      const b = blk[(i + 1) % blk.length];
+      const dx = b[0] - a[0];
+      const dz = b[1] - a[1];
+      const len = Math.hypot(dx, dz);
+      if (len < 24) continue;
+      const tx = dx / len;
+      const tz = dz / len;
+      let nx = -tz;
+      let nz = tx;
+      const mx = (a[0] + b[0]) * 0.5;
+      const mz = (a[1] + b[1]) * 0.5;
+      if (pointInPoly2D([mx + nx * 0.4, mz + nz * 0.4], blk)) {
+        nx = -nx;
+        nz = -nz;
+      }
+      const rot = Math.atan2(nx, nz);
+      const fracs = len > 68 ? [0.28, 0.72] : [0.5];
+      for (const u of fracs) {
+        const px = a[0] + dx * u + nx * 0.7;
+        const pz = a[1] + dz * u + nz * 0.7;
+        if (Math.abs(px) > 385 || Math.abs(pz) > 175) continue;
+        if (pz < 35 && pz > -45) continue;
+        if (isClearStreetPole(px, pz)) {
+          streetPoles.push([px, pz, rot]);
+        }
+      }
+    }
+  }
+
+  // Rues secondaires Nord et transversales Ouest/Est
+  for (let x = -320; x <= 300; x += 38) {
+    for (const z of [-68, -94, 66, 108]) {
+      if (isClearStreetPole(x, z)) {
+        streetPoles.push([x, z, z < 0 ? 0 : Math.PI]);
+      }
+    }
+  }
+
   const poleMat = new THREE.MeshStandardMaterial({ color: 0x5d5a54, roughness: 0.72, metalness: 0.25 });
   const bulbMat = new THREE.MeshStandardMaterial({
     color: 0xfff8ea,
@@ -794,8 +877,15 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     emissiveIntensity: 0.0,
     roughness: 0.35,
   });
+  const dimBulbMat = new THREE.MeshStandardMaterial({
+    color: 0xffeacc,
+    emissive: 0xffb35c,
+    emissiveIntensity: 0.0,
+    roughness: 0.45,
+  });
 
   const lightPools = []; // { x, y, z, size }
+  const dimLightPools = []; // { x, y, z, size }
   const dummy = new THREE.Object3D();
 
   // Instanced bollards
@@ -874,6 +964,25 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     scene.add(rPost, rHead);
   }
 
+  // Instanced neighborhood street poles (lampadaires à faible luminosité dans les rues secondaires)
+  if (streetPoles.length) {
+    const stPost = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.09, 0.14, 6.6, 8), poleMat, streetPoles.length);
+    const stHead = new THREE.InstancedMesh(new THREE.BoxGeometry(0.85, 0.2, 0.38), dimBulbMat, streetPoles.length);
+    streetPoles.forEach(([x, z, rot], idx) => {
+      dummy.position.set(x, 0.08 + 3.3, z);
+      dummy.rotation.set(0, rot, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      stPost.setMatrixAt(idx, dummy.matrix);
+
+      dummy.position.set(x + Math.sin(rot) * 0.3, 0.08 + 6.6, z + Math.cos(rot) * 0.3);
+      dummy.updateMatrix();
+      stHead.setMatrixAt(idx, dummy.matrix);
+      dimLightPools.push({ x, y: 0.092, z, size: 12.5 });
+    });
+    scene.add(stPost, stHead);
+  }
+
   // Halos lumineux au sol (AdditiveBlending, polygonOffset pour zéro Z-fighting)
   const poolMat = new THREE.MeshBasicMaterial({
     map: textures.lightPool,
@@ -898,6 +1007,31 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     poolInst.setMatrixAt(idx, dummy.matrix);
   });
   scene.add(poolInst);
+
+  const dimPoolMat = new THREE.MeshBasicMaterial({
+    map: textures.lightPool,
+    color: 0xffc67a,
+    transparent: true,
+    opacity: 0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -3,
+    polygonOffsetUnits: -3,
+  });
+  let dimPoolInst = null;
+  if (dimLightPools.length) {
+    dimPoolInst = new THREE.InstancedMesh(poolGeo, dimPoolMat, dimLightPools.length);
+    dimPoolInst.visible = false;
+    dimLightPools.forEach((p, idx) => {
+      dummy.position.set(p.x, p.y, p.z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(p.size, 1, p.size);
+      dummy.updateMatrix();
+      dimPoolInst.setMatrixAt(idx, dummy.matrix);
+    });
+    scene.add(dimPoolInst);
+  }
 
   // PointLights couvrant l'ensemble du parc et du parking en mode Nuit (désactivées le jour pour soulager le GPU mobile)
   const lightSpecs = isMobile
@@ -931,10 +1065,23 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     return pl;
   });
 
-  // Maisons voisines, kiosques et cantines éclairés la nuit (fenêtres architecturales sur façades réelles)
+  // Bâtiments extérieurs (3m = 1 niveau, 6m = 2 niveaux, 9m = 3 niveaux + 1 porte éclairée sur chaque bâtiment),
+  // kiosques et cantines éclairés la nuit
   const rng = makeSeeded(8812);
   const winPositions = [];
-  const pushFacadeWindows = (poly, yBot, yTop, paneW, stepW, maxWallSkip = false) => {
+  const pushQuad = (x0, z0, x1, z1, yBot, yTop) => {
+    winPositions.push(
+      x0, yBot, z0,
+      x1, yBot, z1,
+      x1, yTop, z1,
+
+      x0, yBot, z0,
+      x1, yTop, z1,
+      x0, yTop, z0
+    );
+  };
+
+  const pushFacadeWindows = (poly, yBot, yTop, paneW, stepW, maxWallSkip = false, doorExclude = null) => {
     if (!poly || poly.length < 3) return;
     for (let i = 0; i < poly.length; i++) {
       const a = poly[i];
@@ -961,40 +1108,83 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
       if (usable < 0.7) continue;
 
       for (let s = margin; s <= len - margin - Math.min(paneW, usable) + 0.05; s += stepW) {
-        if (maxWallSkip && rng() < 0.28) continue;
         const wSpan = Math.min(paneW, len - margin - s);
         if (wSpan < 0.65) continue;
+        if (
+          doorExclude &&
+          doorExclude.edgeIdx === i &&
+          Math.abs(s + wSpan * 0.5 - doorExclude.sCenter) < doorExclude.clearHalf
+        ) {
+          continue;
+        }
+        if (maxWallSkip && usable > stepW && rng() < 0.18) continue;
         const x0 = a[0] + tx * s + ox;
         const z0 = a[1] + tz * s + oz;
         const x1 = a[0] + tx * (s + wSpan) + ox;
         const z1 = a[1] + tz * (s + wSpan) + oz;
-
-        winPositions.push(
-          x0, yBot, z0,
-          x1, yBot, z1,
-          x1, yTop, z1,
-
-          x0, yBot, z0,
-          x1, yTop, z1,
-          x0, yTop, z0
-        );
+        pushQuad(x0, z0, x1, z1, yBot, yTop);
       }
     }
   };
 
+  const bldBaseY = 0.055;
   for (const b of data.buildings) {
-    if (rng() > 0.44 || b.h < 3.6) continue;
-    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-    for (const [x, z] of b.poly) {
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
-      if (z < minZ) minZ = z;
-      if (z > maxZ) maxZ = z;
+    if (b.isContextSkip || !b.poly || b.poly.length < 3) continue;
+    const levels = b.levels || (b.h < 5.2 ? 1 : b.h < 6.8 ? 2 : 3);
+
+    // 1. Choisir la façade principale du bâtiment pour y placer une porte éclairée au RDC
+    let bestEdgeIdx = -1;
+    let bestLen = 0;
+    for (let i = 0; i < b.poly.length; i++) {
+      const pA = b.poly[i];
+      const pB = b.poly[(i + 1) % b.poly.length];
+      const l = Math.hypot(pB[0] - pA[0], pB[1] - pA[1]);
+      if (l > bestLen) {
+        bestLen = l;
+        bestEdgeIdx = i;
+      }
     }
-    if (maxX - minX > 46 || maxZ - minZ > 46) continue;
-    const yBot = Math.min(b.h * 0.44, 1.8);
-    const yTop = yBot + Math.min(0.9, b.h * 0.24);
-    pushFacadeWindows(b.poly, yBot, yTop, 1.35, 2.7, true);
+
+    let doorExclude = null;
+    if (bestEdgeIdx >= 0 && bestLen >= 1.5) {
+      const pA = b.poly[bestEdgeIdx];
+      const pB = b.poly[(bestEdgeIdx + 1) % b.poly.length];
+      const dx = pB[0] - pA[0];
+      const dz = pB[1] - pA[1];
+      const tx = dx / bestLen;
+      const tz = dz / bestLen;
+      let nx = -tz;
+      let nz = tx;
+      const mx = (pA[0] + pB[0]) * 0.5;
+      const mz = (pA[1] + pB[1]) * 0.5;
+      if (pointInPoly2D([mx + nx * 0.12, mz + nz * 0.12], b.poly)) {
+        nx = -nx;
+        nz = -nz;
+      }
+      const ox = nx * 0.085;
+      const oz = nz * 0.085;
+      const doorW = Math.min(1.2, bestLen * 0.44);
+      const sCenter = bestLen * 0.5;
+      const s0 = sCenter - doorW * 0.5;
+      const s1 = sCenter + doorW * 0.5;
+      pushQuad(
+        pA[0] + tx * s0 + ox,
+        pA[1] + tz * s0 + oz,
+        pA[0] + tx * s1 + ox,
+        pA[1] + tz * s1 + oz,
+        bldBaseY + 0.05,
+        bldBaseY + 2.15
+      );
+      doorExclude = { edgeIdx: bestEdgeIdx, sCenter, clearHalf: doorW * 0.5 + 0.85 };
+    }
+
+    // 2. Fenêtres par niveau : 1 niveau (3 m), 2 niveaux (6 m) ou 3 niveaux (9 m)
+    for (let lv = 0; lv < levels; lv++) {
+      const floorBase = bldBaseY + lv * 3.0;
+      const yBot = floorBase + 1.15;
+      const yTop = floorBase + 2.10;
+      pushFacadeWindows(b.poly, yBot, yTop, 1.28, 2.7, true, lv === 0 ? doorExclude : null);
+    }
   }
   for (const c of data.parkingDetails?.cantines || []) {
     if (rng() > 0.68) continue;
@@ -1025,11 +1215,14 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     applyNightFactor(f, now = 0) {
       const isNightActive = f > 0.005;
       if (poolInst.visible !== isNightActive) poolInst.visible = isNightActive;
+      if (dimPoolInst && dimPoolInst.visible !== isNightActive) dimPoolInst.visible = isNightActive;
       if (winMesh && winMesh.visible !== isNightActive) winMesh.visible = isNightActive;
       const pulse = 0.96 + 0.04 * Math.sin(now * 0.0018);
       const winPulse = 0.97 + 0.03 * Math.sin(now * 0.0012 + 1.1);
       bulbMat.emissiveIntensity = isNightActive ? f * 3.8 * pulse : 0;
+      dimBulbMat.emissiveIntensity = isNightActive ? f * 1.45 * pulse : 0;
       poolMat.opacity = isNightActive ? f * 0.62 * pulse : 0;
+      dimPoolMat.opacity = isNightActive ? f * 0.22 * pulse : 0;
       winMat.opacity = isNightActive ? f * 0.82 * winPulse : 0;
       for (const pl of focalLights) {
         if (pl.visible !== isNightActive) pl.visible = isNightActive;
