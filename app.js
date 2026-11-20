@@ -376,7 +376,19 @@ function buildScene(data, thiesMapTex) {
   // Plan macro carte vectorielle de la Région de Thiès (centré sur 0, 0)
   thiesBackdrop = buildThiesBackdrop(scene, textures);
 
-  // Plan de sol local
+  // Emprises enterrées (Terrain de Basket, Terrain de Beach Sable, et Gradins enterrés triangulaires)
+  const sunkenHoles = (data.zones || [])
+    .filter((z) => {
+      const u = z.name.toUpperCase();
+      return (
+        u === "BASKET" ||
+        u.includes("BEACH") ||
+        (z.kind === "gradin" && z.centroid[0] > -180)
+      );
+    })
+    .map((z) => z.poly);
+
+  // Plan de sol local (découpé sous les 3 arènes/gradins enterrés pour laisser voir les marches en contrebas)
   const groundMat = new THREE.MeshStandardMaterial({
     color: 0xfaf8f3,
     roughness: 0.96,
@@ -385,9 +397,18 @@ function buildScene(data, thiesMapTex) {
     polygonOffsetFactor: 2,
     polygonOffsetUnits: 2,
   });
-  groundMesh = new THREE.Mesh(new THREE.PlaneGeometry(2400, 2400), groundMat);
-  groundMesh.rotation.x = -Math.PI / 2;
-  groundMesh.position.y = -0.05;
+  const groundGeom = extrudePoly(
+    [
+      [-1200, -1200],
+      [1200, -1200],
+      [1200, 1200],
+      [-1200, 1200],
+    ],
+    0.04,
+    -0.09,
+    sunkenHoles
+  );
+  groundMesh = new THREE.Mesh(groundGeom, groundMat);
   groundMesh.receiveShadow = true;
   scene.add(groundMesh);
 
@@ -456,7 +477,7 @@ function buildScene(data, thiesMapTex) {
     scene.add(new THREE.LineSegments(new THREE.EdgesGeometry(mergedBuildings, 28), buildingEdgesMat));
   }
 
-  // 3. Socle du parc linéaire (500 x 50 m, top 0.300)
+  // 3. Socle du parc linéaire (500 x 50 m, top 0.300, évidé au droit des terrains et gradins enterrés)
   const parkMat = new THREE.MeshStandardMaterial({
     color: 0xf2ebe0,
     roughness: 0.92,
@@ -470,7 +491,8 @@ function buildScene(data, thiesMapTex) {
       [-250, 25],
     ],
     0.245,
-    0.055
+    0.055,
+    sunkenHoles
   );
   const parkSlabMesh = new THREE.Mesh(parkSlab, parkMat);
   parkSlabMesh.receiveShadow = true;
@@ -493,6 +515,13 @@ function buildScene(data, thiesMapTex) {
   const mergedByKind = {};
   const kioskGeoms = [];
   const kindMaterials = {};
+  const pushKindGeom = (k, geom) => {
+    if (!geom) return;
+    if (!mergedByKind[k]) mergedByKind[k] = [];
+    mergedByKind[k].push(geom);
+  };
+  const scalePolyToward = (poly, cx, cz, s) =>
+    poly.map(([x, z]) => [cx + (x - cx) * s, cz + (z - cz) * s]);
 
   for (const z of data.zones) {
     try {
@@ -518,11 +547,135 @@ function buildScene(data, thiesMapTex) {
       }
 
       const zu = z.name.toUpperCase();
-      const effectiveKind = zu.includes("BEACH") || zu.includes("SABLE") ? "sand" : z.kind;
+
+      // A. Gradins :
+      // 1) Gradins enterrés triangulaires avec marches concentriques (entre Basket et Beach, cx ~ -145.7)
+      // 2) Gradin surélevé non enterré en béton et gazon (au sud du Terrain de Foot, cx ~ -219.0)
+      if (z.kind === "gradin") {
+        if (z.centroid[0] > -180) {
+          const ix = -146.27;
+          const iz = 10.02;
+          const scales = [1.0, 0.84, 0.68, 0.52, 0.36, 0.20];
+          const topYs = [0.35, 0.12, -0.11, -0.34, -0.57];
+          const baseY = -0.82;
+          for (let t = 0; t < 5; t++) {
+            const outerP = scalePolyToward(z.poly, ix, iz, scales[t]);
+            const innerP = scalePolyToward(z.poly, ix, iz, scales[t + 1]);
+            pushKindGeom("gradin", extrudePoly(outerP, topYs[t] - baseY, baseY, [innerP]));
+          }
+          // Fond central enterré (-0.72 m)
+          const coreP = scalePolyToward(z.poly, ix, iz, scales[5]);
+          pushKindGeom("paving", extrudePoly(coreP, 0.12, -0.84));
+        } else {
+          // Gradin Sud Football : non enterré (surélevé), alternance de gradins en béton et terrasses de gazon
+          const x0 = -245.03;
+          const x1 = -193.03;
+          const zStart = 16.84;
+          const tierD = (23.03 - 16.84) / 4; // 1.5475 m par niveau
+          const baseY = 0.31;
+          const stairXs = [
+            [-242.8, -240.6],
+            [-220.1, -217.9],
+            [-197.4, -195.2],
+          ];
+          const grassSpans = [
+            [x0 + 0.35, stairXs[0][0]],
+            [stairXs[0][1], stairXs[1][0]],
+            [stairXs[1][1], stairXs[2][0]],
+            [stairXs[2][1], x1 - 0.35],
+          ];
+          for (let t = 0; t < 4; t++) {
+            const tz0 = zStart + t * tierD;
+            const tz1 = tz0 + tierD;
+            const yTop = 0.64 + t * 0.34; // 0.64, 0.98, 1.32, 1.66 m
+            // Assise et contremarche en béton
+            pushKindGeom(
+              "gradin",
+              extrudePoly(
+                [
+                  [x0, tz0],
+                  [x1, tz0],
+                  [x1, tz1],
+                  [x0, tz1],
+                ],
+                yTop - baseY,
+                baseY
+              )
+            );
+            // Bande de gazon sur la terrasse de chaque gradin (hors escaliers d'accès en béton)
+            const gz0 = tz0 + 0.56;
+            const gz1 = tz1 - 0.08;
+            for (const [gx0, gx1] of grassSpans) {
+              pushKindGeom(
+                "green",
+                extrudePoly(
+                  [
+                    [gx0, gz0],
+                    [gx1, gz0],
+                    [gx1, gz1],
+                    [gx0, gz1],
+                  ],
+                  0.045,
+                  yTop
+                )
+              );
+            }
+            // Marches d'accès intermédiaires en béton dans les 3 escaliers
+            const stepY = yTop - 0.17;
+            for (const [sx0, sx1] of stairXs) {
+              pushKindGeom(
+                "gradin",
+                extrudePoly(
+                  [
+                    [sx0, tz0 - 0.32],
+                    [sx1, tz0 - 0.32],
+                    [sx1, tz0 + 0.28],
+                    [sx0, tz0 + 0.28],
+                  ],
+                  stepY - baseY,
+                  baseY
+                )
+              );
+            }
+          }
+        }
+        continue;
+      }
+
+      // B. Terrain de Basket enterré (-0.50 m) avec marches périphériques descendantes
+      if (zu === "BASKET") {
+        const [cx, cz] = z.centroid;
+        const p0 = z.poly;
+        const p1 = scalePolyToward(p0, cx, cz, 0.955);
+        const p2 = scalePolyToward(p0, cx, cz, 0.91);
+        const p3 = scalePolyToward(p0, cx, cz, 0.865);
+        const baseY = -0.58;
+        pushKindGeom("gradin", extrudePoly(p0, 0.35 - baseY, baseY, [p1]));
+        pushKindGeom("gradin", extrudePoly(p1, 0.07 - baseY, baseY, [p2]));
+        pushKindGeom("gradin", extrudePoly(p2, -0.21 - baseY, baseY, [p3]));
+        pushKindGeom("sport", extrudePoly(p3, 0.10, -0.60)); // top -0.50 m
+        continue;
+      }
+
+      // C. Terrain de Beach Sable enterré (-0.50 m) avec marches périphériques descendantes
+      if (zu.includes("BEACH")) {
+        const [cx, cz] = z.centroid;
+        const p0 = z.poly;
+        const p1 = scalePolyToward(p0, cx, cz, 0.955);
+        const p2 = scalePolyToward(p0, cx, cz, 0.91);
+        const p3 = scalePolyToward(p0, cx, cz, 0.865);
+        const baseY = -0.58;
+        pushKindGeom("gradin", extrudePoly(p0, 0.35 - baseY, baseY, [p1]));
+        pushKindGeom("gradin", extrudePoly(p1, 0.07 - baseY, baseY, [p2]));
+        pushKindGeom("gradin", extrudePoly(p2, -0.21 - baseY, baseY, [p3]));
+        pushKindGeom("sand", extrudePoly(p3, 0.10, -0.60)); // top -0.50 m
+        continue;
+      }
+
+      const effectiveKind = zu.includes("SABLE") ? "sand" : z.kind;
       const st = kindStyle[effectiveKind] || kindStyle.paving;
       const g = extrudePoly(z.poly, st.depth, st.y, z.holes || []);
-      if (!mergedByKind[effectiveKind]) mergedByKind[effectiveKind] = [];
-      mergedByKind[effectiveKind].push(g);
+      pushKindGeom(effectiveKind, g);
     } catch (_) {}
   }
 
@@ -541,6 +694,9 @@ function buildScene(data, thiesMapTex) {
     mesh.receiveShadow = true;
     mesh.castShadow = kind === "gradin";
     scene.add(mesh);
+    if (kind === "gradin" && buildingEdgesMat) {
+      scene.add(new THREE.LineSegments(new THREE.EdgesGeometry(merged, 20), buildingEdgesMat));
+    }
   }
 
   // Kiosques, accueil, sanitaires

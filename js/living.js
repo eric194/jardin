@@ -736,6 +736,7 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
       z.kind === "sport" ||
       z.kind === "play" ||
       z.kind === "track" ||
+      z.kind === "gradin" ||
       z.name.toUpperCase().includes("BEACH") ||
       z.name.toUpperCase().includes("SABLE")
   );
@@ -787,7 +788,7 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     [-187, -21.5],
     [-162, 20.5],
     [-142, -21.5],
-    [-139.5, 20.5],
+    [-156, 20.6],
     [-109.5, -18.5],
     [-109.5, 20.5],
     [-64, -20],

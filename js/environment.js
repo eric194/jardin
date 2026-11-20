@@ -167,9 +167,9 @@ function makeLocalBasisFromQuad(poly) {
 }
 
 export function buildSportCourts(scene, data) {
-  // Trois strates dédiées (terrains 0.425 -> 0.432, sable beach 0.415 -> 0.423, piste/sprint 0.380 -> 0.389)
+  // Trois strates dédiées (terrains hauts 0.425 -> 0.432, terrains enterrés Basket & Beach -0.50 -> -0.485, piste/sprint 0.380 -> 0.389)
   const rbSport = new RibbonBuilder(0.432);
-  const rbBeach = new RibbonBuilder(0.423);
+  const rbBeach = new RibbonBuilder(-0.485);
   const rbTrack = new RibbonBuilder(0.389);
   const propMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.72 });
   const netMat = new THREE.MeshBasicMaterial({
@@ -234,71 +234,72 @@ export function buildSportCourts(scene, data) {
     rbTrack.addDot(-242.7, cz, 0.16);
   }
 
-  // 3. Arène en sable fin : Beach Soccer / Beach Handball / Beach Volleyball (X: -137..-111, Z: -17.6..19.3)
+  // 3. Arène en sable fin enterrée (-0.50 m) : Beach Soccer / Beach Handball / Beach Volleyball (X: -137..-111, Z: -17.6..19.3)
   const hx = -124.0;
   const hz = 0.85;
-  const bw = 20.0;
-  const bd = 34.0;
-  // Bordure de retenue du sable + lignes souples
-  rbBeach.addRect(hx, hz, 25.4, 36.2, 0.22);
+  const bw = 18.2;
+  const bd = 27.6;
+  const sunkenY = -0.5;
+  // Bordure intérieure de retenue du sable + lignes souples au fond de l'arène enterrée
+  rbBeach.addRect(hx, hz, 21.0, 30.2, 0.2);
   rbBeach.addRect(hx, hz, bw, bd, 0.14);
   rbBeach.addSegment(hx - bw / 2, hz, hx + bw / 2, hz, 0.14);
-  rbBeach.addSegment(hx - bw / 2, hz - 11.5, hx + bw / 2, hz - 11.5, 0.12);
-  rbBeach.addSegment(hx - bw / 2, hz + 11.5, hx + bw / 2, hz + 11.5, 0.12);
-  addGoalFrame(hx, hz - bd / 2, 3.0, 2.0, 0.9, Math.PI, 0.415);
-  addGoalFrame(hx, hz + bd / 2, 3.0, 2.0, 0.9, 0, 0.415);
+  rbBeach.addSegment(hx - bw / 2, hz - 9.4, hx + bw / 2, hz - 9.4, 0.12);
+  rbBeach.addSegment(hx - bw / 2, hz + 9.4, hx + bw / 2, hz + 9.4, 0.12);
+  addGoalFrame(hx, hz - bd / 2, 3.0, 2.0, 0.9, Math.PI, sunkenY);
+  addGoalFrame(hx, hz + bd / 2, 3.0, 2.0, 0.9, 0, sunkenY);
 
-  // Filet central de Beach Volleyball (12 m de large)
+  // Filet central de Beach Volleyball (12 m de large, posé à -0.50 m)
   const bvPoleGeo = new THREE.CylinderGeometry(0.06, 0.06, 2.45, 8);
   const bvPoleMat = new THREE.MeshStandardMaterial({ color: 0x353b42, roughness: 0.55 });
   const bvPoleL = new THREE.Mesh(bvPoleGeo, bvPoleMat);
-  bvPoleL.position.set(hx - 6.1, 0.415 + 1.22, hz);
+  bvPoleL.position.set(hx - 6.1, sunkenY + 1.22, hz);
   const bvPoleR = new THREE.Mesh(bvPoleGeo, bvPoleMat);
-  bvPoleR.position.set(hx + 6.1, 0.415 + 1.22, hz);
+  bvPoleR.position.set(hx + 6.1, sunkenY + 1.22, hz);
   const bvNet = new THREE.Mesh(new THREE.PlaneGeometry(12.0, 0.95), netMat);
-  bvNet.position.set(hx, 0.415 + 1.9, hz);
+  bvNet.position.set(hx, sunkenY + 1.9, hz);
   const bvTopBand = new THREE.Mesh(new THREE.BoxGeometry(12.0, 0.08, 0.06), propMat);
-  bvTopBand.position.set(hx, 0.415 + 2.38, hz);
+  bvTopBand.position.set(hx, sunkenY + 2.38, hz);
   const bvBotBand = new THREE.Mesh(new THREE.BoxGeometry(12.0, 0.06, 0.05), propMat);
-  bvBotBand.position.set(hx, 0.415 + 1.44, hz);
+  bvBotBand.position.set(hx, sunkenY + 1.44, hz);
   scene.add(bvPoleL, bvPoleR, bvNet, bvTopBand, bvBotBand);
 
-  // 4. Basketball (tourné ~45°, extrait exact du polygone DXF)
+  // 4. Basketball enterré (-0.50 m, tourné ~45°, extrait exact du polygone DXF)
   const basketZone = data.zones.find((z) => z.name.toUpperCase() === "BASKET");
   if (basketZone) {
     const b = makeLocalBasisFromQuad(basketZone.poly);
-    const hl = b.longLen * 0.45;
-    const hw = b.shortLen * 0.45;
+    const hl = b.longLen * 0.39;
+    const hw = b.shortLen * 0.38;
     const p1 = b.pt(-hl, -hw);
     const p2 = b.pt(hl, -hw);
     const p3 = b.pt(hl, hw);
     const p4 = b.pt(-hl, hw);
-    rbSport.addSegment(p1[0], p1[1], p2[0], p2[1], 0.2);
-    rbSport.addSegment(p2[0], p2[1], p3[0], p3[1], 0.2);
-    rbSport.addSegment(p3[0], p3[1], p4[0], p4[1], 0.2);
-    rbSport.addSegment(p4[0], p4[1], p1[0], p1[1], 0.2);
+    rbBeach.addSegment(p1[0], p1[1], p2[0], p2[1], 0.18);
+    rbBeach.addSegment(p2[0], p2[1], p3[0], p3[1], 0.18);
+    rbBeach.addSegment(p3[0], p3[1], p4[0], p4[1], 0.18);
+    rbBeach.addSegment(p4[0], p4[1], p1[0], p1[1], 0.18);
     const m1 = b.pt(0, -hw);
     const m2 = b.pt(0, hw);
-    rbSport.addSegment(m1[0], m1[1], m2[0], m2[1], 0.18);
-    rbSport.addArc(b.cx, b.cz, 1.8, 0, Math.PI * 2, 24, 0.16);
-    // Raquettes et arcs à 3 points
+    rbBeach.addSegment(m1[0], m1[1], m2[0], m2[1], 0.16);
+    rbBeach.addArc(b.cx, b.cz, 1.65, 0, Math.PI * 2, 24, 0.15);
+    // Raquettes et arcs à 3 points au fond du terrain enterré
     for (const dir of [-1, 1]) {
-      const k0 = b.pt(dir * hl, -2.3);
-      const k1 = b.pt(dir * (hl - 5.2), -2.3);
-      const k2 = b.pt(dir * (hl - 5.2), 2.3);
-      const k3 = b.pt(dir * hl, 2.3);
-      rbSport.addSegment(k0[0], k0[1], k1[0], k1[1], 0.16);
-      rbSport.addSegment(k1[0], k1[1], k2[0], k2[1], 0.16);
-      rbSport.addSegment(k2[0], k2[1], k3[0], k3[1], 0.16);
+      const k0 = b.pt(dir * hl, -2.05);
+      const k1 = b.pt(dir * (hl - 4.6), -2.05);
+      const k2 = b.pt(dir * (hl - 4.6), 2.05);
+      const k3 = b.pt(dir * hl, 2.05);
+      rbBeach.addSegment(k0[0], k0[1], k1[0], k1[1], 0.15);
+      rbBeach.addSegment(k1[0], k1[1], k2[0], k2[1], 0.15);
+      rbBeach.addSegment(k2[0], k2[1], k3[0], k3[1], 0.15);
       const baseAngle = Math.atan2(-dir * b.uz, -dir * b.ux);
-      const hoopPt = b.pt(dir * (hl - 1.2), 0);
-      rbSport.addArc(hoopPt[0], hoopPt[1], 5.6, baseAngle - 1.22, baseAngle + 1.22, 20, 0.16);
+      const hoopPt = b.pt(dir * (hl - 1.05), 0);
+      rbBeach.addArc(hoopPt[0], hoopPt[1], 4.85, baseAngle - 1.2, baseAngle + 1.2, 20, 0.15);
 
-      // Panier 3D
+      // Panier 3D ancré à -0.50 m
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 3.05, 8), propMat);
-      post.position.set(hoopPt[0], 0.425 + 1.525, hoopPt[1]);
+      post.position.set(hoopPt[0], sunkenY + 1.525, hoopPt[1]);
       const board = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.05, 1.65), propMat);
-      board.position.set(hoopPt[0], 0.425 + 2.75, hoopPt[1]);
+      board.position.set(hoopPt[0], sunkenY + 2.75, hoopPt[1]);
       board.rotation.y = Math.atan2(-b.uz, b.ux);
       scene.add(post, board);
     }
