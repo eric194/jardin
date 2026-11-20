@@ -100,6 +100,9 @@ const state = {
   pointerWorld: new THREE.Vector2(),
   keysDown: new Set(),
   navVel: new THREE.Vector2(),
+  isMobile: false,
+  lastActiveTime: 0,
+  frameCount: 0,
   stats: { trees: 0, benches: 0 },
 };
 
@@ -279,20 +282,25 @@ let groundMesh;
 function buildScene(data, thiesMapTex) {
   const isMobile =
     window.innerWidth <= 768 || window.matchMedia("(pointer: coarse)").matches;
+  state.isMobile = isMobile;
+  state.lastActiveTime = performance.now();
 
   renderer = new THREE.WebGLRenderer({
     canvas: dom.canvas,
     antialias: true,
-    powerPreference: "high-performance",
+    powerPreference: isMobile ? "default" : "high-performance",
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.75));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.03;
+  renderer.toneMappingExposure = 1.04;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // Ombre architecturale pré-calculée (soleil fixe) : 0 passe de shadowMap par frame pendant la navigation !
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
 
-  const maxAniso = Math.min(8, renderer.capabilities.getMaxAnisotropy() || 4);
+  const maxAniso = Math.min(isMobile ? 4 : 8, renderer.capabilities.getMaxAnisotropy() || 4);
 
   const textures = {
     senegal: thiesMapTex || createThiesMapTexture(),
@@ -337,27 +345,31 @@ function buildScene(data, thiesMapTex) {
   controls.minPolarAngle = 0.04;
   controls.maxPolarAngle = Math.PI * 0.44;
   controls.enabled = false;
+  controls.addEventListener("change", () => {
+    state.lastActiveTime = performance.now();
+  });
 
-  // Lumières jour / nuit
-  const hemi = new THREE.HemisphereLight(0xffffff, 0xe8dfd0, 1.08);
+  // Lumières jour / nuit calibrées pour un rendu maquette architecturale ciselé
+  const hemi = new THREE.HemisphereLight(0xfffdf9, 0xe6ddd0, 1.1);
   scene.add(hemi);
 
-  const shadowSize = isMobile ? 1024 : 2048;
-  const sun = new THREE.DirectionalLight(0xfffaf2, 1.15);
+  const shadowSize = isMobile ? 1536 : 2048;
+  const sun = new THREE.DirectionalLight(0xfff9ef, 1.18);
   sun.position.set(160, 250, 130);
   sun.castShadow = true;
   sun.shadow.mapSize.set(shadowSize, shadowSize);
-  sun.shadow.camera.left = -330;
-  sun.shadow.camera.right = 330;
-  sun.shadow.camera.top = 210;
-  sun.shadow.camera.bottom = -210;
+  sun.shadow.camera.left = -295;
+  sun.shadow.camera.right = 295;
+  sun.shadow.camera.top = 135;
+  sun.shadow.camera.bottom = -135;
   sun.shadow.camera.near = 40;
-  sun.shadow.camera.far = 680;
-  sun.shadow.bias = -0.00045;
-  sun.shadow.radius = 3;
+  sun.shadow.camera.far = 650;
+  sun.shadow.bias = -0.00032;
+  sun.shadow.normalBias = 0.018;
+  sun.shadow.radius = 2.4;
   scene.add(sun);
 
-  const fill = new THREE.DirectionalLight(0xf6efe4, 0.28);
+  const fill = new THREE.DirectionalLight(0xf2efe9, 0.32);
   fill.position.set(-180, 140, -160);
   scene.add(fill);
 
@@ -648,7 +660,7 @@ function buildScene(data, thiesMapTex) {
 
   // 8. Tracés sportifs 3D visibles, Eau + Jets animés, Arbres périphériques & intérieurs avec vent
   buildSportCourts(scene, data);
-  waterCtrl = buildWaterAndFountains(scene, data, textures, extrudePoly, mergeGeometries);
+  waterCtrl = buildWaterAndFountains(scene, data, textures, extrudePoly, mergeGeometries, isMobile);
   const vegStats = buildVegetation(scene, data, textures, windUniforms);
   state.stats.trees = vegStats?.treeCount || 0;
 
@@ -658,14 +670,13 @@ function buildScene(data, thiesMapTex) {
   state.stats.benches = benchStats?.benchCount || 0;
   trafficCtrl = buildMovingTraffic(scene, textures);
   pedestrianCtrl = buildPedestrians(scene);
-  lightingCtrl = buildLightingNetwork(scene, data, textures);
+  lightingCtrl = buildLightingNetwork(scene, data, textures, isMobile);
 
   // 10. Zones cliquables + 12 repères terracotta
+  const zoneHitGeo = new THREE.CylinderGeometry(16, 16, 1.6, 16);
+  const zoneHitMat = new THREE.MeshBasicMaterial({ visible: false });
   for (const sp of data.spaces) {
-    const pad = new THREE.Mesh(
-      new THREE.CylinderGeometry(16, 16, 1.6, 16),
-      new THREE.MeshBasicMaterial({ visible: false })
-    );
+    const pad = new THREE.Mesh(zoneHitGeo, zoneHitMat);
     pad.position.set(sp.pos[0], 0.9, sp.pos[1]);
     pad.userData.spaceId = sp.id;
     scene.add(pad);
@@ -675,8 +686,9 @@ function buildScene(data, thiesMapTex) {
   buildSpaceMarkers(data.spaces, isMobile);
 
   // 11. Nuages subtils, papillons, oiseaux diurnes et repères urbains voisins (2 stations-service + banque, hors jardin)
-  atmosphereCtrl = buildDayAtmosphere(scene, textures);
+  atmosphereCtrl = buildDayAtmosphere(scene, textures, isMobile);
   buildUrbanContextLandmarks(scene);
+  renderer.shadowMap.needsUpdate = true;
 
   // Références thème Jour/Nuit
   Object.assign(themeTargets, {
@@ -711,16 +723,23 @@ function buildScene(data, thiesMapTex) {
 }
 
 function buildSpaceMarkers(spaces, isMobile = false) {
-  const discGeo = new THREE.CylinderGeometry(2.35, 2.35, 0.42, 32);
+  const discGeo = new THREE.CylinderGeometry(2.35, 2.35, 0.42, 24);
   discGeo.rotateX(Math.PI / 2);
-  const ringGeo = new THREE.TorusGeometry(2.45, 0.14, 8, 32);
+  const ringGeo = new THREE.TorusGeometry(2.45, 0.14, 8, 24);
   const stemGeo = new THREE.CylinderGeometry(0.08, 0.08, 6.4, 6);
   const baseDotGeo = new THREE.CircleGeometry(0.8, 16);
   baseDotGeo.rotateX(-Math.PI / 2);
-  const pulseGeo = new THREE.RingGeometry(1.15, 1.48, 28);
+  const pulseGeo = new THREE.RingGeometry(1.15, 1.48, 24);
   pulseGeo.rotateX(-Math.PI / 2);
-  const hitGeo = new THREE.SphereGeometry(isMobile ? 9.6 : 8.4, 12, 12);
+  const hitGeo = new THREE.SphereGeometry(isMobile ? 9.6 : 8.4, 10, 10);
   const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+  const sharedRingMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const sharedStemMat = new THREE.MeshBasicMaterial({
+    color: 0x8f887d,
+    transparent: true,
+    opacity: 0.55,
+  });
+  const sharedDotMat = new THREE.MeshBasicMaterial({ color: 0xa64234 });
 
   spaces.forEach((sp, idx) => {
     const group = new THREE.Group();
@@ -736,18 +755,14 @@ function buildSpaceMarkers(spaces, isMobile = false) {
     });
     const disc = new THREE.Mesh(discGeo, discMat);
     disc.position.y = 7.2;
-    disc.castShadow = true;
 
-    const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    const ring = new THREE.Mesh(ringGeo, sharedRingMat);
     disc.add(ring);
 
-    const stem = new THREE.Mesh(
-      stemGeo,
-      new THREE.MeshBasicMaterial({ color: 0x8f887d, transparent: true, opacity: 0.55 })
-    );
+    const stem = new THREE.Mesh(stemGeo, sharedStemMat);
     stem.position.y = 3.4;
 
-    const baseDot = new THREE.Mesh(baseDotGeo, new THREE.MeshBasicMaterial({ color: 0xa64234 }));
+    const baseDot = new THREE.Mesh(baseDotGeo, sharedDotMat);
     baseDot.position.y = 0.08;
 
     const pulseMat = new THREE.MeshBasicMaterial({
@@ -1477,8 +1492,27 @@ let lastFrameTime = performance.now();
 
 function animate(now) {
   requestAnimationFrame(animate);
-  const dt = Math.min(0.05, Math.max(0.001, (now - lastFrameTime) * 0.001));
+
+  if (document.hidden) {
+    lastFrameTime = now;
+    return;
+  }
+
+  // Régulation thermique intelligente sur téléphone (évite la surchauffe sur écrans 90/120 Hz)
+  const rawElapsed = now - lastFrameTime;
+  if (state.isMobile) {
+    const isMovingCam =
+      Boolean(state.satZoom) ||
+      Boolean(state.fly) ||
+      Boolean(state.nightAnim) ||
+      now - state.lastActiveTime < 1800;
+    const minInterval = isMovingCam ? 21 : 34; // ~46 FPS en mouvement, ~29 FPS au repos
+    if (rawElapsed < minInterval) return;
+  }
+
+  const dt = Math.min(0.05, Math.max(0.001, rawElapsed * 0.001));
   lastFrameTime = now;
+  state.frameCount++;
 
   // Vent GPU
   if (!state.reducedMotion) {
@@ -1619,10 +1653,10 @@ function animate(now) {
   }
 
   // Animations vivantes : eau + jets d'eau, voitures, piétons
-  if (waterCtrl) waterCtrl.updateWater(dt, now, state.nightFactor);
+  if (waterCtrl) waterCtrl.updateWater(dt, now, state.nightFactor, camY);
   if (!state.reducedMotion) {
-    if (trafficCtrl) trafficCtrl.update(dt, state.nightFactor);
-    if (pedestrianCtrl) pedestrianCtrl.update(dt, now);
+    if (trafficCtrl) trafficCtrl.update(dt, state.nightFactor, camY);
+    if (pedestrianCtrl) pedestrianCtrl.update(dt, now, camY);
   }
 
   // Disques 3D terracotta orientés face caméra + anneau pulsant au sol
@@ -1661,17 +1695,19 @@ function animate(now) {
     audioCtrl.update(now, camera.position, state.nightFactor);
   }
 
-  // Étiquettes translucides, indice de distance et boussole
-  syncSpaceLabels();
-  updateDistanceHud();
+  // Étiquettes translucides, indice de distance et boussole (cadencés sur mobile pour éviter les reflows DOM)
+  if (!state.isMobile || state.frameCount % 2 === 0) {
+    syncSpaceLabels();
+    updateDistanceHud();
 
-  if (dom.compassSvg) {
-    const angleRad = Math.atan2(
-      camera.position.x - controls.target.x,
-      camera.position.z - controls.target.z
-    );
-    const deg = THREE.MathUtils.radToDeg(angleRad);
-    dom.compassSvg.style.transform = `rotate(${(-deg).toFixed(1)}deg)`;
+    if (dom.compassSvg) {
+      const angleRad = Math.atan2(
+        camera.position.x - controls.target.x,
+        camera.position.z - controls.target.z
+      );
+      const deg = THREE.MathUtils.radToDeg(angleRad);
+      dom.compassSvg.style.transform = `rotate(${(-deg).toFixed(1)}deg)`;
+    }
   }
 
   renderer.render(scene, camera);

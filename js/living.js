@@ -417,20 +417,17 @@ export function buildMovingTraffic(scene, textures) {
       metalness: 0.16,
     });
 
-    const wheelGeo = new THREE.CylinderGeometry(vt.wheelR, vt.wheelR, 0.22, 10);
-    wheelGeo.rotateZ(Math.PI / 2);
-    for (const sx of [-1, 1]) {
-      for (const sz of [-1, 1]) {
-        const w = new THREE.Mesh(wheelGeo, wheelMat);
-        w.position.set(sx * vt.bodyW * 0.46, vt.wheelR, sz * vt.bodyL * 0.31);
-        group.add(w);
-      }
+    const axleGeo = new THREE.CylinderGeometry(vt.wheelR, vt.wheelR, vt.bodyW * 0.95, 8);
+    axleGeo.rotateZ(Math.PI / 2);
+    for (const sz of [-1, 1]) {
+      const w = new THREE.Mesh(axleGeo, wheelMat);
+      w.position.set(0, vt.wheelR, sz * vt.bodyL * 0.31);
+      group.add(w);
     }
 
     const bodyY = vt.wheelR * 0.55 + vt.bodyH * 0.5;
     const body = new THREE.Mesh(new THREE.BoxGeometry(vt.bodyW, vt.bodyH, vt.bodyL), bMat);
     body.position.y = bodyY;
-    body.castShadow = true;
 
     const cabinY = vt.wheelR * 0.55 + vt.bodyH + vt.cabinH * 0.48;
     const cabin = new THREE.Mesh(new THREE.BoxGeometry(vt.cabinW, vt.cabinH, vt.cabinL), cabinMat);
@@ -448,6 +445,9 @@ export function buildMovingTraffic(scene, textures) {
     const hlY = vt.wheelR * 0.55 + vt.bodyH * 0.52;
     const lampX = vt.bodyW * 0.34;
 
+    const nightGroup = new THREE.Group();
+    nightGroup.visible = false;
+
     const hlL = new THREE.Mesh(lampGeo, headMat);
     hlL.position.set(-lampX, hlY, frontZ);
     const hlR = new THREE.Mesh(lampGeo, headMat);
@@ -461,22 +461,35 @@ export function buildMovingTraffic(scene, textures) {
     const beam = new THREE.Mesh(coneGeo, beamMat);
     beam.position.set(0, 0.12, frontZ + 3.8);
 
-    group.add(hlL, hlR, tlL, tlR, beam);
+    nightGroup.add(hlL, hlR, tlL, tlR, beam);
+    group.add(nightGroup);
     scene.add(group);
 
     const span = r.max - r.min;
     const progress = (idx / routes.length + 0.13 * idx) % 1;
+    const initPos = r.min + progress * span;
+    if (r.axis === "x") {
+      group.position.set(initPos, 0.08, r.fixed);
+      group.rotation.y = r.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+    } else {
+      group.position.set(r.fixed, 0.08, initPos);
+      group.rotation.y = r.dir > 0 ? 0 : Math.PI;
+    }
     return {
       group,
+      nightGroup,
       route: r,
-      pos: r.min + progress * span,
+      pos: initPos,
     };
   });
 
   return {
-    update(dt, nightFactor) {
-      beamMat.opacity = nightFactor * 0.42;
+    update(dt, nightFactor, camY = 126) {
+      const showNight = nightFactor > 0.01;
+      if (showNight) beamMat.opacity = nightFactor * 0.42;
+      if (camY > 460) return;
       for (const c of cars) {
+        if (c.nightGroup.visible !== showNight) c.nightGroup.visible = showNight;
         const r = c.route;
         c.pos += r.dir * r.speed * dt;
         if (c.pos > r.max) c.pos = r.min;
@@ -569,7 +582,6 @@ export function buildPedestrians(scene) {
 
   const torsos = new THREE.InstancedMesh(torsoGeo, torsoMat, walkers.length);
   const heads = new THREE.InstancedMesh(headGeo, headMat, walkers.length);
-  torsos.castShadow = true;
 
   const clothes = [
     new THREE.Color(0xeae4d8),
@@ -624,7 +636,13 @@ export function buildPedestrians(scene) {
   }
 
   return {
-    update(dt, now) {
+    update(dt, now, camY = 126) {
+      const vis = camY < 380;
+      if (torsos.visible !== vis) {
+        torsos.visible = vis;
+        heads.visible = vis;
+      }
+      if (!vis) return;
       const tSec = now * 0.001;
       walkers.forEach((w, idx) => {
         let px, pz, dx, dz;
@@ -685,7 +703,7 @@ function pointInPoly2D(pt, poly) {
   return inside;
 }
 
-export function buildLightingNetwork(scene, data, textures) {
+export function buildLightingNetwork(scene, data, textures, isMobile = false) {
   const bollards = [];
   const parkPoles = [];
   const sportMasts = [];
@@ -871,6 +889,7 @@ export function buildLightingNetwork(scene, data, textures) {
   const poolGeo = new THREE.PlaneGeometry(1, 1);
   poolGeo.rotateX(-Math.PI / 2);
   const poolInst = new THREE.InstancedMesh(poolGeo, poolMat, lightPools.length);
+  poolInst.visible = false;
   lightPools.forEach((p, idx) => {
     dummy.position.set(p.x, p.y, p.z);
     dummy.rotation.set(0, 0, 0);
@@ -880,22 +899,34 @@ export function buildLightingNetwork(scene, data, textures) {
   });
   scene.add(poolInst);
 
-  // 11 PointLights couvrant l'ensemble du parc et du parking en mode Nuit
-  const focalLights = [
-    [-219, 18, 0.8, 86],  // Terrain de Football & Sprint
-    [-162, 16, 0, 74],    // Padel, Tennis, Basket & Beach Sable
-    [-82, 14, -4, 68],    // Arts Martiaux & Fitness
-    [-50, 14, -9, 72],    // Piscines
-    [0, 14, -20, 76],     // Entrée principale
-    [0, 15, -1.6, 92],    // Bassin & Jets d'eau
-    [0, 14, 14, 74],      // Théâtre de verdure & kiosques
-    [52, 14, 4, 72],      // Aires de Jeux & Pétanque
-    [135, 14, 0, 76],     // Promenades & Jardins
-    [205, 14, 0, 72],     // Fontaine Est & Halle pique-nique
-    [130, 14, -52, 84],   // Parking & Cantines
-  ].map(([x, y, z, dist]) => {
+  // PointLights couvrant l'ensemble du parc et du parking en mode Nuit (désactivées le jour pour soulager le GPU mobile)
+  const lightSpecs = isMobile
+    ? [
+        [-200, 20, 0, 125],   // Pôle Sportif Ouest
+        [-70, 18, -4, 110],   // Arts Martiaux & Piscines
+        [0, 18, -2, 115],     // Entrée, Bassin central & Théâtre
+        [85, 18, 2, 115],     // Aires de Jeux, Pétanque & Jardins
+        [195, 18, 0, 110],    // Fontaine Est & Halle pique-nique
+        [120, 18, -52, 130],  // Parking & Cantines
+      ]
+    : [
+        [-219, 18, 0.8, 86],  // Terrain de Football & Sprint
+        [-162, 16, 0, 74],    // Padel, Tennis, Basket & Beach Sable
+        [-82, 14, -4, 68],    // Arts Martiaux & Fitness
+        [-50, 14, -9, 72],    // Piscines
+        [0, 14, -20, 76],     // Entrée principale
+        [0, 15, -1.6, 92],    // Bassin & Jets d'eau
+        [0, 14, 14, 74],      // Théâtre de verdure & kiosques
+        [52, 14, 4, 72],      // Aires de Jeux & Pétanque
+        [135, 14, 0, 76],     // Promenades & Jardins
+        [205, 14, 0, 72],     // Fontaine Est & Halle pique-nique
+        [130, 14, -52, 84],   // Parking & Cantines
+      ];
+
+  const focalLights = lightSpecs.map(([x, y, z, dist]) => {
     const pl = new THREE.PointLight(0xffcb82, 0, dist, 1.0);
     pl.position.set(x, y, z);
+    pl.visible = false;
     scene.add(pl);
     return pl;
   });
@@ -980,23 +1011,29 @@ export function buildLightingNetwork(scene, data, textures) {
     opacity: 0,
     side: THREE.DoubleSide,
   });
+  let winMesh = null;
   if (winPositions.length) {
     const winGeo = new THREE.BufferGeometry();
     winGeo.setAttribute("position", new THREE.Float32BufferAttribute(winPositions, 3));
     winGeo.computeVertexNormals();
-    const winMesh = new THREE.Mesh(winGeo, winMat);
+    winMesh = new THREE.Mesh(winGeo, winMat);
+    winMesh.visible = false;
     scene.add(winMesh);
   }
 
   return {
     applyNightFactor(f, now = 0) {
+      const isNightActive = f > 0.005;
+      if (poolInst.visible !== isNightActive) poolInst.visible = isNightActive;
+      if (winMesh && winMesh.visible !== isNightActive) winMesh.visible = isNightActive;
       const pulse = 0.96 + 0.04 * Math.sin(now * 0.0018);
       const winPulse = 0.97 + 0.03 * Math.sin(now * 0.0012 + 1.1);
-      bulbMat.emissiveIntensity = f * 3.8 * pulse;
-      poolMat.opacity = f * 0.62 * pulse;
-      winMat.opacity = f * 0.82 * winPulse;
+      bulbMat.emissiveIntensity = isNightActive ? f * 3.8 * pulse : 0;
+      poolMat.opacity = isNightActive ? f * 0.62 * pulse : 0;
+      winMat.opacity = isNightActive ? f * 0.82 * winPulse : 0;
       for (const pl of focalLights) {
-        pl.intensity = f * 58;
+        if (pl.visible !== isNightActive) pl.visible = isNightActive;
+        pl.intensity = isNightActive ? f * (isMobile ? 72 : 58) : 0;
       }
     },
   };

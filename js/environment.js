@@ -498,7 +498,7 @@ function addOutwardCopingRim(poly, innerOff, outerOff, yBot, yTop, posOut) {
   }
 }
 
-export function buildWaterAndFountains(scene, data, textures, extrudePoly, mergeGeometries) {
+export function buildWaterAndFountains(scene, data, textures, extrudePoly, mergeGeometries, isMobile = false) {
   const waterGeoms = [];
   const rimPositions = [];
   const fountains = [];
@@ -662,15 +662,16 @@ export function buildWaterAndFountains(scene, data, textures, extrudePoly, merge
       nozzles.push([jx, jz, js.h]);
       underGlows.push([jx, jz, js.h > 4 ? 7.5 : 4.2]);
       const choreoPhase = js.phaseShift * Math.PI * 2 + fIdx * 0.65;
-      for (let i = 0; i < js.count; i++) {
-        const angle = (i / js.count) * Math.PI * 2 * 4.3 + js.phaseShift;
+      const effCount = isMobile ? Math.max(6, Math.round(js.count * 0.55)) : js.count;
+      for (let i = 0; i < effCount; i++) {
+        const angle = (i / effCount) * Math.PI * 2 * 4.3 + js.phaseShift;
         droplets.push({
           bx: jx,
           bz: jz,
           h: js.h,
           vx: Math.cos(angle) * js.spread * (0.3 + ((i * 17) % 10) * 0.07),
           vz: Math.sin(angle) * js.spread * (0.3 + ((i * 13) % 10) * 0.07),
-          phase: i / js.count + js.phaseShift + fIdx * 0.11,
+          phase: i / effCount + js.phaseShift + fIdx * 0.11,
           choreoPhase,
           speed: 0.72 + ((i * 7) % 5) * 0.07,
         });
@@ -700,10 +701,12 @@ export function buildWaterAndFountains(scene, data, textures, extrudePoly, merge
     blending: THREE.AdditiveBlending,
     depthWrite: false,
   });
+  let ugInst = null;
   if (underGlows.length) {
     const ugGeo = new THREE.PlaneGeometry(1, 1);
     ugGeo.rotateX(-Math.PI / 2);
-    const ugInst = new THREE.InstancedMesh(ugGeo, underGlowMat, underGlows.length);
+    ugInst = new THREE.InstancedMesh(ugGeo, underGlowMat, underGlows.length);
+    ugInst.visible = false;
     const d = new THREE.Object3D();
     underGlows.forEach(([x, z, sz], idx) => {
       d.position.set(x, 0.488, z);
@@ -730,7 +733,7 @@ export function buildWaterAndFountains(scene, data, textures, extrudePoly, merge
   const ptsGeo = new THREE.BufferGeometry();
   ptsGeo.setAttribute("position", new THREE.BufferAttribute(ptsPos, 3));
   const ptsMat = new THREE.PointsMaterial({
-    size: 0.85,
+    size: isMobile ? 1.04 : 0.85,
     map: new THREE.CanvasTexture(spCanvas),
     transparent: true,
     opacity: 0.88,
@@ -740,11 +743,11 @@ export function buildWaterAndFountains(scene, data, textures, extrudePoly, merge
   const pointsMesh = new THREE.Points(ptsGeo, ptsMat);
   scene.add(pointsMesh);
 
-  const dayWaterCol = new THREE.Color(0xd4e6e6);
-  const nightWaterCol = new THREE.Color(0x284352);
+  const dayWaterCol = new THREE.Color(0xcce2e4);
+  const nightWaterCol = new THREE.Color(0x244252);
 
   return {
-    updateWater(dt, now, nightFactor) {
+    updateWater(dt, now, nightFactor, camY = 126) {
       waterTexA.offset.x = (now * 0.000018) % 1;
       waterTexA.offset.y = (now * 0.000012) % 1;
       waterTexB.offset.x = -(now * 0.000014) % 1;
@@ -753,7 +756,16 @@ export function buildWaterAndFountains(scene, data, textures, extrudePoly, merge
       const tSec = now * 0.001;
       waterMat.color.lerpColors(dayWaterCol, nightWaterCol, nightFactor);
       ptsMat.color.setHex(nightFactor > 0.4 ? 0xffe4b8 : 0xf4fafc);
-      underGlowMat.opacity = nightFactor * (0.44 + 0.06 * Math.sin(tSec * 2.1));
+
+      const showGlow = nightFactor > 0.01;
+      if (ugInst && ugInst.visible !== showGlow) ugInst.visible = showGlow;
+      if (showGlow) {
+        underGlowMat.opacity = nightFactor * (0.44 + 0.06 * Math.sin(tSec * 2.1));
+      }
+
+      const showSpray = camY < 420;
+      if (pointsMesh.visible !== showSpray) pointsMesh.visible = showSpray;
+      if (!showSpray) return;
 
       const arr = ptsGeo.attributes.position.array;
       for (let i = 0; i < droplets.length; i++) {
@@ -1075,7 +1087,7 @@ export function buildVegetation(scene, data, textures, windUniforms) {
   return { treeCount: treePositions.length };
 }
 
-export function buildDayAtmosphere(scene, textures) {
+export function buildDayAtmosphere(scene, textures, isMobile = false) {
   const clouds = [];
   const cloudMat = new THREE.MeshBasicMaterial({
     map: textures.cloud,
@@ -1183,6 +1195,11 @@ export function buildDayAtmosphere(scene, textures) {
     )
   );
   const bfPalette = [0xf2e7cf, 0xe5b899, 0xd8a35a, 0xcfcfdc, 0xf6f0e4];
+  const bfMats = bfPalette.map((hex) => {
+    const m = bfMat.clone();
+    m.color.setHex(hex);
+    return m;
+  });
   const butterflies = [];
   const bfRng = makeSeeded(9012);
   const bfAnchors = [
@@ -1195,11 +1212,11 @@ export function buildDayAtmosphere(scene, textures) {
     [188, 10],
     [224, 12],
   ];
-  for (let i = 0; i < 24; i++) {
+  const bfTotal = isMobile ? 12 : 24;
+  for (let i = 0; i < bfTotal; i++) {
     const anc = bfAnchors[i % bfAnchors.length];
     const g = new THREE.Group();
-    const wMat = bfMat.clone();
-    wMat.color.setHex(bfPalette[i % bfPalette.length]);
+    const wMat = bfMats[i % bfMats.length];
     const wL = new THREE.Mesh(bfWingGeo, wMat);
     wL.scale.x = -1;
     const wR = new THREE.Mesh(bfWingGeo, wMat);
@@ -1209,7 +1226,6 @@ export function buildDayAtmosphere(scene, textures) {
       group: g,
       wL,
       wR,
-      mat: wMat,
       cx: anc[0] + (bfRng() - 0.5) * 14,
       cz: anc[1] + (bfRng() - 0.5) * 12,
       yBase: 1.45 + bfRng() * 1.4,
@@ -1244,7 +1260,7 @@ export function buildDayAtmosphere(scene, textures) {
 
       const birdAlpha = THREE.MathUtils.clamp(1 - nightFactor * 1.6, 0, 0.85);
       birdMat.opacity = birdAlpha;
-      birdGroup.visible = birdAlpha > 0.02;
+      birdGroup.visible = birdAlpha > 0.02 && camY < 340;
       if (birdGroup.visible) {
         const t = now * 0.001;
         for (const b of birds) {
@@ -1265,8 +1281,9 @@ export function buildDayAtmosphere(scene, textures) {
       }
 
       const bfAlpha = THREE.MathUtils.clamp(1 - nightFactor * 1.8, 0, 0.92);
-      butterflyGroup.visible = bfAlpha > 0.02;
+      butterflyGroup.visible = bfAlpha > 0.02 && camY < 185;
       if (butterflyGroup.visible) {
+        for (const m of bfMats) m.opacity = bfAlpha;
         const t = now * 0.001;
         for (const bf of butterflies) {
           bf.angle += bf.speed * dt;
@@ -1279,7 +1296,6 @@ export function buildDayAtmosphere(scene, textures) {
           const flap = Math.sin(t * 14.5 + bf.phase) * 0.72 + 0.15;
           bf.wL.rotation.z = -flap;
           bf.wR.rotation.z = flap;
-          bf.mat.opacity = bfAlpha;
         }
       }
     },
