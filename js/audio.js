@@ -1,5 +1,5 @@
 // Lecteur audio de l'enregistrement d'ambiance du parc (assets/audio/park-ambience.mp3)
-// diffusé à volume normal lors de la visite du jardin.
+// avec modulation spatiale directe selon le niveau de zoom (altitude de la caméra).
 
 export function createParkAudioController({ onStateChange } = {}) {
   let audioEl = null;
@@ -10,7 +10,7 @@ export function createParkAudioController({ onStateChange } = {}) {
     audioEl = new Audio("assets/audio/park-ambience.mp3");
     audioEl.loop = true;
     audioEl.preload = "auto";
-    audioEl.volume = 0.82;
+    audioEl.volume = 0.65;
     return audioEl;
   }
 
@@ -39,11 +39,17 @@ export function createParkAudioController({ onStateChange } = {}) {
     toggle: () => setEnabled(!enabled),
     update(_now, cameraPos, nightFactor = 0) {
       if (!audioEl || !enabled) return;
-      // Volume normal (0.72 à 0.85 dans le jardin, atténuation douce uniquement à très haute altitude)
+      // Modulation continue selon le zoom (camY de ~18 m au sol jusqu'à ~650 m en vue éloignée) :
+      // - Proche du sol (camY <= 25 m) : volume fort et immersif (~0.95)
+      // - Vue d'ensemble (camY ~ 126 m) : volume modéré (~0.52)
+      // - Vue plan / haute altitude (camY ~ 300 m) : volume discret (~0.18)
+      // - Très haute altitude (camY >= 600 m) : quasi silencieux (~0.02)
       const camY = cameraPos ? cameraPos.y : 126;
-      const altScale = Math.max(0.45, Math.min(1, 1 - Math.max(0, camY - 260) / 900));
+      const t = Math.max(0, Math.min(1, (camY - 22) / 420));
+      const zoomCurve = Math.pow(1 - t, 1.85);
       const nightScale = 1 - nightFactor * 0.15;
-      audioEl.volume = Math.max(0.32, Math.min(0.85, 0.82 * altScale * nightScale));
+      const targetVol = (0.02 + 0.93 * zoomCurve) * nightScale;
+      audioEl.volume = Math.max(0.02, Math.min(0.95, targetVol));
     },
   };
 }
