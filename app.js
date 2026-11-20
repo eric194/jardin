@@ -376,7 +376,7 @@ function buildScene(data, thiesMapTex) {
   // Plan macro carte vectorielle de la Région de Thiès (centré sur 0, 0)
   thiesBackdrop = buildThiesBackdrop(scene, textures);
 
-  // Emprises enterrées (Terrain de Basket, Terrain de Beach Sable, et Gradins enterrés triangulaires)
+  // Emprises enterrées (Terrain de Basket, Terrain de Beach Sable, et Gradin central entre les deux)
   const sunkenHoles = (data.zones || [])
     .filter((z) => {
       const u = z.name.toUpperCase();
@@ -549,23 +549,69 @@ function buildScene(data, thiesMapTex) {
       const zu = z.name.toUpperCase();
 
       // A. Gradins :
-      // 1) Gradins enterrés triangulaires avec marches concentriques (entre Basket et Beach, cx ~ -145.7)
-      // 2) Gradin surélevé non enterré en béton et gazon (au sud du Terrain de Foot, cx ~ -219.0)
+      // 1) Gradin triangulaire au milieu entre Basket et Beach (cx ~ -145.7) : marches tournées VERS L'EXTÉRIEUR
+      //    (descendant du centre vers les deux terrains enterrés), avec bandes de gazon et décorations paysagères.
+      // 2) Gradin Sud du Terrain de Foot (cx ~ -219.0) : surélevé en béton et gazon.
       if (z.kind === "gradin") {
         if (z.centroid[0] > -180) {
           const ix = -146.27;
           const iz = 10.02;
-          const scales = [1.0, 0.84, 0.68, 0.52, 0.36, 0.20];
-          const topYs = [0.35, 0.12, -0.11, -0.34, -0.57];
-          const baseY = -0.82;
-          for (let t = 0; t < 5; t++) {
+          const scales = [1.0, 0.82, 0.64, 0.46, 0.28];
+          const topYs = [-0.22, 0.06, 0.34, 0.62, 0.90];
+          const baseY = -0.42;
+          for (let t = 0; t < scales.length; t++) {
             const outerP = scalePolyToward(z.poly, ix, iz, scales[t]);
-            const innerP = scalePolyToward(z.poly, ix, iz, scales[t + 1]);
-            pushKindGeom("gradin", extrudePoly(outerP, topYs[t] - baseY, baseY, [innerP]));
+            const holes =
+              t < scales.length - 1
+                ? [scalePolyToward(z.poly, ix, iz, scales[t + 1] * 0.98)]
+                : [];
+            pushKindGeom("gradin", extrudePoly(outerP, topYs[t] - baseY, baseY, holes));
+
+            // Bandes de gazon sur chaque palier et esplanade engazonnée au sommet central
+            if (t < scales.length - 1) {
+              const gOuter = scalePolyToward(z.poly, ix, iz, scales[t] * 0.93);
+              const gInner = scalePolyToward(z.poly, ix, iz, scales[t + 1] * 1.02);
+              pushKindGeom("green", extrudePoly(gOuter, 0.045, topYs[t], [gInner]));
+            } else {
+              const topLawn = scalePolyToward(z.poly, ix, iz, scales[t] * 0.86);
+              pushKindGeom("green", extrudePoly(topLawn, 0.05, topYs[t]));
+            }
           }
-          // Fond central enterré (-0.72 m)
-          const coreP = scalePolyToward(z.poly, ix, iz, scales[5]);
-          pushKindGeom("paving", extrudePoly(coreP, 0.12, -0.84));
+
+          // Marches intermédiaires en béton tournées vers l'extérieur (côté Basket NO et côté Beach Est)
+          for (let t = 0; t < scales.length; t++) {
+            const sOut = scales[t];
+            const stepY = topYs[t] - 0.14;
+            const xE = ix + (-136.99 - ix) * sOut;
+            pushKindGeom(
+              "gradin",
+              extrudePoly(
+                [
+                  [xE - 0.35, 5.8],
+                  [xE + 0.35, 5.8],
+                  [xE + 0.35, 8.2],
+                  [xE - 0.35, 8.2],
+                ],
+                stepY - baseY,
+                baseY
+              )
+            );
+            const bx = ix + (-150.0 - ix) * sOut;
+            const bz = iz + (0.6 - iz) * sOut;
+            pushKindGeom(
+              "gradin",
+              extrudePoly(
+                [
+                  [bx - 1.1, bz - 0.3],
+                  [bx + 0.5, bz - 1.3],
+                  [bx + 1.1, bz - 0.5],
+                  [bx - 0.5, bz + 0.5],
+                ],
+                stepY - baseY,
+                baseY
+              )
+            );
+          }
         } else {
           // Gradin Sud Football : non enterré (surélevé), alternance de gradins en béton et terrasses de gazon
           const x0 = -245.03;
@@ -642,33 +688,23 @@ function buildScene(data, thiesMapTex) {
         continue;
       }
 
-      // B. Terrain de Basket enterré (-0.50 m) avec marches périphériques descendantes
+      // B. Terrain de Basket enterré (-0.35 m) SANS gradin autour du terrain (simple bordure de soutènement fine)
       if (zu === "BASKET") {
         const [cx, cz] = z.centroid;
         const p0 = z.poly;
-        const p1 = scalePolyToward(p0, cx, cz, 0.955);
-        const p2 = scalePolyToward(p0, cx, cz, 0.91);
-        const p3 = scalePolyToward(p0, cx, cz, 0.865);
-        const baseY = -0.58;
-        pushKindGeom("gradin", extrudePoly(p0, 0.35 - baseY, baseY, [p1]));
-        pushKindGeom("gradin", extrudePoly(p1, 0.07 - baseY, baseY, [p2]));
-        pushKindGeom("gradin", extrudePoly(p2, -0.21 - baseY, baseY, [p3]));
-        pushKindGeom("sport", extrudePoly(p3, 0.10, -0.60)); // top -0.50 m
+        const pInner = scalePolyToward(p0, cx, cz, 0.985);
+        pushKindGeom("paving", extrudePoly(p0, 0.75, -0.40, [pInner]));
+        pushKindGeom("sport", extrudePoly(pInner, 0.10, -0.45)); // top -0.35 m
         continue;
       }
 
-      // C. Terrain de Beach Sable enterré (-0.50 m) avec marches périphériques descendantes
+      // C. Terrain de Beach Sable enterré (-0.35 m) SANS gradin autour du terrain (simple bordure de soutènement fine)
       if (zu.includes("BEACH")) {
         const [cx, cz] = z.centroid;
         const p0 = z.poly;
-        const p1 = scalePolyToward(p0, cx, cz, 0.955);
-        const p2 = scalePolyToward(p0, cx, cz, 0.91);
-        const p3 = scalePolyToward(p0, cx, cz, 0.865);
-        const baseY = -0.58;
-        pushKindGeom("gradin", extrudePoly(p0, 0.35 - baseY, baseY, [p1]));
-        pushKindGeom("gradin", extrudePoly(p1, 0.07 - baseY, baseY, [p2]));
-        pushKindGeom("gradin", extrudePoly(p2, -0.21 - baseY, baseY, [p3]));
-        pushKindGeom("sand", extrudePoly(p3, 0.10, -0.60)); // top -0.50 m
+        const pInner = scalePolyToward(p0, cx, cz, 0.985);
+        pushKindGeom("paving", extrudePoly(p0, 0.75, -0.40, [pInner]));
+        pushKindGeom("sand", extrudePoly(pInner, 0.10, -0.45)); // top -0.35 m
         continue;
       }
 

@@ -167,9 +167,9 @@ function makeLocalBasisFromQuad(poly) {
 }
 
 export function buildSportCourts(scene, data) {
-  // Trois strates dédiées (terrains hauts 0.425 -> 0.432, terrains enterrés Basket & Beach -0.50 -> -0.485, piste/sprint 0.380 -> 0.389)
+  // Trois strates dédiées (terrains hauts 0.425 -> 0.432, terrains enterrés Basket & Beach -0.35 -> -0.338, piste/sprint 0.380 -> 0.389)
   const rbSport = new RibbonBuilder(0.432);
-  const rbBeach = new RibbonBuilder(-0.485);
+  const rbBeach = new RibbonBuilder(-0.338);
   const rbTrack = new RibbonBuilder(0.389);
   const propMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.72 });
   const netMat = new THREE.MeshBasicMaterial({
@@ -234,22 +234,22 @@ export function buildSportCourts(scene, data) {
     rbTrack.addDot(-242.7, cz, 0.16);
   }
 
-  // 3. Arène en sable fin enterrée (-0.50 m) : Beach Soccer / Beach Handball / Beach Volleyball (X: -137..-111, Z: -17.6..19.3)
+  // 3. Arène en sable fin enterrée (-0.35 m, sans gradin interne) : Beach Soccer / Beach Handball / Beach Volleyball
   const hx = -124.0;
   const hz = 0.85;
-  const bw = 18.2;
-  const bd = 27.6;
-  const sunkenY = -0.5;
-  // Bordure intérieure de retenue du sable + lignes souples au fond de l'arène enterrée
-  rbBeach.addRect(hx, hz, 21.0, 30.2, 0.2);
+  const bw = 20.0;
+  const bd = 33.6;
+  const sunkenY = -0.35;
+  // Bordure de retenue du sable + lignes souples pleine largeur
+  rbBeach.addRect(hx, hz, 24.6, 35.4, 0.2);
   rbBeach.addRect(hx, hz, bw, bd, 0.14);
   rbBeach.addSegment(hx - bw / 2, hz, hx + bw / 2, hz, 0.14);
-  rbBeach.addSegment(hx - bw / 2, hz - 9.4, hx + bw / 2, hz - 9.4, 0.12);
-  rbBeach.addSegment(hx - bw / 2, hz + 9.4, hx + bw / 2, hz + 9.4, 0.12);
+  rbBeach.addSegment(hx - bw / 2, hz - 11.2, hx + bw / 2, hz - 11.2, 0.12);
+  rbBeach.addSegment(hx - bw / 2, hz + 11.2, hx + bw / 2, hz + 11.2, 0.12);
   addGoalFrame(hx, hz - bd / 2, 3.0, 2.0, 0.9, Math.PI, sunkenY);
   addGoalFrame(hx, hz + bd / 2, 3.0, 2.0, 0.9, 0, sunkenY);
 
-  // Filet central de Beach Volleyball (12 m de large, posé à -0.50 m)
+  // Filet central de Beach Volleyball (12 m de large, posé à -0.35 m)
   const bvPoleGeo = new THREE.CylinderGeometry(0.06, 0.06, 2.45, 8);
   const bvPoleMat = new THREE.MeshStandardMaterial({ color: 0x353b42, roughness: 0.55 });
   const bvPoleL = new THREE.Mesh(bvPoleGeo, bvPoleMat);
@@ -264,12 +264,12 @@ export function buildSportCourts(scene, data) {
   bvBotBand.position.set(hx, sunkenY + 1.44, hz);
   scene.add(bvPoleL, bvPoleR, bvNet, bvTopBand, bvBotBand);
 
-  // 4. Basketball enterré (-0.50 m, tourné ~45°, extrait exact du polygone DXF)
+  // 4. Basketball enterré (-0.35 m, sans gradin interne, pleine largeur)
   const basketZone = data.zones.find((z) => z.name.toUpperCase() === "BASKET");
   if (basketZone) {
     const b = makeLocalBasisFromQuad(basketZone.poly);
-    const hl = b.longLen * 0.39;
-    const hw = b.shortLen * 0.38;
+    const hl = b.longLen * 0.44;
+    const hw = b.shortLen * 0.44;
     const p1 = b.pt(-hl, -hw);
     const p2 = b.pt(hl, -hw);
     const p3 = b.pt(hl, hw);
@@ -281,21 +281,21 @@ export function buildSportCourts(scene, data) {
     const m1 = b.pt(0, -hw);
     const m2 = b.pt(0, hw);
     rbBeach.addSegment(m1[0], m1[1], m2[0], m2[1], 0.16);
-    rbBeach.addArc(b.cx, b.cz, 1.65, 0, Math.PI * 2, 24, 0.15);
+    rbBeach.addArc(b.cx, b.cz, 1.8, 0, Math.PI * 2, 24, 0.15);
     // Raquettes et arcs à 3 points au fond du terrain enterré
     for (const dir of [-1, 1]) {
-      const k0 = b.pt(dir * hl, -2.05);
-      const k1 = b.pt(dir * (hl - 4.6), -2.05);
-      const k2 = b.pt(dir * (hl - 4.6), 2.05);
-      const k3 = b.pt(dir * hl, 2.05);
+      const k0 = b.pt(dir * hl, -2.25);
+      const k1 = b.pt(dir * (hl - 5.1), -2.25);
+      const k2 = b.pt(dir * (hl - 5.1), 2.25);
+      const k3 = b.pt(dir * hl, 2.25);
       rbBeach.addSegment(k0[0], k0[1], k1[0], k1[1], 0.15);
       rbBeach.addSegment(k1[0], k1[1], k2[0], k2[1], 0.15);
       rbBeach.addSegment(k2[0], k2[1], k3[0], k3[1], 0.15);
       const baseAngle = Math.atan2(-dir * b.uz, -dir * b.ux);
-      const hoopPt = b.pt(dir * (hl - 1.05), 0);
-      rbBeach.addArc(hoopPt[0], hoopPt[1], 4.85, baseAngle - 1.2, baseAngle + 1.2, 20, 0.15);
+      const hoopPt = b.pt(dir * (hl - 1.15), 0);
+      rbBeach.addArc(hoopPt[0], hoopPt[1], 5.4, baseAngle - 1.22, baseAngle + 1.22, 20, 0.15);
 
-      // Panier 3D ancré à -0.50 m
+      // Panier 3D ancré à -0.35 m
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 3.05, 8), propMat);
       post.position.set(hoopPt[0], sunkenY + 1.525, hoopPt[1]);
       const board = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.05, 1.65), propMat);
@@ -941,6 +941,22 @@ export function buildVegetation(scene, data, textures, windUniforms) {
     if (addTreeIfClear(ux, uz, 0.78 + rng() * 0.52, 0.1, 8.2)) urbanAdded++;
   }
 
+  // 1e. Arbre d'ornement et jardinière monumentale au sommet du gradin triangulaire (entre Basket et Beach)
+  treePositions.push([-146.27, 10.02, 0.86, 1.1]);
+  const planterRing = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.75, 1.85, 0.36, 20),
+    new THREE.MeshStandardMaterial({ color: 0xe6ddd0, roughness: 0.88 })
+  );
+  planterRing.position.set(-146.27, 1.08, 10.02);
+  planterRing.castShadow = true;
+  planterRing.receiveShadow = true;
+  const planterSoil = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.48, 1.48, 0.4, 18),
+    new THREE.MeshStandardMaterial({ color: 0x8d9f73, roughness: 0.92 })
+  );
+  planterSoil.position.set(-146.27, 1.09, 10.02);
+  scene.add(planterRing, planterSoil);
+
   if (treePositions.length) {
     const trunkGeo = new THREE.CylinderGeometry(0.18, 0.25, 2.2, 6);
     const trunkMat = new THREE.MeshStandardMaterial({ color: 0xc5b8a4, roughness: 0.94 });
@@ -1002,9 +1018,37 @@ export function buildVegetation(scene, data, textures, windUniforms) {
       const pz = minZ + rng() * (maxZ - minZ);
       if (!pointInPoly2D([px, pz], bz.poly)) continue;
       if (!isClearInner(px, pz)) continue;
-      bushPositions.push([px, pz, 0.55 + rng() * 0.6]);
+      bushPositions.push([px, pz, 0.55 + rng() * 0.6, 0.44]);
       added++;
     }
+  }
+
+  // Décorations végétales (arbustes taillés) sur les paliers engazonnés du gradin triangulaire (entre Basket et Beach)
+  const triGradin = data.zones.find((z) => z.kind === "gradin" && z.centroid[0] > -180);
+  if (triGradin) {
+    const ix = -146.27;
+    const iz = 10.02;
+    const scales = [0.91, 0.73, 0.55, 0.37];
+    const tierYs = [-0.17, 0.11, 0.39, 0.67];
+    scales.forEach((scRing, tIdx) => {
+      const ringPts = triGradin.poly.map(([x, z]) => [ix + (x - ix) * scRing, iz + (z - iz) * scRing]);
+      for (let i = 0; i < ringPts.length; i++) {
+        const a = ringPts[i];
+        const b = ringPts[(i + 1) % ringPts.length];
+        const segLen = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        if (segLen < 3.5) continue;
+        const steps = Math.max(1, Math.floor(segLen / 5.5));
+        for (let k = 1; k <= steps; k++) {
+          const u = k / (steps + 1);
+          const bx = a[0] + (b[0] - a[0]) * u;
+          const bz = a[1] + (b[1] - a[1]) * u;
+          // Laisser dégagés les 2 escaliers d'accès (Est et Nord-Ouest)
+          if (bx > -139.8 && bz > 5.4 && bz < 8.6) continue;
+          if (Math.hypot(bx + 149.2, bz - 1.5) < 2.2) continue;
+          bushPositions.push([bx, bz, 0.48 + (k % 2) * 0.16, tierYs[tIdx]]);
+        }
+      }
+    });
   }
 
   if (bushPositions.length) {
@@ -1021,8 +1065,8 @@ export function buildVegetation(scene, data, textures, windUniforms) {
       new THREE.Color(0xa0b584),
     ];
     const dummy = new THREE.Object3D();
-    bushPositions.forEach(([bx, bz, sc], idx) => {
-      dummy.position.set(bx, 0.44 + 0.35 * sc, bz);
+    bushPositions.forEach(([bx, bz, sc, by = 0.44], idx) => {
+      dummy.position.set(bx, by + 0.35 * sc, bz);
       dummy.scale.set(sc * 1.25, sc * 0.72, sc * 1.15);
       dummy.rotation.y = rng() * Math.PI * 2;
       dummy.updateMatrix();
@@ -1033,7 +1077,7 @@ export function buildVegetation(scene, data, textures, windUniforms) {
     scene.add(bushInst);
   }
 
-  // 3. Fleurs (~460 bouquets sobres) dans les PARTERRE FLEURI et massifs
+  // 3. Fleurs (~460 bouquets sobres) dans les PARTERRE FLEURI, massifs et sur les terrasses du gradin triangulaire
   const flowerPositions = [];
   const flowerZones = data.zones.filter((z) => {
     const n = z.name.toUpperCase();
@@ -1054,8 +1098,38 @@ export function buildVegetation(scene, data, textures, windUniforms) {
       const pz = minZ + rng() * (maxZ - minZ);
       if (!pointInPoly2D([px, pz], fz.poly)) continue;
       if (!isClearInner(px, pz)) continue;
-      flowerPositions.push([px, pz, 0.7 + rng() * 0.55]);
+      flowerPositions.push([px, pz, 0.7 + rng() * 0.55, 0.5]);
       added++;
+    }
+  }
+
+  if (triGradin) {
+    const ix = -146.27;
+    const iz = 10.02;
+    const scales = [0.91, 0.73, 0.55, 0.37];
+    const tierYs = [-0.17, 0.11, 0.39, 0.67];
+    scales.forEach((scRing, tIdx) => {
+      const ringPts = triGradin.poly.map(([x, z]) => [ix + (x - ix) * scRing, iz + (z - iz) * scRing]);
+      for (let i = 0; i < ringPts.length; i++) {
+        const a = ringPts[i];
+        const b = ringPts[(i + 1) % ringPts.length];
+        const segLen = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        if (segLen < 2.8) continue;
+        const steps = Math.max(2, Math.floor(segLen / 3.2));
+        for (let k = 1; k <= steps; k++) {
+          const u = (k - 0.35) / steps;
+          const fx = a[0] + (b[0] - a[0]) * u;
+          const fz = a[1] + (b[1] - a[1]) * u;
+          if (fx > -139.8 && fz > 5.4 && fz < 8.6) continue;
+          if (Math.hypot(fx + 149.2, fz - 1.5) < 2.2) continue;
+          flowerPositions.push([fx, fz, 0.85 + (k % 3) * 0.2, tierYs[tIdx]]);
+        }
+      }
+    });
+    // Couronne fleurie autour de l'arbre central au sommet du gradin
+    for (let a = 0; a < 8; a++) {
+      const ang = (a / 8) * Math.PI * 2;
+      flowerPositions.push([ix + Math.cos(ang) * 1.15, iz + Math.sin(ang) * 1.15, 0.95, 1.26]);
     }
   }
 
@@ -1073,8 +1147,8 @@ export function buildVegetation(scene, data, textures, windUniforms) {
       new THREE.Color(0xcfc0d6), // lavande douce
     ];
     const dummy = new THREE.Object3D();
-    flowerPositions.forEach(([fx, fz, sc], idx) => {
-      dummy.position.set(fx, 0.5 + 0.18 * sc, fz);
+    flowerPositions.forEach(([fx, fz, sc, fy = 0.5], idx) => {
+      dummy.position.set(fx, fy + 0.18 * sc, fz);
       dummy.scale.set(sc * 1.1, sc * 0.8, sc * 1.1);
       dummy.rotation.y = rng() * Math.PI * 2;
       dummy.updateMatrix();
