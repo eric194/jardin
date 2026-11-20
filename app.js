@@ -254,6 +254,13 @@ function easeInOutQuint(t) {
   return t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2;
 }
 
+// Courbe de vol cinématographique ultra-fluide (accélération douce en cosinus + long amorti d'atterrissage)
+function easeSmoothFlight(t) {
+  const cosPart = 0.5 - 0.5 * Math.cos(Math.PI * t);
+  const outPart = 1 - Math.pow(1 - t, 3.2);
+  return cosPart * 0.58 + outPart * 0.42;
+}
+
 function easeOutExpo(t) {
   return t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
 }
@@ -914,8 +921,8 @@ function buildScene(data, thiesMapTex) {
     state.satZoom = {
       startTime: null,
       warmed: false,
-      holdMs: 1350,
-      duration: 3500,
+      holdMs: 900,
+      duration: 4500,
       fromPos: new THREE.Vector3(...satCam.pos),
       fromTarget: new THREE.Vector3(...satCam.target),
       toPos: new THREE.Vector3(...introCam.pos),
@@ -1014,14 +1021,16 @@ function buildSpaceLabels(spaces) {
 function finishSatelliteIntro() {
   state.satDone = true;
   state.satZoom = null;
-  state.introOrbitStart = performance.now();
+  if (!state.introOrbitStart) {
+    state.introOrbitStart = performance.now();
+  }
   if (dom.satBanner) dom.satBanner.classList.remove("is-visible");
   if (state.isIntro) {
     dom.intro.classList.add("is-visible");
   }
 }
 
-function flyTo(toPos, toTarget, duration = 1150) {
+function flyTo(toPos, toTarget, duration = 1350) {
   if (state.reducedMotion) {
     camera.position.set(...toPos);
     controls.target.set(...toTarget);
@@ -1030,13 +1039,19 @@ function flyTo(toPos, toTarget, duration = 1150) {
     return;
   }
 
+  const fromPos = camera.position.clone();
+  const destPos = new THREE.Vector3(...toPos);
+  const horizDist = Math.hypot(destPos.x - fromPos.x, destPos.z - fromPos.z);
+  const arcLift = Math.min(34, horizDist * 0.14);
+
   state.fly = {
     startTime: performance.now(),
     duration,
-    fromPos: camera.position.clone(),
-    toPos: new THREE.Vector3(...toPos),
+    fromPos,
+    toPos: destPos,
     fromTarget: controls.target.clone(),
     toTarget: new THREE.Vector3(...toTarget),
+    arcLift,
   };
 }
 
@@ -1086,7 +1101,7 @@ function enterExperience() {
   controls.enabled = true;
   audioCtrl?.setEnabled(true);
   const ov = getOverviewCam();
-  flyTo(ov.pos, ov.target, 1150);
+  flyTo(ov.pos, ov.target, 1400);
 }
 
 function selectSpace(spaceId) {
@@ -1137,7 +1152,7 @@ function selectSpace(spaceId) {
     sp.camOffset[1],
     sp.pos[1] + sp.camOffset[2],
   ];
-  flyTo(camPos, targetPos, 1000);
+  flyTo(camPos, targetPos, 1350);
 }
 
 function closeSpaceCard() {
@@ -1154,7 +1169,7 @@ function closeSpaceCard() {
   });
 
   const dest = state.isPlanView ? getPlanCam() : getOverviewCam();
-  flyTo(dest.pos, dest.target, 950);
+  flyTo(dest.pos, dest.target, 1300);
 }
 
 function stepSpace(delta) {
@@ -1179,7 +1194,7 @@ function togglePlanView() {
   state.isPlanView = !state.isPlanView;
   dom.btnViewMode.setAttribute("aria-pressed", String(state.isPlanView));
   const dest = state.isPlanView ? getPlanCam() : getOverviewCam();
-  flyTo(dest.pos, dest.target, 900);
+  flyTo(dest.pos, dest.target, 1280);
 }
 
 function resetView() {
@@ -1190,7 +1205,7 @@ function resetView() {
     closeSpaceCard();
   } else {
     const ov = getOverviewCam();
-    flyTo(ov.pos, ov.target, 900);
+    flyTo(ov.pos, ov.target, 1280);
   }
 }
 
@@ -1199,7 +1214,7 @@ function setNightMode(nextNight) {
   state.targetNight = state.isNight ? 1 : 0;
   state.nightAnim = {
     startTime: performance.now(),
-    duration: state.reducedMotion ? 1 : 780,
+    duration: state.reducedMotion ? 1 : 1750,
     from: state.nightFactor,
     to: state.targetNight,
   };
@@ -1322,11 +1337,18 @@ const _nightColors = {
   senegal: new THREE.Color(0x26344b),
 };
 
+const _twilightSky = new THREE.Color(0xd8c6b4);
+const _twilightSun = new THREE.Color(0xffb46e);
+
 function applyThemeLerp(f) {
   const t = themeTargets;
   if (!t.sun) return;
 
+  const twilight = Math.sin(f * Math.PI) * 0.28;
   scene.background.lerpColors(_dayColors.sky, _nightColors.sky, f);
+  if (twilight > 0.005) {
+    scene.background.lerp(_twilightSky, twilight);
+  }
   scene.fog.color.copy(scene.background);
 
   t.groundMat.color.lerpColors(_dayColors.ground, _nightColors.ground, f);
@@ -1345,12 +1367,16 @@ function applyThemeLerp(f) {
   }
 
   t.sun.color.lerpColors(_dayColors.sun, _nightColors.sun, f);
-  t.sun.intensity = THREE.MathUtils.lerp(1.15, 0.36, f);
+  if (twilight > 0.005) {
+    t.sun.color.lerp(_twilightSun, twilight * 1.4);
+  }
+  t.sun.position.y = THREE.MathUtils.lerp(250, 78, f);
+  t.sun.intensity = THREE.MathUtils.lerp(1.18, 0.36, f);
   t.hemi.color.lerpColors(_dayColors.hemiSky, _nightColors.hemiSky, f);
   t.hemi.groundColor.lerpColors(_dayColors.hemiGround, _nightColors.hemiGround, f);
-  t.hemi.intensity = THREE.MathUtils.lerp(1.08, 0.42, f);
-  t.fill.intensity = THREE.MathUtils.lerp(0.28, 0.14, f);
-  renderer.toneMappingExposure = THREE.MathUtils.lerp(1.03, 0.94, f);
+  t.hemi.intensity = THREE.MathUtils.lerp(1.1, 0.42, f);
+  t.fill.intensity = THREE.MathUtils.lerp(0.32, 0.14, f);
+  renderer.toneMappingExposure = THREE.MathUtils.lerp(1.04, 0.95, f);
 
   if (thiesBackdrop?.material) {
     thiesBackdrop.material.color.lerpColors(_dayColors.senegal, _nightColors.senegal, f);
@@ -1702,15 +1728,13 @@ function animate(now) {
     return;
   }
 
-  // Régulation thermique intelligente sur téléphone (évite la surchauffe sur écrans 90/120 Hz)
+  // Régulation thermique intelligente sur téléphone : 60 FPS pleins pendant toute transition (zoom carte, vol, Jour/Nuit),
+  // économie d'énergie uniquement au repos
   const rawElapsed = now - lastFrameTime;
-  if (state.isMobile) {
-    const isMovingCam =
-      Boolean(state.satZoom) ||
-      Boolean(state.fly) ||
-      Boolean(state.nightAnim) ||
-      now - state.lastActiveTime < 1800;
-    const minInterval = isMovingCam ? 21 : 34; // ~46 FPS en mouvement, ~29 FPS au repos
+  const inTransition = Boolean(state.satZoom) || Boolean(state.fly) || Boolean(state.nightAnim);
+  if (state.isMobile && !inTransition) {
+    const isInteracting = now - state.lastActiveTime < 1800;
+    const minInterval = isInteracting ? 20 : 34;
     if (rawElapsed < minInterval) return;
   }
 
@@ -1723,21 +1747,22 @@ function animate(now) {
     windUniforms.uWindTime.value = now * 0.001;
   }
 
-  // Transition fluide Jour <-> Nuit (courbe quintic douce + scintillement continu)
+  // Transition fluide Jour <-> Nuit avec allumage en vague des lampadaires
   if (state.nightAnim) {
     const np = Math.min(1, (now - state.nightAnim.startTime) / state.nightAnim.duration);
-    const nk = easeInOutQuint(np);
+    const nk = 0.5 - 0.5 * Math.cos(Math.PI * np);
     state.nightFactor = state.nightAnim.from + (state.nightAnim.to - state.nightAnim.from) * nk;
     applyThemeLerp(state.nightFactor);
     if (np >= 1) {
       state.nightFactor = state.nightAnim.to;
+      applyThemeLerp(state.nightFactor);
       state.nightAnim = null;
     }
   } else if (state.nightFactor > 0.01 && lightingCtrl && !state.reducedMotion) {
     lightingCtrl.applyNightFactor(state.nightFactor, now);
   }
 
-  // Zoom cartographique carte de Thiès (thies40.svg) -> centre-ville (courbe logarithmique fluide)
+  // Zoom cartographique carte de Thiès (thies40.svg) -> arrivée amortie et fondue dans l'orbite du jardin
   if (state.satZoom) {
     if (!state.satZoom.warmed) {
       state.satZoom.warmed = true;
@@ -1749,20 +1774,33 @@ function animate(now) {
         ? 0
         : Math.max(0, now - state.satZoom.startTime - (state.satZoom.holdMs || 0));
     const p = Math.min(1, elapsed / state.satZoom.duration);
-    const k = easeInOutQuart(p);
-    const kPan = Math.pow(k, 0.48);
+
+    // Courbe C-infini en cosinus avec long coussin d'atterrissage (décélération progressive sur les 2 dernières secondes)
+    const s = 0.5 - 0.5 * Math.cos(Math.PI * p);
+    const kAlt = 1 - Math.pow(1 - s, 1.85);
+    const kPan = 1 - Math.pow(1 - s, 2.2);
 
     const tgtX = state.satZoom.fromTarget.x * (1 - kPan) + state.satZoom.toTarget.x * kPan;
     const tgtZ = state.satZoom.fromTarget.z * (1 - kPan) + state.satZoom.toTarget.z * kPan;
-    const curX = state.satZoom.fromPos.x * (1 - kPan) + state.satZoom.toPos.x * kPan;
+    let curX = state.satZoom.fromPos.x * (1 - kPan) + state.satZoom.toPos.x * kPan;
     const curY =
       state.satZoom.fromPos.y *
-      Math.pow(state.satZoom.toPos.y / state.satZoom.fromPos.y, k);
+      Math.pow(state.satZoom.toPos.y / state.satZoom.fromPos.y, kAlt);
     const fromOffZ = state.satZoom.fromPos.z - state.satZoom.fromTarget.z;
     const toOffZ = state.satZoom.toPos.z - state.satZoom.toTarget.z;
-    const curZ = tgtZ + fromOffZ * Math.pow(toOffZ / fromOffZ, k);
+    let curZ = tgtZ + fromOffZ * Math.pow(toOffZ / fromOffZ, kAlt);
+
+    // Fondu progressif dans l'orbite d'accueil dès p = 0.72 pour une arrivée sans aucune rupture de vitesse
+    if (p > 0.72 && !state.reducedMotion) {
+      if (!state.introOrbitStart) state.introOrbitStart = now;
+      const orbitBlend = THREE.MathUtils.smoothstep(p, 0.72, 1.0);
+      const t = (now - state.introOrbitStart) * 0.00016;
+      curX += Math.sin(t) * 24 * orbitBlend;
+      curZ += (-12 + Math.cos(t * 0.8) * 12) * orbitBlend;
+    }
 
     camera.position.set(curX, curY, curZ);
+    controls.target.set(tgtX, 0, tgtZ);
     camera.lookAt(tgtX, 0, tgtZ);
 
     if (dom.satAltitude) {
@@ -1775,7 +1813,7 @@ function animate(now) {
         dom.satAltitude.textContent = `THIÈS · ALT. ${Math.round(curY)} M`;
       }
     }
-    if (p >= 0.85) {
+    if (p >= 0.78) {
       dom.intro.classList.add("is-visible");
     }
     if (p >= 1) {
@@ -1788,13 +1826,18 @@ function animate(now) {
     camera.position.x = Math.sin(t) * 24;
     camera.position.y = introCam.pos[1];
     camera.position.z = introCam.pos[2] - 12 + Math.cos(t * 0.8) * 12;
+    controls.target.set(...introCam.target);
     camera.lookAt(...introCam.target);
   } else if (state.fly) {
     const elapsed = now - state.fly.startTime;
     const p = Math.min(1, elapsed / state.fly.duration);
-    const k = easeInOutQuint(p);
+    const k = easeSmoothFlight(p);
     camera.position.lerpVectors(state.fly.fromPos, state.fly.toPos, k);
+    if (state.fly.arcLift) {
+      camera.position.y += Math.sin(Math.PI * k) * state.fly.arcLift;
+    }
     controls.target.lerpVectors(state.fly.fromTarget, state.fly.toTarget, k);
+    controls.update();
     if (p >= 1) state.fly = null;
   }
 

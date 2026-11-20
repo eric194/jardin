@@ -872,22 +872,20 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
   }
 
   const poleMat = new THREE.MeshStandardMaterial({ color: 0x5d5a54, roughness: 0.72, metalness: 0.25 });
-  const bulbMat = new THREE.MeshStandardMaterial({
-    color: 0xfff8ea,
-    emissive: 0xffc66e,
-    emissiveIntensity: 0.0,
-    roughness: 0.35,
-  });
-  const dimBulbMat = new THREE.MeshStandardMaterial({
-    color: 0xffeacc,
-    emissive: 0xffb35c,
-    emissiveIntensity: 0.0,
-    roughness: 0.45,
-  });
+  const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const dimBulbMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const dayBulbCol = new THREE.Color(0xdad2c6);
+  const darkBulbCol = new THREE.Color(0x464d59);
+  const litBulbCol = new THREE.Color(0xfff0c2);
+  const litDimBulbCol = new THREE.Color(0xffcf8b);
+  const _tmpBulbCol = new THREE.Color();
 
-  const lightPools = []; // { x, y, z, size }
-  const dimLightPools = []; // { x, y, z, size }
+  const lightPools = []; // { x, y, z, size, delay }
+  const dimLightPools = []; // { x, y, z, size, delay }
+  const lampHeads = []; // { mesh, idx, x, y, z, delay, isDim }
   const dummy = new THREE.Object3D();
+  const calcWaveDelay = (x, z, extra = 0) =>
+    Math.min(0.72, extra + Math.hypot(x, z * 1.4) / 440);
 
   // Instanced bollards
   if (bollards.length) {
@@ -896,13 +894,17 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     bollards.forEach(([x, z], idx) => {
       dummy.position.set(x, 0.44 + 0.52, z);
       dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(1, 1, 1);
       dummy.updateMatrix();
       bPost.setMatrixAt(idx, dummy.matrix);
 
-      dummy.position.set(x, 0.44 + 1.08, z);
+      const hy = 0.44 + 1.08;
+      dummy.position.set(x, hy, z);
       dummy.updateMatrix();
       bHead.setMatrixAt(idx, dummy.matrix);
-      lightPools.push({ x, y: z < -30 ? 0.34 : 0.525, z, size: 7.5 });
+      const delay = calcWaveDelay(x, z, 0.0);
+      lightPools.push({ x, y: z < -30 ? 0.34 : 0.525, z, size: 7.5, delay });
+      lampHeads.push({ mesh: bHead, idx, x, y: hy, z, delay, isDim: false });
     });
     scene.add(bPost, bHead);
   }
@@ -918,11 +920,15 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
       dummy.updateMatrix();
       pPost.setMatrixAt(idx, dummy.matrix);
 
-      dummy.position.set(x, 0.36 + h + 0.08, z + Math.cos(rot) * 0.35);
+      const hy = 0.36 + h + 0.08;
+      const hz = z + Math.cos(rot) * 0.35;
+      dummy.position.set(x, hy, hz);
       dummy.scale.set(1, 1, 1);
       dummy.updateMatrix();
       pHead.setMatrixAt(idx, dummy.matrix);
-      lightPools.push({ x, y: z < -48 ? 0.455 : z < -30 ? 0.34 : 0.525, z, size: h * 2.2 });
+      const delay = calcWaveDelay(x, z, 0.05);
+      lightPools.push({ x, y: z < -48 ? 0.455 : z < -30 ? 0.34 : 0.525, z, size: h * 2.2, delay });
+      lampHeads.push({ mesh: pHead, idx, x, y: hy, z: hz, rot, delay, isDim: false });
     });
     scene.add(pPost, pHead);
   }
@@ -938,10 +944,13 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
       dummy.updateMatrix();
       sPost.setMatrixAt(idx, dummy.matrix);
 
-      dummy.position.set(x, 0.36 + 11.0, z);
+      const hy = 0.36 + 11.0;
+      dummy.position.set(x, hy, z);
       dummy.updateMatrix();
       sHead.setMatrixAt(idx, dummy.matrix);
-      lightPools.push({ x, y: 0.525, z, size: 22 });
+      const delay = calcWaveDelay(x, z, 0.1);
+      lightPools.push({ x, y: 0.525, z, size: 22, delay });
+      lampHeads.push({ mesh: sHead, idx, x, y: hy, z, rot: 0, delay, isDim: false });
     });
     scene.add(sPost, sHead);
   }
@@ -957,10 +966,14 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
       dummy.updateMatrix();
       rPost.setMatrixAt(idx, dummy.matrix);
 
-      dummy.position.set(x, 0.08 + 9.0, z + Math.cos(rot) * 0.45);
+      const hy = 0.08 + 9.0;
+      const hz = z + Math.cos(rot) * 0.45;
+      dummy.position.set(x, hy, hz);
       dummy.updateMatrix();
       rHead.setMatrixAt(idx, dummy.matrix);
-      lightPools.push({ x, y: 0.095, z, size: 17 });
+      const delay = calcWaveDelay(x, z, 0.14);
+      lightPools.push({ x, y: 0.095, z, size: 17, delay });
+      lampHeads.push({ mesh: rHead, idx, x, y: hy, z: hz, rot, delay, isDim: false });
     });
     scene.add(rPost, rHead);
   }
@@ -976,10 +989,15 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
       dummy.updateMatrix();
       stPost.setMatrixAt(idx, dummy.matrix);
 
-      dummy.position.set(x + Math.sin(rot) * 0.3, 0.08 + 6.6, z + Math.cos(rot) * 0.3);
+      const hx = x + Math.sin(rot) * 0.3;
+      const hy = 0.08 + 6.6;
+      const hz = z + Math.cos(rot) * 0.3;
+      dummy.position.set(hx, hy, hz);
       dummy.updateMatrix();
       stHead.setMatrixAt(idx, dummy.matrix);
-      dimLightPools.push({ x, y: 0.092, z, size: 12.5 });
+      const delay = calcWaveDelay(x, z, 0.22);
+      dimLightPools.push({ x, y: 0.092, z, size: 12.5, delay });
+      lampHeads.push({ mesh: stHead, idx, x: hx, y: hy, z: hz, rot, delay, isDim: true });
     });
     scene.add(stPost, stHead);
   }
@@ -1034,34 +1052,20 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     scene.add(dimPoolInst);
   }
 
-  // PointLights couvrant l'ensemble du parc et du parking en mode Nuit (désactivées le jour pour soulager le GPU mobile)
-  const lightSpecs = isMobile
-    ? [
-        [-200, 20, 0, 125],   // Pôle Sportif Ouest
-        [-70, 18, -4, 110],   // Arts Martiaux & Piscines
-        [0, 18, -2, 115],     // Entrée, Bassin central & Théâtre
-        [85, 18, 2, 115],     // Aires de Jeux, Pétanque & Jardins
-        [195, 18, 0, 110],    // Fontaine Est & Halle pique-nique
-        [120, 18, -52, 130],  // Parking & Cantines
-      ]
-    : [
-        [-219, 18, 0.8, 86],  // Terrain de Football & Sprint
-        [-162, 16, 0, 74],    // Padel, Tennis, Basket & Beach Sable
-        [-82, 14, -4, 68],    // Arts Martiaux & Fitness
-        [-50, 14, -9, 72],    // Piscines
-        [0, 14, -20, 76],     // Entrée principale
-        [0, 15, -1.6, 92],    // Bassin & Jets d'eau
-        [0, 14, 14, 74],      // Théâtre de verdure & kiosques
-        [52, 14, 4, 72],      // Aires de Jeux & Pétanque
-        [135, 14, 0, 76],     // Promenades & Jardins
-        [205, 14, 0, 72],     // Fontaine Est & Halle pique-nique
-        [130, 14, -52, 84],   // Parking & Cantines
-      ];
+  // 6 PointLights couvrant l'ensemble du parc et du parking (toujours attachées pour éviter toute recompilation shader au clic Jour/Nuit)
+  const lightSpecs = [
+    [-200, 20, 0, 128],   // Pôle Sportif Ouest
+    [-70, 18, -4, 112],   // Arts Martiaux & Piscines
+    [0, 18, -2, 118],     // Entrée, Bassin central & Théâtre
+    [85, 18, 2, 118],     // Aires de Jeux, Pétanque & Jardins
+    [195, 18, 0, 112],    // Fontaine Est & Halle pique-nique
+    [120, 18, -52, 132],  // Parking & Cantines
+  ];
 
   const focalLights = lightSpecs.map(([x, y, z, dist]) => {
     const pl = new THREE.PointLight(0xffcb82, 0, dist, 1.0);
     pl.position.set(x, y, z);
-    pl.visible = false;
+    pl.userData.delay = Math.min(0.55, Math.abs(x) / 390);
     scene.add(pl);
     return pl;
   });
@@ -1214,22 +1218,96 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     scene.add(winMesh);
   }
 
+  const headMeshes = new Set(lampHeads.map((h) => h.mesh));
+  for (let i = 0; i < lampHeads.length; i++) {
+    const h = lampHeads[i];
+    h.mesh.setColorAt(h.idx, dayBulbCol);
+  }
+  headMeshes.forEach((m) => {
+    if (m.instanceColor) m.instanceColor.needsUpdate = true;
+  });
+  let lastWaveF = -1;
+
   return {
     applyNightFactor(f, now = 0) {
-      const isNightActive = f > 0.005;
+      const isNightActive = f > 0.002;
       if (poolInst.visible !== isNightActive) poolInst.visible = isNightActive;
       if (dimPoolInst && dimPoolInst.visible !== isNightActive) dimPoolInst.visible = isNightActive;
       const pulse = 0.96 + 0.04 * Math.sin(now * 0.0018);
       const winPulse = 0.97 + 0.03 * Math.sin(now * 0.0012 + 1.1);
-      bulbMat.emissiveIntensity = isNightActive ? f * 3.8 * pulse : 0;
-      dimBulbMat.emissiveIntensity = isNightActive ? f * 1.45 * pulse : 0;
-      poolMat.opacity = isNightActive ? f * 0.62 * pulse : 0;
-      dimPoolMat.opacity = isNightActive ? f * 0.22 * pulse : 0;
-      winMat.color.lerpColors(dayWinCol, nightWinCol, f);
-      winMat.opacity = THREE.MathUtils.lerp(0.74, 0.85 * winPulse, f);
+
+      // Animation en vague progressive des lampadaires, bornes et halos lors du passage Jour <-> Nuit
+      if (Math.abs(f - lastWaveF) > 0.0005) {
+        lastWaveF = f;
+        for (let i = 0; i < lightPools.length; i++) {
+          const p = lightPools[i];
+          const span = Math.max(0.26, 1 - p.delay);
+          const lf = THREE.MathUtils.clamp((f - p.delay) / span, 0, 1);
+          const sCurve = lf * lf * (3 - 2 * lf);
+          const bloom = sCurve + Math.sin(lf * Math.PI) * 0.24 * lf;
+          const sc = Math.max(0.001, p.size * bloom);
+          dummy.position.set(p.x, p.y, p.z);
+          dummy.rotation.set(0, 0, 0);
+          dummy.scale.set(sc, 1, sc);
+          dummy.updateMatrix();
+          poolInst.setMatrixAt(i, dummy.matrix);
+        }
+        poolInst.instanceMatrix.needsUpdate = true;
+
+        if (dimPoolInst) {
+          for (let i = 0; i < dimLightPools.length; i++) {
+            const p = dimLightPools[i];
+            const span = Math.max(0.24, 1 - p.delay);
+            const lf = THREE.MathUtils.clamp((f - p.delay) / span, 0, 1);
+            const sCurve = lf * lf * (3 - 2 * lf);
+            const bloom = sCurve + Math.sin(lf * Math.PI) * 0.2 * lf;
+            const sc = Math.max(0.001, p.size * bloom);
+            dummy.position.set(p.x, p.y, p.z);
+            dummy.rotation.set(0, 0, 0);
+            dummy.scale.set(sc, 1, sc);
+            dummy.updateMatrix();
+            dimPoolInst.setMatrixAt(i, dummy.matrix);
+          }
+          dimPoolInst.instanceMatrix.needsUpdate = true;
+        }
+
+        // Allumage/extinction individuel en vague de chaque tête de lampe (couleur + pulsation)
+        for (let i = 0; i < lampHeads.length; i++) {
+          const h = lampHeads[i];
+          const span = Math.max(0.26, 1 - h.delay);
+          const lf = THREE.MathUtils.clamp((f - h.delay) / span, 0, 1);
+          const sCurve = lf * lf * (3 - 2 * lf);
+          const pop = 1 + Math.sin(lf * Math.PI) * 0.55;
+          dummy.position.set(h.x, h.y, h.z);
+          dummy.rotation.set(0, h.rot || 0, 0);
+          dummy.scale.set(pop, pop, pop);
+          dummy.updateMatrix();
+          h.mesh.setMatrixAt(h.idx, dummy.matrix);
+
+          // Tant que l'onde n'a pas atteint la lampe, elle s'assombrit avec le crépuscule puis s'allume franchement au passage de l'onde
+          _tmpBulbCol.lerpColors(dayBulbCol, darkBulbCol, Math.min(1, f * 1.4));
+          _tmpBulbCol.lerp(h.isDim ? litDimBulbCol : litBulbCol, sCurve);
+          h.mesh.setColorAt(h.idx, _tmpBulbCol);
+        }
+        headMeshes.forEach((m) => {
+          m.instanceMatrix.needsUpdate = true;
+          if (m.instanceColor) m.instanceColor.needsUpdate = true;
+        });
+      }
+
+      poolMat.opacity = isNightActive ? Math.min(1, f * 1.35) * 0.62 * pulse : 0;
+      dimPoolMat.opacity = isNightActive ? Math.min(1, f * 1.25) * 0.22 * pulse : 0;
+
+      // Allumage progressif des portes et fenêtres des bâtiments
+      const winF = THREE.MathUtils.smoothstep(f, 0.15, 0.96);
+      winMat.color.lerpColors(dayWinCol, nightWinCol, winF);
+      winMat.opacity = THREE.MathUtils.lerp(0.74, 0.86 * winPulse, winF);
+
       for (const pl of focalLights) {
-        if (pl.visible !== isNightActive) pl.visible = isNightActive;
-        pl.intensity = isNightActive ? f * (isMobile ? 72 : 58) : 0;
+        const d = pl.userData.delay || 0;
+        const lf = THREE.MathUtils.clamp((f - d) / Math.max(0.3, 1 - d), 0, 1);
+        const sCurve = lf * lf * (3 - 2 * lf);
+        pl.intensity = isNightActive ? sCurve * 68 * pulse : 0;
       }
     },
   };
