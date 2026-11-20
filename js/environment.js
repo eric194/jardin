@@ -1281,3 +1281,177 @@ export function buildDayAtmosphere(scene, textures) {
     },
   };
 }
+
+export function buildUrbanContextLandmarks(scene) {
+  const group = new THREE.Group();
+
+  const stoneMat = new THREE.MeshStandardMaterial({ color: 0xf4eee4, roughness: 0.86 });
+  const roofTrimMat = new THREE.MeshStandardMaterial({ color: 0xe2d8c8, roughness: 0.82 });
+  const redAccentMat = new THREE.MeshStandardMaterial({
+    color: 0xa64234,
+    emissive: 0x3b120c,
+    emissiveIntensity: 0.25,
+    roughness: 0.55,
+  });
+  const darkSlateMat = new THREE.MeshStandardMaterial({
+    color: 0x26292e,
+    roughness: 0.5,
+    metalness: 0.18,
+  });
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0x9ab0b8,
+    roughness: 0.18,
+    metalness: 0.25,
+    transparent: true,
+    opacity: 0.55,
+  });
+  const colMat = new THREE.MeshStandardMaterial({ color: 0xded7cb, roughness: 0.78 });
+  const pumpBodyMat = new THREE.MeshStandardMaterial({ color: 0xfbf9f5, roughness: 0.7 });
+
+  // Constructeur d'une station-service architecturale sobre (auvent sur colonnes, bandeau terracotta, îlots de pompes, totem)
+  const addServiceStation = ({ cx, cz, canopyW, canopyD, canopyY = 5.4, shopX, shopZ, shopW, shopD, totemX, totemZ }) => {
+    const st = new THREE.Group();
+
+    // Dalle piste de distribution
+    const pad = new THREE.Mesh(
+      new THREE.BoxGeometry(canopyW + 8, 0.16, canopyD + 8),
+      new THREE.MeshStandardMaterial({ color: 0xe6dfd3, roughness: 0.92 })
+    );
+    pad.position.set(cx, 0.12, cz);
+    pad.receiveShadow = true;
+    st.add(pad);
+
+    // Auvent principal + bandeau périmétrique terracotta
+    const canopy = new THREE.Mesh(new THREE.BoxGeometry(canopyW, 0.45, canopyD), stoneMat);
+    canopy.position.set(cx, canopyY, cz);
+    canopy.castShadow = true;
+    canopy.receiveShadow = true;
+
+    const fascia = new THREE.Mesh(new THREE.BoxGeometry(canopyW + 0.16, 0.28, canopyD + 0.16), redAccentMat);
+    fascia.position.set(cx, canopyY + 0.08, cz);
+    st.add(canopy, fascia);
+
+    // Colonnes porteuses et îlots de pompes à essence
+    const colGeo = new THREE.CylinderGeometry(0.24, 0.26, canopyY - 0.2, 10);
+    const islandGeo = new THREE.BoxGeometry(4.4, 0.24, 1.35);
+    const pumpGeo = new THREE.BoxGeometry(0.95, 1.65, 0.65);
+    const pumpTopGeo = new THREE.BoxGeometry(1.0, 0.28, 0.7);
+
+    const xOffsets = [-canopyW * 0.34, 0, canopyW * 0.34];
+    for (const ox of xOffsets) {
+      for (const sz of [-1, 1]) {
+        const col = new THREE.Mesh(colGeo, colMat);
+        col.position.set(cx + ox, (canopyY - 0.2) * 0.5 + 0.1, cz + sz * (canopyD * 0.34));
+        col.castShadow = true;
+        st.add(col);
+      }
+
+      const isl = new THREE.Mesh(islandGeo, roofTrimMat);
+      isl.position.set(cx + ox, 0.28, cz);
+      const pump = new THREE.Mesh(pumpGeo, pumpBodyMat);
+      pump.position.set(cx + ox, 1.15, cz);
+      pump.castShadow = true;
+      const pTop = new THREE.Mesh(pumpTopGeo, redAccentMat);
+      pTop.position.set(cx + ox, 2.05, cz);
+      st.add(isl, pump, pTop);
+    }
+
+    // Boutique / bâtiment de station
+    if (shopW && shopD) {
+      const shop = new THREE.Mesh(new THREE.BoxGeometry(shopW, 4.1, shopD), stoneMat);
+      shop.position.set(shopX, 2.15, shopZ);
+      shop.castShadow = true;
+      shop.receiveShadow = true;
+      const shopGlass = new THREE.Mesh(new THREE.BoxGeometry(shopW * 0.72, 2.3, 0.14), glassMat);
+      shopGlass.position.set(shopX, 1.65, shopZ + (cz > shopZ ? shopD * 0.51 : -shopD * 0.51));
+      st.add(shop, shopGlass);
+    }
+
+    // Totem prix en bordure de voie
+    const totemBody = new THREE.Mesh(new THREE.BoxGeometry(1.45, 5.8, 0.48), darkSlateMat);
+    totemBody.position.set(totemX, 3.0, totemZ);
+    totemBody.castShadow = true;
+    const totemCap = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.35, 0.54), redAccentMat);
+    totemCap.position.set(totemX, 5.15, totemZ);
+    st.add(totemBody, totemCap);
+
+    group.add(st);
+  };
+
+  // 1. Station-service Nord-Ouest (sur la grande parcelle d'angle X=-236, Z=-68)
+  addServiceStation({
+    cx: -236,
+    cz: -60,
+    canopyW: 22,
+    canopyD: 12.5,
+    canopyY: 5.5,
+    shopX: -236,
+    shopZ: -78,
+    shopW: 20,
+    shopD: 9.5,
+    totemX: -255,
+    totemZ: -46,
+  });
+
+  // 2. Station-service Ouest (en face du terrain de football, X=-303, Z=-7)
+  addServiceStation({
+    cx: -303,
+    cz: -7,
+    canopyW: 19,
+    canopyD: 10.5,
+    canopyY: 5.3,
+    shopX: -303,
+    shopZ: 7.5,
+    shopW: 18,
+    shopD: 8.5,
+    totemX: -282,
+    totemZ: -16,
+  });
+
+  // 3. Banque (parcelle Nord face à la boucle d'accès, X=-121, Z=-73 : édifice sobre à façade anthracite & colonnade)
+  const bankGroup = new THREE.Group();
+  const bx = -120.6;
+  const bz = -73.1;
+
+  // Parvis et marches de la banque
+  const bankPlinth = new THREE.Mesh(new THREE.BoxGeometry(24, 0.35, 22), roofTrimMat);
+  bankPlinth.position.set(bx, 0.22, bz);
+  bankPlinth.receiveShadow = true;
+
+  // Volume architectural principal + corniche et bandeau anthracite (le repère sobre de la banque)
+  const bankCore = new THREE.Mesh(new THREE.BoxGeometry(18.5, 9.2, 16.5), stoneMat);
+  bankCore.position.set(bx, 4.8, bz);
+  bankCore.castShadow = true;
+  bankCore.receiveShadow = true;
+
+  const bankCrown = new THREE.Mesh(new THREE.BoxGeometry(19.4, 0.9, 17.4), darkSlateMat);
+  bankCrown.position.set(bx, 9.5, bz);
+  bankCrown.castShadow = true;
+
+  const bankRoofTop = new THREE.Mesh(new THREE.BoxGeometry(17.8, 0.35, 15.8), roofTrimMat);
+  bankRoofTop.position.set(bx, 9.95, bz);
+  bankRoofTop.receiveShadow = true;
+
+  // Façade vitrée Sud face à la demi-lune et au jardin + portique anthracite
+  const bankGlass = new THREE.Mesh(new THREE.BoxGeometry(14.8, 6.8, 0.22), glassMat);
+  bankGlass.position.set(bx, 4.2, bz + 8.3);
+
+  const portalFrame = new THREE.Mesh(new THREE.BoxGeometry(7.6, 5.2, 1.4), darkSlateMat);
+  portalFrame.position.set(bx, 2.8, bz + 8.6);
+  portalFrame.castShadow = true;
+
+  // 4 colonnes de façade
+  const bColGeo = new THREE.CylinderGeometry(0.28, 0.3, 7.6, 12);
+  for (const ox of [-6.8, -2.6, 2.6, 6.8]) {
+    const c = new THREE.Mesh(bColGeo, colMat);
+    c.position.set(bx + ox, 4.0, bz + 8.75);
+    c.castShadow = true;
+    bankGroup.add(c);
+  }
+
+  bankGroup.add(bankPlinth, bankCore, bankCrown, bankRoofTop, bankGlass, portalFrame);
+  group.add(bankGroup);
+
+  scene.add(group);
+  return group;
+}

@@ -18,6 +18,7 @@ import {
   buildWaterAndFountains,
   buildVegetation,
   buildDayAtmosphere,
+  buildUrbanContextLandmarks,
 } from "./js/environment.js";
 import {
   VEHICLE_TYPES,
@@ -272,6 +273,23 @@ const markerGroups = [];
 const hitProxies = [];
 const clickableZones = [];
 const labelButtons = new Map();
+const contextBadges = [];
+const CONTEXT_LANDMARKS = [
+  { id: "ctx-station-nw", title: "Station-service", pos: [-236, 7.6, -60], dotColor: "#a64234" },
+  { id: "ctx-station-w", title: "Station-service", pos: [-303, 7.4, -7], dotColor: "#a64234" },
+  { id: "ctx-banque", title: "Banque", pos: [-120.6, 11.8, -73.1], dotColor: "#1e2024" },
+];
+
+function buildContextLabels() {
+  contextBadges.length = 0;
+  for (const lm of CONTEXT_LANDMARKS) {
+    const el = document.createElement("div");
+    el.className = "context-label";
+    el.innerHTML = `<span class="context-dot" style="background:${lm.dotColor}"></span><span>${lm.title}</span>`;
+    dom.spaceLabels.appendChild(el);
+    contextBadges.push({ ...lm, el });
+  }
+}
 const themeTargets = {};
 let groundMesh;
 
@@ -397,10 +415,20 @@ function buildScene(data, thiesMapTex) {
     }
   }
 
-  // 2. 352 immeubles voisins de Thiès (base strictement > top routes)
+  // 2. 352 immeubles voisins de Thiès (base strictement > top routes, hors emprises des 3 édifices de contexte détaillés)
   const buildingGeoms = [];
   for (const b of data.buildings) {
     try {
+      const p0 = b.poly?.[0];
+      // Éviter de superposer les blocs bruts sur la Station-service Nord-Ouest (b[74]), la Station-service Ouest (b[87]/b[88]) et la Banque (b[63])
+      if (p0) {
+        const cx = b.poly.reduce((s, p) => s + p[0], 0) / b.poly.length;
+        const cz = b.poly.reduce((s, p) => s + p[1], 0) / b.poly.length;
+        if (Math.hypot(cx + 241.5, cz + 73.6) < 8) continue;
+        if (Math.hypot(cx + 302.9, cz + 6.8) < 6) continue;
+        if (Math.hypot(cx + 293.4, cz - 7.9) < 6) continue;
+        if (Math.hypot(cx + 120.6, cz + 73.1) < 5) continue;
+      }
       buildingGeoms.push(extrudePoly(b.poly, b.h, 0.055));
     } catch (_) {}
   }
@@ -664,8 +692,9 @@ function buildScene(data, thiesMapTex) {
 
   buildSpaceMarkers(data.spaces, isMobile);
 
-  // 11. Nuages subtils, papillons et oiseaux diurnes
+  // 11. Nuages subtils, papillons, oiseaux diurnes et repères urbains voisins (2 stations-service + banque, hors jardin)
   atmosphereCtrl = buildDayAtmosphere(scene, textures);
+  buildUrbanContextLandmarks(scene);
 
   // Références thème Jour/Nuit
   Object.assign(themeTargets, {
@@ -779,6 +808,8 @@ function buildSpaceLabels(spaces) {
     dom.spaceLabels.appendChild(btn);
     labelButtons.set(sp.id, btn);
   }
+
+  buildContextLabels();
 }
 
 function finishSatelliteIntro() {
@@ -1177,6 +1208,28 @@ function syncSpaceLabels() {
     btn.classList.add("is-visible");
     btn.classList.toggle("is-active", sp.id === state.selectedSpaceId);
     btn.classList.remove("is-muted");
+  }
+
+  // Repères de contexte urbain hors jardin (Banque & 2 Stations-service), discrets et non cliquables
+  const camY = camera.position.y;
+  const showCtx = !state.selectedSpaceId && camY >= 35 && camY <= 460;
+  for (const cb of contextBadges) {
+    if (!showCtx) {
+      cb.el.style.display = "none";
+      continue;
+    }
+    _projVec.set(cb.pos[0], cb.pos[1], cb.pos[2]);
+    _projVec.project(camera);
+    const sx = Math.round(((_projVec.x + 1) * 0.5) * w);
+    const sy = Math.round(((-_projVec.y + 1) * 0.5) * h);
+    const inBounds =
+      _projVec.z < 1 && sx >= 36 && sx <= w - 36 && sy >= 58 && sy <= h - 36;
+    if (!inBounds) {
+      cb.el.style.display = "none";
+      continue;
+    }
+    cb.el.style.display = "inline-flex";
+    cb.el.style.transform = `translate3d(${sx}px, ${sy}px, 0) translate(-50%, -100%)`;
   }
 }
 
