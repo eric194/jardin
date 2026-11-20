@@ -1644,7 +1644,7 @@ function animate(now) {
 
   // Nuages subtils, papillons et oiseaux en vue jour + ambiance sonore spatialisée
   if (atmosphereCtrl) {
-    atmosphereCtrl.update(state.reducedMotion ? 0 : dt, now, state.nightFactor);
+    atmosphereCtrl.update(state.reducedMotion ? 0 : dt, now, state.nightFactor, camY);
   }
   if (audioCtrl && camera) {
     audioCtrl.update(now, camera.position, state.nightFactor);

@@ -1076,95 +1076,34 @@ export function buildDayAtmosphere(scene, textures) {
   const cloudMat = new THREE.MeshBasicMaterial({
     map: textures.cloud,
     transparent: true,
-    opacity: 0.72,
+    opacity: 0.0,
     depthWrite: false,
     side: THREE.DoubleSide,
+    fog: false,
   });
 
-  // Ombre nuageuse très douce portée au sol + nuages volumétriques légers autour du parc (sans masquer le cœur du jardin)
-  const cloudShadowMat = new THREE.MeshBasicMaterial({
-    map: textures.cloud,
-    color: 0x8f8575,
-    transparent: true,
-    opacity: 0.1,
-    depthWrite: false,
-  });
-
-  const puffBodyMat = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    emissive: 0xeae3d7,
-    emissiveIntensity: 0.28,
-    roughness: 0.96,
-    metalness: 0,
-    transparent: true,
-    opacity: 0.46,
-    depthWrite: false,
-  });
-
-  const puffUnderMat = new THREE.MeshStandardMaterial({
-    color: 0xd8cfc1,
-    roughness: 0.98,
-    metalness: 0,
-    transparent: true,
-    opacity: 0.28,
-    depthWrite: false,
-  });
-
-  const sphereGeo = new THREE.IcosahedronGeometry(1, 2);
-
+  // Nuages légers et hauts en altitude (y = 320..520 m) : visibles uniquement en altitude ou à l'horizon lointain,
+  // jamais devant le jardin lorsqu'on consulte ou parcourt les espaces.
   const cloudSpecs = [
-    [-195, 52, -72, 112, 58, 2.0, 0.2],
-    [-95, 56, -84, 124, 62, 1.7, 1.1],
-    [-12, 58, -94, 118, 60, 2.2, 2.3],
-    [82, 54, -76, 126, 64, 1.6, 3.0],
-    [185, 52, -68, 114, 58, 2.1, 4.1],
-    [-255, 62, -128, 136, 70, 1.5, 5.2],
-    [-45, 64, -142, 142, 72, 1.9, 0.8],
-    [135, 61, -124, 134, 68, 1.8, 1.9],
-    [-165, 48, 56, 102, 52, 2.1, 2.7],
-    [-25, 50, 74, 110, 56, 1.7, 3.8],
-    [105, 48, 58, 106, 54, 2.0, 4.6],
-    [225, 52, 68, 116, 60, 1.8, 5.5],
-  ];
-
-  const puffOffsets = [
-    [0, 0, 0, 0.9, 0.28, 0.56],
-    [-0.26, -0.03, 0.06, 0.68, 0.24, 0.48],
-    [0.28, -0.02, -0.05, 0.7, 0.25, 0.48],
-    [-0.12, 0.06, -0.08, 0.58, 0.26, 0.44],
-    [0.14, 0.05, 0.09, 0.56, 0.25, 0.42],
+    [-420, 340, -290, 240, 125, 2.2, 0.2],
+    [-160, 380, -340, 270, 140, 1.8, 1.1],
+    [110, 355, -310, 255, 132, 2.1, 2.3],
+    [380, 395, -330, 280, 145, 1.7, 3.0],
+    [-310, 440, -450, 310, 160, 1.5, 4.1],
+    [40, 465, -480, 330, 170, 1.9, 5.2],
+    [340, 430, -440, 295, 152, 1.6, 0.8],
+    [-360, 360, 310, 250, 130, 2.0, 1.9],
+    [-40, 410, 360, 285, 148, 1.7, 2.7],
+    [290, 375, 325, 260, 135, 2.1, 3.8],
   ];
 
   for (const [x, y, z, w, h, speed, phase] of cloudSpecs) {
-    const group = new THREE.Group();
-    group.position.set(x, y, z);
-
-    // Nappe vaporeuse texturée principale
     const billGeo = new THREE.PlaneGeometry(w, h);
     const billMesh = new THREE.Mesh(billGeo, cloudMat);
     billMesh.rotation.x = -Math.PI / 2;
-    group.add(billMesh);
-
-    // Volumes 3D doux (cumulus aplatis + base ombrée beige)
-    for (const [ox, oy, oz, sx, sy, sz] of puffOffsets) {
-      const pTop = new THREE.Mesh(sphereGeo, puffBodyMat);
-      pTop.position.set(ox * w * 0.52, oy * 11 + 0.9, oz * h * 0.48);
-      pTop.scale.set(w * 0.2 * sx, 9 * sy, h * 0.24 * sz);
-      group.add(pTop);
-
-      const pBot = new THREE.Mesh(sphereGeo, puffUnderMat);
-      pBot.position.set(ox * w * 0.52, oy * 8 - 0.5, oz * h * 0.48);
-      pBot.scale.set(w * 0.21 * sx, 5 * sy, h * 0.25 * sz);
-      group.add(pBot);
-    }
-
-    // Ombre portée très légère au sol qui glisse avec le nuage
-    const shadowMesh = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.8, h * 0.8), cloudShadowMat);
-    shadowMesh.rotation.x = -Math.PI / 2;
-    shadowMesh.position.set(x + 14, 0.52, z + 10);
-    scene.add(group, shadowMesh);
-
-    clouds.push({ mesh: group, shadowMesh, baseY: y, speed, phase });
+    billMesh.position.set(x, y, z);
+    scene.add(billMesh);
+    clouds.push({ mesh: billMesh, baseY: y, speed, phase });
   }
 
   // Oiseaux discrets planant en petites formations de jour
@@ -1283,22 +1222,20 @@ export function buildDayAtmosphere(scene, textures) {
     birdCount: birds.length,
     cloudCount: clouds.length,
     butterflyCount: butterflies.length,
-    update(dt, now, nightFactor) {
+    update(dt, now, nightFactor, camY = 126) {
       const dayFactor = Math.max(0, 1 - nightFactor);
       const tSec = now * 0.001;
-      cloudMat.opacity = dayFactor * 0.72;
-      puffBodyMat.opacity = dayFactor * 0.46;
-      puffUnderMat.opacity = dayFactor * 0.28;
-      cloudShadowMat.opacity = dayFactor * 0.1;
-      const showClouds = dayFactor > 0.02;
+      // Invisibles quand on consulte le jardin (< 190 m), apparaissent subtilement uniquement en haute altitude
+      const altFactor = THREE.MathUtils.clamp((camY - 190) / 240, 0, 1) *
+                        THREE.MathUtils.clamp(1 - (camY - 1400) / 1600, 0, 1);
+      cloudMat.opacity = dayFactor * altFactor * 0.48;
+      const showClouds = cloudMat.opacity > 0.015;
       for (const c of clouds) {
         c.mesh.visible = showClouds;
-        c.shadowMesh.visible = showClouds;
         if (!showClouds) continue;
         c.mesh.position.x += c.speed * dt;
-        if (c.mesh.position.x > 360) c.mesh.position.x = -360;
-        c.mesh.position.y = c.baseY + Math.sin(tSec * 0.35 + c.phase) * 0.9;
-        c.shadowMesh.position.x = c.mesh.position.x + 14;
+        if (c.mesh.position.x > 520) c.mesh.position.x = -520;
+        c.mesh.position.y = c.baseY + Math.sin(tSec * 0.3 + c.phase) * 1.2;
       }
 
       const birdAlpha = THREE.MathUtils.clamp(1 - nightFactor * 1.6, 0, 0.85);
