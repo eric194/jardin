@@ -1195,10 +1195,12 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     pushFacadeWindows(z.poly, 1.45, 2.35, 1.3, 2.2, false);
   }
 
+  const dayWinCol = new THREE.Color(0x7c7367);
+  const nightWinCol = new THREE.Color(0xffd28a);
   const winMat = new THREE.MeshBasicMaterial({
-    color: 0xffd28a,
+    color: dayWinCol.clone(),
     transparent: true,
-    opacity: 0,
+    opacity: 0.74,
     side: THREE.DoubleSide,
   });
   let winMesh = null;
@@ -1207,7 +1209,7 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     winGeo.setAttribute("position", new THREE.Float32BufferAttribute(winPositions, 3));
     winGeo.computeVertexNormals();
     winMesh = new THREE.Mesh(winGeo, winMat);
-    winMesh.visible = false;
+    winMesh.visible = true;
     scene.add(winMesh);
   }
 
@@ -1216,14 +1218,14 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
       const isNightActive = f > 0.005;
       if (poolInst.visible !== isNightActive) poolInst.visible = isNightActive;
       if (dimPoolInst && dimPoolInst.visible !== isNightActive) dimPoolInst.visible = isNightActive;
-      if (winMesh && winMesh.visible !== isNightActive) winMesh.visible = isNightActive;
       const pulse = 0.96 + 0.04 * Math.sin(now * 0.0018);
       const winPulse = 0.97 + 0.03 * Math.sin(now * 0.0012 + 1.1);
       bulbMat.emissiveIntensity = isNightActive ? f * 3.8 * pulse : 0;
       dimBulbMat.emissiveIntensity = isNightActive ? f * 1.45 * pulse : 0;
       poolMat.opacity = isNightActive ? f * 0.62 * pulse : 0;
       dimPoolMat.opacity = isNightActive ? f * 0.22 * pulse : 0;
-      winMat.opacity = isNightActive ? f * 0.82 * winPulse : 0;
+      winMat.color.lerpColors(dayWinCol, nightWinCol, f);
+      winMat.opacity = THREE.MathUtils.lerp(0.74, 0.85 * winPulse, f);
       for (const pl of focalLights) {
         if (pl.visible !== isNightActive) pl.visible = isNightActive;
         pl.intensity = isNightActive ? f * (isMobile ? 72 : 58) : 0;
