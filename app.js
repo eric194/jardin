@@ -89,6 +89,8 @@ const state = {
   isNight: false,
   nightFactor: 0,
   targetNight: 0,
+  timeOfDay: 14.5,
+  timeAnim: null,
   selectedSpaceId: null,
   hoveredSpaceId: null,
   hasInteracted: false,
@@ -125,6 +127,10 @@ function cacheDom() {
   dom.header = document.getElementById("site-header");
   dom.btnDevis = document.getElementById("btn-devis");
   dom.btnAudio = document.getElementById("btn-audio");
+  dom.timeControl = document.getElementById("time-control");
+  dom.btnTimePreset = document.getElementById("btn-time-preset");
+  dom.timeReadout = document.getElementById("time-readout");
+  dom.timeSlider = document.getElementById("time-slider");
   dom.btnTheme = document.getElementById("btn-theme");
   dom.btnViewMode = document.getElementById("btn-view-mode");
   dom.btnReset = document.getElementById("btn-reset");
@@ -1209,27 +1215,75 @@ function resetView() {
   }
 }
 
-function setNightMode(nextNight) {
-  state.isNight = Boolean(nextNight);
-  state.targetNight = state.isNight ? 1 : 0;
-  state.nightAnim = {
-    startTime: performance.now(),
-    duration: state.reducedMotion ? 1 : 1750,
-    from: state.nightFactor,
-    to: state.targetNight,
-  };
-  document.body.classList.toggle("is-night", state.isNight);
-  dom.btnTheme.setAttribute("aria-pressed", String(state.isNight));
-  dom.btnTheme.setAttribute(
+function formatTimeOfDay(hour) {
+  const clamped = THREE.MathUtils.clamp(hour, 0, 24);
+  const h = Math.floor(clamped);
+  const m = Math.round((clamped - h) * 60) % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function syncTimeUi(hour, isNight) {
+  if (dom.timeReadout) {
+    dom.timeReadout.textContent = formatTimeOfDay(hour);
+  }
+  if (dom.timeSlider && Math.abs(Number(dom.timeSlider.value) - hour) > 0.02) {
+    dom.timeSlider.value = hour.toFixed(2);
+  }
+  document.body.classList.toggle("is-night", isNight);
+  dom.btnTheme?.setAttribute("aria-pressed", String(isNight));
+  dom.btnTheme?.setAttribute(
     "aria-label",
-    state.isNight ? "Revenir à la vue jour" : "Activer la vue nuit"
+    isNight ? "Revenir à la vue jour" : "Activer la vue nuit"
   );
   if (dom.btnIntroDay && dom.btnIntroNight) {
-    dom.btnIntroDay.classList.toggle("is-active", !state.isNight);
-    dom.btnIntroDay.setAttribute("aria-pressed", String(!state.isNight));
-    dom.btnIntroNight.classList.toggle("is-active", state.isNight);
-    dom.btnIntroNight.setAttribute("aria-pressed", String(state.isNight));
+    dom.btnIntroDay.classList.toggle("is-active", !isNight);
+    dom.btnIntroDay.setAttribute("aria-pressed", String(!isNight));
+    dom.btnIntroNight.classList.toggle("is-active", isNight);
+    dom.btnIntroNight.setAttribute("aria-pressed", String(isNight));
   }
+}
+
+function setTimeOfDay(nextHour, animateTransition = false, duration = 1450) {
+  const targetH = THREE.MathUtils.clamp(Number(nextHour) || 14.5, 6, 22);
+  state.lastActiveTime = performance.now();
+  const targetNight = THREE.MathUtils.smoothstep(targetH, 18.0, 20.1);
+  state.isNight = targetNight > 0.5;
+  state.targetNight = targetNight;
+
+  if (animateTransition && !state.reducedMotion) {
+    state.nightAnim = null;
+    state.timeAnim = {
+      startTime: performance.now(),
+      duration,
+      fromHour: state.timeOfDay,
+      toHour: targetH,
+      fromNight: state.nightFactor,
+      toNight: targetNight,
+    };
+    syncTimeUi(targetH, state.isNight);
+  } else {
+    state.timeAnim = null;
+    state.nightAnim = null;
+    state.timeOfDay = targetH;
+    state.nightFactor = targetNight;
+    syncTimeUi(targetH, state.isNight);
+    applyThemeLerp(state.nightFactor, state.timeOfDay);
+  }
+}
+
+const TIME_PRESETS = [8.5, 12.5, 17.5, 21.5]; // 08:30 Matin, 12:30 Midi, 17:30 Heure dorée, 21:30 Nuit
+
+function cycleTimePreset() {
+  const cur = state.timeAnim ? state.timeAnim.toHour : state.timeOfDay;
+  let nextIdx = TIME_PRESETS.findIndex((p) => p > cur + 0.4);
+  if (nextIdx === -1) nextIdx = 0;
+  setTimeOfDay(TIME_PRESETS[nextIdx], true, 1550);
+}
+
+function setNightMode(nextNight) {
+  const targetNight = Boolean(nextNight);
+  const targetHour = targetNight ? 21.5 : 14.5;
+  setTimeOfDay(targetHour, true, 1750);
 }
 
 function openMenu() {
@@ -1339,12 +1393,40 @@ const _nightColors = {
 
 const _twilightSky = new THREE.Color(0xd8c6b4);
 const _twilightSun = new THREE.Color(0xffb46e);
+const _lastSunShadowPos = new THREE.Vector3(160, 250, 130);
 
-function applyThemeLerp(f) {
+function applyThemeLerp(f, hour = state.timeOfDay) {
   const t = themeTargets;
   if (!t.sun) return;
 
-  const twilight = Math.sin(f * Math.PI) * 0.28;
+  // Calcul de la trajectoire solaire 3D selon l'heure de la journée (06h00 Est -> 12h30 Zénith -> 19h00 Ouest)
+  const clampedDayHour = THREE.MathUtils.clamp(hour, 6.0, 19.2);
+  const solarAngle = ((clampedDayHour - 12.5) / 6.5) * (Math.PI * 0.45);
+  const sx = Math.sin(solarAngle) * 265;
+  const syDay = Math.max(38, Math.cos(solarAngle) * 268);
+  const sy = THREE.MathUtils.lerp(syDay, 68, f);
+  const sz = 92 + Math.cos(solarAngle) * 44;
+
+  t.sun.position.set(sx, sy, sz);
+  if (t.fill) {
+    t.fill.position.set(-sx * 0.72, Math.max(75, sy * 0.55), -sz);
+  }
+
+  // Recalculer l'ombre portée uniquement lorsque le soleil se déplace (0 coût par frame au repos !)
+  if (renderer && _lastSunShadowPos.distanceToSquared(t.sun.position) > 0.35) {
+    _lastSunShadowPos.copy(t.sun.position);
+    renderer.shadowMap.needsUpdate = true;
+  }
+
+  // Chaleur dorée du matin (06h-09h) et de fin d'après-midi / crépuscule (16h15-19h30)
+  const lowSunWarmth =
+    (1 - f) *
+    Math.max(
+      0,
+      Math.max(1 - Math.max(0, hour - 6.2) / 2.8, Math.max(0, hour - 15.8) / 3.0)
+    );
+  const twilight = Math.max(Math.sin(f * Math.PI) * 0.3, lowSunWarmth * 0.38);
+
   scene.background.lerpColors(_dayColors.sky, _nightColors.sky, f);
   if (twilight > 0.005) {
     scene.background.lerp(_twilightSky, twilight);
@@ -1368,13 +1450,13 @@ function applyThemeLerp(f) {
 
   t.sun.color.lerpColors(_dayColors.sun, _nightColors.sun, f);
   if (twilight > 0.005) {
-    t.sun.color.lerp(_twilightSun, twilight * 1.4);
+    t.sun.color.lerp(_twilightSun, Math.min(0.85, twilight * 1.55));
   }
-  t.sun.position.y = THREE.MathUtils.lerp(250, 78, f);
-  t.sun.intensity = THREE.MathUtils.lerp(1.18, 0.36, f);
+  const zenithBoost = Math.cos(solarAngle) * 0.14 * (1 - f);
+  t.sun.intensity = THREE.MathUtils.lerp(1.12 + zenithBoost, 0.36, f);
   t.hemi.color.lerpColors(_dayColors.hemiSky, _nightColors.hemiSky, f);
   t.hemi.groundColor.lerpColors(_dayColors.hemiGround, _nightColors.hemiGround, f);
-  t.hemi.intensity = THREE.MathUtils.lerp(1.1, 0.42, f);
+  t.hemi.intensity = THREE.MathUtils.lerp(1.08, 0.42, f);
   t.fill.intensity = THREE.MathUtils.lerp(0.32, 0.14, f);
   renderer.toneMappingExposure = THREE.MathUtils.lerp(1.04, 0.95, f);
 
@@ -1490,6 +1572,10 @@ function bindEvents() {
     dossierCtrl?.openDevis();
   });
   dom.btnTheme.addEventListener("click", () => setNightMode(!state.isNight));
+  dom.btnTimePreset?.addEventListener("click", cycleTimePreset);
+  dom.timeSlider?.addEventListener("input", (e) => {
+    setTimeOfDay(parseFloat(e.target.value), false);
+  });
   dom.btnAudio?.addEventListener("click", () => audioCtrl?.toggle());
   dom.btnViewMode.addEventListener("click", togglePlanView);
   dom.btnReset.addEventListener("click", resetView);
@@ -1728,10 +1814,14 @@ function animate(now) {
     return;
   }
 
-  // Régulation thermique intelligente sur téléphone : 60 FPS pleins pendant toute transition (zoom carte, vol, Jour/Nuit),
+  // Régulation thermique intelligente sur téléphone : 60 FPS pleins pendant toute transition (zoom carte, vol, Jour/Nuit, heure du soleil),
   // économie d'énergie uniquement au repos
   const rawElapsed = now - lastFrameTime;
-  const inTransition = Boolean(state.satZoom) || Boolean(state.fly) || Boolean(state.nightAnim);
+  const inTransition =
+    Boolean(state.satZoom) ||
+    Boolean(state.fly) ||
+    Boolean(state.nightAnim) ||
+    Boolean(state.timeAnim);
   if (state.isMobile && !inTransition) {
     const isInteracting = now - state.lastActiveTime < 1800;
     const minInterval = isInteracting ? 20 : 34;
@@ -1747,15 +1837,30 @@ function animate(now) {
     windUniforms.uWindTime.value = now * 0.001;
   }
 
-  // Transition fluide Jour <-> Nuit avec allumage en vague des lampadaires
-  if (state.nightAnim) {
+  // Transition fluide de l'heure de la journée (Course du Soleil) et Jour <-> Nuit avec allumage en vague des lampadaires
+  if (state.timeAnim) {
+    const tp = Math.min(1, (now - state.timeAnim.startTime) / state.timeAnim.duration);
+    const tk = 0.5 - 0.5 * Math.cos(Math.PI * tp);
+    state.timeOfDay = state.timeAnim.fromHour + (state.timeAnim.toHour - state.timeAnim.fromHour) * tk;
+    state.nightFactor =
+      state.timeAnim.fromNight + (state.timeAnim.toNight - state.timeAnim.fromNight) * tk;
+    syncTimeUi(state.timeOfDay, state.isNight);
+    applyThemeLerp(state.nightFactor, state.timeOfDay);
+    if (tp >= 1) {
+      state.timeOfDay = state.timeAnim.toHour;
+      state.nightFactor = state.timeAnim.toNight;
+      syncTimeUi(state.timeOfDay, state.isNight);
+      applyThemeLerp(state.nightFactor, state.timeOfDay);
+      state.timeAnim = null;
+    }
+  } else if (state.nightAnim) {
     const np = Math.min(1, (now - state.nightAnim.startTime) / state.nightAnim.duration);
     const nk = 0.5 - 0.5 * Math.cos(Math.PI * np);
     state.nightFactor = state.nightAnim.from + (state.nightAnim.to - state.nightAnim.from) * nk;
-    applyThemeLerp(state.nightFactor);
+    applyThemeLerp(state.nightFactor, state.timeOfDay);
     if (np >= 1) {
       state.nightFactor = state.nightAnim.to;
-      applyThemeLerp(state.nightFactor);
+      applyThemeLerp(state.nightFactor, state.timeOfDay);
       state.nightAnim = null;
     }
   } else if (state.nightFactor > 0.01 && lightingCtrl && !state.reducedMotion) {
