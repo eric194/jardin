@@ -28,6 +28,7 @@ import {
   buildLightingNetwork,
 } from "./js/living.js";
 import { createDossierController } from "./js/dossier.js";
+import { createParkAudioController } from "./js/audio.js";
 
 function getOverviewCam() {
   const aspect = window.innerWidth / Math.max(1, window.innerHeight);
@@ -91,6 +92,7 @@ const state = {
   hoveredSpaceId: null,
   hasInteracted: false,
   guideOpen: false,
+  audioEnabled: false,
   reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   fly: null,
   pointerDownPos: null,
@@ -118,6 +120,7 @@ function cacheDom() {
   dom.btnIntroNight = document.getElementById("btn-intro-night");
   dom.header = document.getElementById("site-header");
   dom.btnDevis = document.getElementById("btn-devis");
+  dom.btnAudio = document.getElementById("btn-audio");
   dom.btnTheme = document.getElementById("btn-theme");
   dom.btnViewMode = document.getElementById("btn-view-mode");
   dom.btnReset = document.getElementById("btn-reset");
@@ -262,6 +265,7 @@ let pedestrianCtrl;
 let lightingCtrl;
 let atmosphereCtrl;
 let dossierCtrl;
+let audioCtrl;
 
 const raycaster = new THREE.Raycaster();
 const markerGroups = [];
@@ -850,6 +854,7 @@ function enterExperience() {
   dom.spaceLabels.setAttribute("aria-hidden", "false");
   dom.distanceHud.classList.add("is-visible");
   controls.enabled = true;
+  audioCtrl?.setEnabled(true);
   const ov = getOverviewCam();
   flyTo(ov.pos, ov.target, 1150);
 }
@@ -1229,6 +1234,7 @@ function bindEvents() {
     dossierCtrl?.openDevis();
   });
   dom.btnTheme.addEventListener("click", () => setNightMode(!state.isNight));
+  dom.btnAudio?.addEventListener("click", () => audioCtrl?.toggle());
   dom.btnViewMode.addEventListener("click", togglePlanView);
   dom.btnReset.addEventListener("click", resetView);
   dom.btnGuide?.addEventListener("click", toggleNavGuide);
@@ -1370,6 +1376,11 @@ function bindEvents() {
       return;
     }
 
+    if (e.key === "m" || e.key === "M") {
+      audioCtrl?.toggle();
+      return;
+    }
+
     if ((e.key === "h" || e.key === "H" || e.key === "?") && !state.isIntro && !dossierCtrl?.isOpen()) {
       toggleNavGuide();
       return;
@@ -1432,6 +1443,7 @@ function bindEvents() {
         isPlanView: state.isPlanView,
         isNight: state.isNight,
         guideOpen: state.guideOpen,
+        audioEnabled: state.audioEnabled,
         nightFactor: Number(state.nightFactor.toFixed(2)),
         selectedSpaceId: state.selectedSpaceId,
         hoveredSpaceId: state.hoveredSpaceId,
@@ -1630,9 +1642,12 @@ function animate(now) {
     }
   });
 
-  // Nuages subtils, papillons et oiseaux en vue jour
+  // Nuages subtils, papillons et oiseaux en vue jour + ambiance sonore spatialisée
   if (atmosphereCtrl) {
     atmosphereCtrl.update(state.reducedMotion ? 0 : dt, now, state.nightFactor);
+  }
+  if (audioCtrl && camera) {
+    audioCtrl.update(now, camera.position, state.nightFactor);
   }
 
   // Étiquettes translucides, indice de distance et boussole
@@ -1664,6 +1679,16 @@ async function init() {
     buildScene(state.data, thiesMapTex);
     buildSpaceLabels(state.data.spaces);
     buildMenu();
+    audioCtrl = createParkAudioController({
+      onStateChange: (on) => {
+        state.audioEnabled = on;
+        dom.btnAudio?.setAttribute("aria-pressed", String(on));
+        dom.btnAudio?.setAttribute(
+          "aria-label",
+          on ? "Couper l'ambiance sonore du parc" : "Activer l'ambiance sonore du parc"
+        );
+      },
+    });
     dossierCtrl = createDossierController({
       devisModal: dom.devisModal,
       spacePageModal: dom.spacePageModal,

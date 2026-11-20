@@ -242,19 +242,31 @@ export function createLightPoolTexture() {
 export function createCloudTexture() {
   const [canvas, ctx] = makeCanvas(512, 256);
   const puffs = [
-    [256, 128, 120, 0.34],
-    [165, 138, 86, 0.28],
-    [348, 136, 90, 0.28],
-    [215, 102, 74, 0.26],
-    [300, 104, 72, 0.24],
-    [118, 150, 56, 0.18],
-    [396, 148, 56, 0.18],
+    [256, 132, 128, 0.72],
+    [156, 142, 96, 0.62],
+    [356, 140, 100, 0.62],
+    [210, 96, 86, 0.56],
+    [306, 100, 84, 0.54],
+    [104, 154, 68, 0.42],
+    [408, 152, 68, 0.42],
   ];
+  // Halo inférieur doux pour donner du volume aux nuages sur fond clair #f8f6f2
   for (const [x, y, r, a] of puffs) {
-    const grad = ctx.createRadialGradient(x, y, r * 0.12, x, y, r);
-    grad.addColorStop(0, `rgba(255, 253, 248, ${a})`);
-    grad.addColorStop(0.55, `rgba(250, 247, 240, ${a * 0.48})`);
-    grad.addColorStop(1, "rgba(250, 247, 240, 0)");
+    const sh = ctx.createRadialGradient(x, y + r * 0.22, r * 0.08, x, y + r * 0.22, r * 1.05);
+    sh.addColorStop(0, `rgba(182, 174, 160, ${a * 0.42})`);
+    sh.addColorStop(0.6, `rgba(198, 190, 176, ${a * 0.22})`);
+    sh.addColorStop(1, "rgba(216, 208, 194, 0)");
+    ctx.fillStyle = sh;
+    ctx.beginPath();
+    ctx.arc(x, y + r * 0.22, r * 1.05, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Cœur blanc crème lumineux du nuage
+  for (const [x, y, r, a] of puffs) {
+    const grad = ctx.createRadialGradient(x, y - r * 0.08, r * 0.1, x, y, r);
+    grad.addColorStop(0, `rgba(255, 255, 255, ${a})`);
+    grad.addColorStop(0.58, `rgba(244, 239, 230, ${a * 0.65})`);
+    grad.addColorStop(1, "rgba(240, 234, 224, 0)");
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);

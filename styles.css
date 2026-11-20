@@ -628,8 +628,17 @@ body.is-night .icon-btn:hover {
   color: var(--bg);
 }
 
-.icon-sun {
+.icon-sun,
+.icon-sound-on {
   display: none;
+}
+
+#btn-audio[aria-pressed="true"] .icon-sound-off {
+  display: none;
+}
+
+#btn-audio[aria-pressed="true"] .icon-sound-on {
+  display: block;
 }
 
 body.is-night #btn-theme .icon-moon {
