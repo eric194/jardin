@@ -1587,7 +1587,8 @@ function animate(now) {
   scene.fog.near = Math.max(420, camY * 2.2);
   scene.fog.far = Math.max(1250, camY * 5.2);
   if (thiesBackdrop?.material) {
-    const op = THREE.MathUtils.clamp((camY - 310) / 680, 0, 1);
+    const rawOp = THREE.MathUtils.clamp((camY - 900) / 1400, 0, 1);
+    const op = rawOp * rawOp * (3 - 2 * rawOp);
     thiesBackdrop.material.opacity = op;
     thiesBackdrop.mesh.visible = op > 0.01;
     thiesBackdrop.updateBeacon?.(now, op);

@@ -42,7 +42,6 @@ function pointNearPoly2D(pt, poly, margin) {
 }
 
 export function buildThiesBackdrop(scene, textures) {
-  const group = new THREE.Group();
   const geo = new THREE.PlaneGeometry(11000, 11000);
   geo.rotateX(-Math.PI / 2);
   const mat = new THREE.MeshBasicMaterial({
@@ -58,51 +57,15 @@ export function buildThiesBackdrop(scene, textures) {
   });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.set(0, 0.002, 0);
-  group.add(mesh);
+  scene.add(mesh);
 
-  // Balises animées centrées exactement sur Thiès (0, 0) pendant l'approche cartographique
-  const beaconMatA = new THREE.MeshBasicMaterial({
-    color: 0xa64234,
-    transparent: true,
-    opacity: 0,
-    side: THREE.DoubleSide,
-    depthWrite: false,
-    depthTest: false,
-    toneMapped: false,
-    fog: false,
-  });
-  const beaconMatB = beaconMatA.clone();
-  const ringA = new THREE.Mesh(new THREE.RingGeometry(82, 112, 48), beaconMatA);
-  ringA.rotation.x = -Math.PI / 2;
-  ringA.position.set(0, 1.8, 0);
-  ringA.renderOrder = 51;
-  const ringB = new THREE.Mesh(new THREE.RingGeometry(82, 108, 48), beaconMatB);
-  ringB.rotation.x = -Math.PI / 2;
-  ringB.position.set(0, 1.85, 0);
-  ringB.renderOrder = 51;
-  group.add(ringA, ringB);
-
-  scene.add(group);
   return {
-    mesh: group,
+    mesh,
     material: mat,
-    updateBeacon(now, mapOpacity) {
-      const show = mapOpacity > 0.04;
-      ringA.visible = show;
-      ringB.visible = show;
+    updateBeacon(_now, mapOpacity) {
       const overlayTop = mapOpacity >= 0.72;
       mat.depthTest = !overlayTop;
       mesh.renderOrder = overlayTop ? 50 : 0;
-      if (!show) return;
-      const t = now * 0.00055;
-      const pA = t % 1;
-      const pB = (t + 0.5) % 1;
-      const sA = 1.0 + pA * 2.2;
-      const sB = 1.0 + pB * 2.2;
-      ringA.scale.set(sA, sA, 1);
-      ringB.scale.set(sB, sB, 1);
-      beaconMatA.opacity = (1 - pA) * mapOpacity * 0.48;
-      beaconMatB.opacity = (1 - pB) * mapOpacity * 0.48;
     },
   };
 }

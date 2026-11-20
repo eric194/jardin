@@ -76,18 +76,10 @@ export function createThiesMapTexture() {
   ctx.lineTo(980, 1460);
   ctx.stroke();
 
-  // Cible exacte sur Thiès (1024, 1024)
-  ctx.strokeStyle = "rgba(166, 66, 52, 0.35)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(1024, 1024, 42, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(1024, 1024, 18, 0, Math.PI * 2);
-  ctx.stroke();
+  // Point de Thiès sobre en (1024, 1024)
   ctx.fillStyle = "#a64234";
   ctx.beginPath();
-  ctx.arc(1024, 1024, 7, 0, Math.PI * 2);
+  ctx.arc(1024, 1024, 6, 0, Math.PI * 2);
   ctx.fill();
 
   const tex = new THREE.CanvasTexture(canvas);
