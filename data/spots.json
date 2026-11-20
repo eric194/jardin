@@ -1,0 +1,139 @@
+{
+  "meta": {
+    "title": "Parc linéaire de Thiès",
+    "subtitle": "Un ruban de ville, 500 mètres de vie.",
+    "reference": "DQE202611-THS-PARC",
+    "date": "19 novembre 2026",
+    "surface": "25 000 m²",
+    "length": "500 m",
+    "width": "50 m"
+  },
+  "boards": {
+    "park": {
+      "label": "Parc linéaire",
+      "dimensions": "500 × 50 m",
+      "image": "assets/img/plan-park.png",
+      "width": 2660,
+      "height": 295
+    },
+    "parking": {
+      "label": "Parking + cantines",
+      "dimensions": "390 × 20 m",
+      "image": "assets/img/plan-parking.png",
+      "width": 1620,
+      "height": 145
+    }
+  },
+  "spots": [
+    {
+      "id": "sport",
+      "number": "01",
+      "board": "park",
+      "x": 17.5,
+      "y": 57,
+      "category": "sport",
+      "title": "Terrains de sport",
+      "surface": "5 363,77 m²",
+      "lot": "Lot 5",
+      "description": "Football, handball, basket, padel, tennis, arts martiaux, fitness et pétanque. Buts, panneaux, filets et courts sont fournis et posés."
+    },
+    {
+      "id": "piste",
+      "number": "02",
+      "board": "park",
+      "x": 8.5,
+      "y": 84,
+      "category": "sport",
+      "title": "Piste d'athlétisme",
+      "surface": "3 068,28 m²",
+      "lot": "Lot 5",
+      "description": "Un anneau périphérique de 3 m de large, avec un couloir de sprint. Revêtement coulé, bordures et tracés des couloirs compris."
+    },
+    {
+      "id": "eau",
+      "number": "03",
+      "board": "park",
+      "x": 43.5,
+      "y": 55,
+      "category": "eau",
+      "title": "Piscines & bassin",
+      "surface": "1 381,95 m²",
+      "lot": "Lot 4",
+      "description": "Deux piscines, un bassin et son jet d'eau, une fontaine. Filtration, étanchéité, carrelage antidérapant et traitement automatique."
+    },
+    {
+      "id": "jeux",
+      "number": "04",
+      "board": "park",
+      "x": 54.5,
+      "y": 65,
+      "category": "enfance",
+      "title": "Aire de jeux enfants",
+      "surface": "1 967,62 m²",
+      "lot": "Lot 6",
+      "description": "Six agrès conformes EN 1176, sol amortissant EPDM, voiles d'ombrage, clôture et plateau de fitness extérieur."
+    },
+    {
+      "id": "theatre",
+      "number": "05",
+      "board": "park",
+      "x": 51.5,
+      "y": 84,
+      "category": "culture",
+      "title": "Théâtre de verdure",
+      "surface": "758,38 m² de gradins",
+      "lot": "Lot 8",
+      "description": "Gradins engazonnés, scène et murs de soutènement. Un équipement culturel ouvert sur le parvis central."
+    },
+    {
+      "id": "jardin",
+      "number": "06",
+      "board": "park",
+      "x": 79,
+      "y": 55,
+      "category": "jardin",
+      "title": "Jardin & pique-nique",
+      "surface": "7 739,99 m²",
+      "lot": "Lot 7",
+      "description": "Pelouse, jardins plantés et parterres. 158 arbres, 3 838 arbustes, 300 ml de haies et un arrosage automatique."
+    },
+    {
+      "id": "entree",
+      "number": "07",
+      "board": "park",
+      "x": 51.5,
+      "y": 9,
+      "category": "entree",
+      "title": "Entrée principale",
+      "surface": "Parvis · 396,55 m²",
+      "lot": "Lots 3 & 10",
+      "description": "Parvis en béton désactivé, accès principal, portail coulissant motorisé de 8 m et cheminements accessibles."
+    },
+    {
+      "id": "parking",
+      "number": "08",
+      "board": "parking",
+      "x": 56,
+      "y": 50,
+      "category": "parking",
+      "title": "Parking & cantines",
+      "surface": "7 800,00 m²",
+      "lot": "Lot 13",
+      "description": "312 places, 43 cantines en conteneurs, 14 mâts d'éclairage et 780 ml de caniveaux. Un village qui prolonge le parc."
+    }
+  ],
+  "filters": [
+    { "id": "all", "label": "Tout" },
+    { "id": "sport", "label": "Sport" },
+    { "id": "eau", "label": "Eau" },
+    { "id": "enfance", "label": "Enfance" },
+    { "id": "jardin", "label": "Jardin" },
+    { "id": "parking", "label": "Village" }
+  ],
+  "stats": [
+    { "value": "25 000", "unit": "m²", "label": "de parc" },
+    { "value": "500 × 50", "unit": "m", "label": "d'emprise" },
+    { "value": "43", "unit": "", "label": "cantines" },
+    { "value": "3,15", "unit": "Mds", "label": "FCFA TTC" }
+  ]
+}

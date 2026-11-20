@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jardin Grand Standing de Thiès — Carte 3D Interactive</title>
+  <meta name="description" content="Maquette 3D interactive du Jardin Grand Standing de Thiès (14°46'51.2&quot;N 16°56'54.5&quot;W). Explorez chaque espace en trois dimensions.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23f8f6f2'/%3E%3Ccircle cx='16' cy='16' r='9' fill='%23efe8dc' stroke='%23161513' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23a64234'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./assets/vendor/three.module.min.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="scene-canvas" aria-label="Maquette 3D interactive du Jardin Grand Standing de Thiès"></canvas>
+
+  <!-- Curseur minimaliste bureau -->
+  <div id="cursor-ring" class="cursor-ring" aria-hidden="true"></div>
+
+  <!-- Étiquettes translucides des noms de zones au-dessus des 12 points 3D -->
+  <div id="space-labels" class="space-labels" aria-hidden="true"></div>
+
+  <!-- Indicateur d'altitude pendant le zoom cartographique initial -->
+  <div id="sat-banner" class="sat-banner is-visible" aria-hidden="true">
+    <p id="sat-altitude" class="sat-altitude">RÉGION DE THIÈS · CARTE → CENTRE-VILLE</p>
+  </div>
+
+  <!-- Accueil épuré : Explorer en haut, Jour/Nuit au milieu, Entités en dessous -->
+  <section id="intro" class="intro" aria-labelledby="intro-title">
+    <div class="intro-inner">
+      <p class="intro-coords">14°46'51.2"N · 16°56'54.5"W — THIÈS</p>
+      <h1 id="intro-title" class="intro-title">Jardin Grand Standing <span>de Thiès</span></h1>
+      <p class="intro-sub">Découvrez chaque espace en trois dimensions.</p>
+      <div class="intro-actions">
+        <button type="button" id="btn-explore" class="pill-btn">Explorer</button>
+        <div class="theme-switch" role="group" aria-label="Ambiance lumineuse">
+          <button type="button" id="btn-intro-day" class="theme-switch-btn is-active" aria-pressed="true">Jour</button>
+          <button type="button" id="btn-intro-night" class="theme-switch-btn" aria-pressed="false">Nuit</button>
+        </div>
+      </div>
+
+      <div class="intro-partners" aria-label="Entités du projet">
+        <div class="partner-item">
+          <div class="partner-logo-box"><img src="assets/logos/mairie-thies.png" alt="Logo Mairie de Thiès"></div>
+          <strong class="partner-name">Mairie de Thiès</strong>
+        </div>
+        <div class="partner-item">
+          <div class="partner-logo-box"><img src="assets/logos/ert.png" alt="Logo ERT"></div>
+          <strong class="partner-name">ERT</strong>
+        </div>
+        <div class="partner-item">
+          <div class="partner-logo-box"><img src="assets/logos/dieylani.png" alt="Logo DIEYLANI"></div>
+          <strong class="partner-name">DIEYLANI</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- En-tête minimal (visible après Explorer, masqué en gros plan) -->
+  <header id="site-header" class="site-header" aria-hidden="true">
+    <div class="header-brand">
+      <span class="brand-title">Jardin Grand Standing</span>
+      <span class="brand-coords">Thiès · 14°46'51.2"N 16°56'54.5"W</span>
+    </div>
+
+    <div class="header-actions">
+      <button type="button" id="btn-devis" class="devis-nav-btn" aria-label="Consulter le devis estimatif" title="Consulter le devis estimatif">
+        <svg width="15" height="15" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <rect x="3.5" y="2.5" width="11" height="13" rx="1.6" stroke="currentColor" stroke-width="1.35"/>
+          <path d="M6 6.5h6M6 9.5h6M6 12.5h4" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+        </svg>
+        <span>Devis</span>
+      </button>
+
+      <button type="button" id="btn-theme" class="icon-btn" aria-label="Activer la vue nuit" aria-pressed="false" title="Vue jour / nuit (N)">
+        <svg class="icon-moon" width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <path d="M14.2 10.9A5.8 5.8 0 0 1 7.1 3.8a5.8 5.8 0 1 0 7.1 7.1Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>
+        </svg>
+        <svg class="icon-sun" width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <circle cx="9" cy="9" r="3.4" stroke="currentColor" stroke-width="1.35"/>
+          <path d="M9 2v1.6M9 14.4V16M2 9h1.6M14.4 9H16M4.05 4.05l1.13 1.13M12.82 12.82l1.13 1.13M13.95 4.05l-1.13 1.13M5.18 12.82l-1.13 1.13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <button type="button" id="btn-view-mode" class="icon-btn" aria-label="Basculer en vue plan zénithale" aria-pressed="false" title="Vue plan / 3D">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <rect x="2.5" y="4" width="13" height="10" rx="1.5" stroke="currentColor" stroke-width="1.35"/>
+          <path d="M2.5 9h13M9 4v10" stroke="currentColor" stroke-width="1.15" opacity="0.6"/>
+        </svg>
+      </button>
+
+      <button type="button" id="btn-reset" class="icon-btn" aria-label="Recentrer la vue d'ensemble" title="Recentrer">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <circle cx="9" cy="9" r="5" stroke="currentColor" stroke-width="1.35"/>
+          <path d="M9 2v2M9 14v2M2 9h2M14 9h2" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <button type="button" id="btn-guide" class="icon-btn" aria-label="Guide de navigation" aria-expanded="false" aria-controls="nav-guide" title="Guide de navigation (?)">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <circle cx="9" cy="9" r="6.2" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M7.3 7.1a1.85 1.85 0 0 1 3.45.95c0 1.05-1.45 1.35-1.45 2.35" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <circle cx="9.3" cy="12.6" r="0.75" fill="currentColor"/>
+        </svg>
+      </button>
+
+      <button type="button" id="btn-menu" class="icon-btn" aria-label="Ouvrir la liste des espaces" aria-expanded="false" aria-controls="menu-overlay" title="Espaces">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <path d="M3 5.5h12M3 9h12M3 12.5h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Guide de navigation souris & tactile -->
+  <aside id="nav-guide" class="nav-guide" role="dialog" aria-modal="false" aria-hidden="true" aria-label="Guide de navigation">
+    <div class="nav-guide-head">
+      <div>
+        <span class="nav-guide-kicker">Contrôles 3D</span>
+        <h2>Guide de navigation</h2>
+      </div>
+      <button type="button" id="btn-close-guide" class="card-close" aria-label="Fermer le guide">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M3.5 3.5l9 9m0-9l-9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <ul class="guide-list guide-list--desktop">
+      <li class="guide-item">
+        <span class="guide-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><rect x="4.5" y="2.2" width="9" height="13.6" rx="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M9 2.2v5.2H4.5" stroke="currentColor" stroke-width="1.3"/><path d="M6.7 3.6h1.3v2.5H5.8V4.6a1 1 0 0 1 .9-1Z" fill="currentColor" opacity="0.35"/></svg>
+        </span>
+        <div>
+          <strong>Clic gauche + glisser</strong>
+          <span>Pivoter librement autour du jardin</span>
+        </div>
+      </li>
+      <li class="guide-item">
+        <span class="guide-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><rect x="4.5" y="2.2" width="9" height="13.6" rx="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M9 2.2v5.2h4.5" stroke="currentColor" stroke-width="1.3"/><path d="M10 3.6h1.3a1 1 0 0 1 .9 1v1.5H10V3.6Z" fill="currentColor" opacity="0.35"/></svg>
+        </span>
+        <div>
+          <strong>Clic droit ou <kbd>Maj</kbd> + glisser</strong>
+          <span>Déplacer la vue latéralement</span>
+        </div>
+      </li>
+      <li class="guide-item">
+        <span class="guide-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M9 6.2v5.6M6.8 8.3 9 6.1l2.2 2.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <div>
+          <strong>Molette ou double-clic</strong>
+          <span>Zoomer · Avancer vers un point précis</span>
+        </div>
+      </li>
+      <li class="guide-item">
+        <span class="guide-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="7.5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M9 10.5v5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </span>
+        <div>
+          <strong>Survol · Clic sur un repère</strong>
+          <span>Afficher le nom · Ouvrir la fiche d'espace</span>
+        </div>
+      </li>
+      <li class="guide-item">
+        <span class="guide-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><rect x="2.5" y="4.5" width="13" height="9" rx="1.8" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 8h1.5M8.2 8h1.6M11 8h1.5M6.5 10.8h5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>
+        </span>
+        <div>
+          <strong><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> ou Flèches · <kbd>N</kbd></strong>
+          <span>Parcourir les allées · Basculer Jour / Nuit</span>
+        </div>
+      </li>
+    </ul>
+
+    <ul class="guide-list guide-list--touch">
+      <li class="guide-item">
+        <span class="guide-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="6.5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 13.5c1.2-1.8 6.8-1.8 8 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </span>
+        <div>
+          <strong>1 doigt + glisser</strong>
+          <span>Pivoter autour du parc</span>
+        </div>
+      </li>
+      <li class="guide-item">
+        <span class="guide-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><circle cx="6.2" cy="7.5" r="2" stroke="currentColor" stroke-width="1.3"/><circle cx="11.8" cy="7.5" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M4.2 12.5h9.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </span>
+        <div>
+          <strong>2 doigts (pincer ou glisser)</strong>
+          <span>Zoomer et déplacer la vue</span>
+        </div>
+      </li>
+      <li class="guide-item">
+        <span class="guide-icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="7.5" r="3" stroke="currentColor" stroke-width="1.3"/><path d="M9 10.5v5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </span>
+        <div>
+          <strong>Toucher un repère terracotta</strong>
+          <span>Ouvrir la fiche d'espace et le devis</span>
+        </div>
+      </li>
+    </ul>
+  </aside>
+
+  <!-- Indice de geste discret -->
+  <div id="gesture-hint" class="gesture-hint" aria-hidden="true">
+    <span class="hint-desktop">Glisser pour pivoter · Molette pour zoomer · Guide (?)</span>
+    <span class="hint-touch">1 doigt pour pivoter · 2 doigts pour zoomer · Guide (?)</span>
+  </div>
+
+  <!-- Fiche d'espace (strictement invisible avant de cliquer un élément) -->
+  <aside id="space-card" class="space-card" aria-live="polite" aria-hidden="true">
+    <div class="card-handle" aria-hidden="true"><span></span></div>
+
+    <div class="card-head">
+      <div class="card-meta">
+        <span id="card-index" class="card-index">01 / 12</span>
+        <span id="card-category" class="card-category">Sport</span>
+      </div>
+      <button type="button" id="btn-close-card" class="card-close" aria-label="Fermer la fiche">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M3.5 3.5l9 9m0-9l-9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <h2 id="card-title" class="card-title">Terrain de Football &amp; Piste</h2>
+    <p id="card-metric" class="card-metric">1 500 m² · Piste 3 068,28 m²</p>
+    <p id="card-summary" class="card-summary"></p>
+
+    <ul id="card-highlights" class="card-highlights"></ul>
+
+    <p id="card-lot" class="card-lot"></p>
+
+    <div class="card-foot">
+      <div class="card-steppers">
+        <button type="button" id="btn-prev-space" class="step-btn" aria-label="Espace précédent">←</button>
+        <button type="button" id="btn-next-space" class="step-btn" aria-label="Espace suivant">→</button>
+      </div>
+      <div class="card-actions">
+        <button type="button" id="btn-space-more" class="pill-btn pill-btn--sm pill-btn--accent">Voir plus</button>
+        <button type="button" id="btn-back-to-map" class="pill-btn pill-btn--sm">Plan</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Voile menu minimal des 12 espaces -->
+  <div id="menu-overlay" class="menu-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Index des espaces du jardin">
+    <button type="button" id="btn-close-menu" class="icon-btn menu-close" aria-label="Fermer le menu">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M3.5 3.5l9 9m0-9l-9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+
+    <div class="menu-content">
+      <p class="menu-kicker">14°46'51.2"N 16°56'54.5"W · Thiès</p>
+      <nav aria-label="Liste des 12 espaces">
+        <ul id="menu-spaces-list" class="menu-list"></ul>
+      </nav>
+
+      <footer class="menu-footer">
+        <div class="menu-partners">
+          <strong>Mairie de Thiès</strong>
+          <span>·</span>
+          <strong>ERT</strong>
+          <span>·</span>
+          <strong>DIEYLANI</strong>
+        </div>
+        <p class="menu-totals">3 171 908 028 FCFA HT · 3 742 851 473 FCFA TTC · <button type="button" id="btn-menu-devis" class="menu-inline-link">Consulter le devis</button> · <a href="downloads/DQE202611-THS-PARC.pdf" download="DQE202611-THS-PARC.pdf">DQE PDF</a></p>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Page dédiée de l'espace (détails, budget, commodités) -->
+  <div id="space-page" class="dossier-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Fiche détaillée de l'espace"></div>
+
+  <!-- Vue complète de consultation du devis -->
+  <div id="devis-modal" class="dossier-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Consultation du devis estimatif et quantitatif"></div>
+
+  <!-- Indicateur d'échelle et de distance dynamique -->
+  <div id="distance-hud" class="distance-hud" aria-hidden="true">
+    <div class="scale-ruler">
+      <span id="scale-bar-line" class="scale-bar-line"></span>
+      <span id="scale-bar-label" class="scale-bar-label">50 m</span>
+    </div>
+    <span id="distance-readout" class="distance-readout">Alt. 126 m</span>
+  </div>
+
+  <!-- Boussole dynamique en bas à droite -->
+  <div id="compass" class="compass" aria-hidden="true" title="Orientation Nord">
+    <svg id="compass-svg" width="38" height="38" viewBox="0 0 40 40" fill="none">
+      <circle cx="20" cy="20" r="17" stroke="currentColor" stroke-width="1" opacity="0.28"/>
+      <path d="M20 7l2.6 11L20 20l-2.6-2L20 7z" fill="#a64234"/>
+      <path d="M20 33l-2.6-11L20 20l2.6 2L20 33z" fill="currentColor" opacity="0.28"/>
+      <text x="20" y="5.2" text-anchor="middle" font-family="Manrope, sans-serif" font-size="6" font-weight="600" fill="currentColor">N</text>
+    </svg>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,1474 @@
+{
+  "meta": {
+    "title": "Parc linéaire de Thiès",
+    "subtitle": "Un ruban de ville, 500 mètres de vie.",
+    "reference": "DQE202611-THS-PARC",
+    "date": "19/11/2026",
+    "dateLabel": "19 novembre 2026",
+    "status": "Estimation préliminaire",
+    "city": "Thiès",
+    "country": "Sénégal",
+    "master": "DIEYLANI AER – SASU",
+    "masterMeta": "NINEA 011216472 · RC SN.DKR.2024.B.9214",
+    "client": "Maître d'ouvrage à désigner"
+  },
+  "site": {
+    "length": 500.0,
+    "width": 50.0,
+    "area": 25000.0,
+    "perimeter": 1100.0,
+    "zonesCount": 107,
+    "zonesArea": 31598.12,
+    "parkZonesArea": 23798.12,
+    "parkingLength": 390.0,
+    "parkingWidth": 20.0,
+    "parkingArea": 7800.0,
+    "parkingSpaces": 312,
+    "containers": 43
+  },
+  "totals": {
+    "ht": 2667060155,
+    "tva": 480070828,
+    "tvaRate": 18,
+    "ttc": 3147130983
+  },
+  "zones": [
+    {
+      "key": "sport",
+      "value": 5363.77,
+      "label": "Terrains de sport",
+      "detail": "Football, handball, basket, padel, tennis, arts martiaux, fitness, pétanque."
+    },
+    {
+      "key": "piste",
+      "value": 3068.28,
+      "label": "Piste d'athlétisme",
+      "detail": "Anneau extérieur et couloir de sprint."
+    },
+    {
+      "key": "vert",
+      "value": 7739.99,
+      "label": "Espaces verts",
+      "detail": "Pelouse 3 975,53 + jardins plantés 3 198,22 + parterres 566,24."
+    },
+    {
+      "key": "jeux",
+      "value": 1967.62,
+      "label": "Jeux enfants",
+      "detail": "Six agrès, sols amortissants, ombrage et clôture."
+    },
+    {
+      "key": "eau",
+      "value": 1381.95,
+      "label": "Plans d'eau",
+      "detail": "Deux piscines, bassin et jet d'eau, fontaine."
+    },
+    {
+      "key": "paves",
+      "value": 2547.93,
+      "label": "Pavés",
+      "detail": "Aires de repos et cheminements en pierre naturelle."
+    },
+    {
+      "key": "beton",
+      "value": 396.55,
+      "label": "Béton désactivé",
+      "detail": "Parvis et entrées."
+    },
+    {
+      "key": "degagement",
+      "value": 386.71,
+      "label": "Dégagements",
+      "detail": "Aires périphériques des terrains."
+    },
+    {
+      "key": "batiments",
+      "value": 186.95,
+      "label": "Bâti",
+      "detail": "Kiosques, locaux et sanitaires."
+    },
+    {
+      "key": "gradins",
+      "value": 758.38,
+      "label": "Gradins",
+      "detail": "Théâtre de verdure."
+    }
+  ],
+  "regions": [
+    {
+      "key": "sport",
+      "index": "01",
+      "kicker": "Séquence ouest · 0 → 160 m",
+      "title": "Le sport",
+      "lead": "Un terrain de 25 000 m² ne se gaspille pas : il se pratique.",
+      "body": "Les disciplines cohabitent sur un plateau continu, reliées par la piste et les aires de dégagement. Les équipements fixes — buts, panneaux, filets, poteaux, court de padel et court de tennis — sont fournis, posés et scellés.",
+      "surface": "5 363,77 m²",
+      "facts": [
+        [
+          "Football",
+          "1 500 m²"
+        ],
+        [
+          "Handball",
+          "958,63 m²"
+        ],
+        [
+          "Padel + tennis",
+          "2 courts"
+        ],
+        [
+          "Pétanque",
+          "4 terrains"
+        ]
+      ],
+      "lots": "Lot 5 — Terrains de sport",
+      "color": "#c75b39"
+    },
+    {
+      "key": "coeur",
+      "index": "02",
+      "kicker": "Séquence centrale · 160 → 340 m",
+      "title": "Le cœur",
+      "lead": "L'entrée principale ne coupe pas le parc : elle le met en scène.",
+      "body": "Le parvis, le bassin et son jet d'eau forment le point de rencontre. De part et d'autre, les piscines, l'aire de jeux enfants, le théâtre de verdure et les kiosques composent un centre actif, ombragé et accessible.",
+      "surface": "1 381,95 m² d'eau",
+      "facts": [
+        [
+          "Jeux enfants",
+          "1 967,62 m²"
+        ],
+        [
+          "Piscines",
+          "2 bassins"
+        ],
+        [
+          "Théâtre",
+          "758,38 m²"
+        ],
+        [
+          "Agrès EN 1176",
+          "6 jeux"
+        ]
+      ],
+      "lots": "Lots 4, 6 et 8",
+      "color": "#5e9e95"
+    },
+    {
+      "key": "jardin",
+      "index": "03",
+      "kicker": "Séquence est · 340 → 500 m",
+      "title": "Le jardin",
+      "lead": "Après l'effort et le rassemblement, l'ombre.",
+      "body": "Le jardin déroule 7 740 m² de pelouse, de massifs et de jardins plantés. Les allées ralentissent, les arbres prennent le relais de la ville. La halle de pique-nique et le théâtre de verdure donnent au parc ses usages du soir.",
+      "surface": "7 739,99 m²",
+      "facts": [
+        [
+          "Arbres",
+          "158 sujets"
+        ],
+        [
+          "Arbustes",
+          "3 838"
+        ],
+        [
+          "Haies",
+          "300 ml"
+        ],
+        [
+          "Arrosage",
+          "automatique"
+        ]
+      ],
+      "lots": "Lot 7 — Espaces verts",
+      "color": "#7b9a54"
+    },
+    {
+      "key": "parking",
+      "index": "04",
+      "kicker": "En face · 390 × 20 m",
+      "title": "Le village",
+      "lead": "Un parking de 312 places. Et 43 cantines qui font ville.",
+      "body": "De l'autre côté de la rue, la bande de 7 800 m² accueille le stationnement, ses circulations et ses plantations. Les conteneurs aménagés s'alignent en village : un kiosque, 29 boutiques, 5 restaurants, 6 cafés et 2 salles de jeux.",
+      "surface": "7 800,00 m²",
+      "facts": [
+        [
+          "Stationnement",
+          "312 places"
+        ],
+        [
+          "Cantines",
+          "43 unités"
+        ],
+        [
+          "Éclairage",
+          "14 mâts"
+        ],
+        [
+          "Drainage",
+          "780 ml"
+        ]
+      ],
+      "lots": "Lot 13 — Parking et cantines",
+      "color": "#e0a33e"
+    }
+  ],
+  "cantines": [
+    {
+      "type": "Kiosque",
+      "count": 1,
+      "size": "20 pieds",
+      "unit": 2520000,
+      "total": 2520000
+    },
+    {
+      "type": "Boutiques",
+      "count": 29,
+      "size": "20 pieds",
+      "unit": 2520000,
+      "total": 73080000
+    },
+    {
+      "type": "Restaurants / fast food",
+      "count": 5,
+      "size": "40 pieds",
+      "unit": 6930000,
+      "total": 34650000
+    },
+    {
+      "type": "Cafés",
+      "count": 6,
+      "size": "20 pieds",
+      "unit": 3780000,
+      "total": 22680000
+    },
+    {
+      "type": "Salles de jeux",
+      "count": 2,
+      "size": "40 pieds",
+      "unit": 7560000,
+      "total": 15120000
+    }
+  ],
+  "lots": [
+    {
+      "num": 1,
+      "code": "LOT 1",
+      "name": "TRAVAUX PRÉLIMINAIRES ET ÉTUDES",
+      "short": "Préliminaires",
+      "note": "Installation de chantier, études d'exécution, topographie, autorisations et étude d'impact.",
+      "total": 52920000,
+      "lines": [
+        {
+          "code": "1.1",
+          "description": "Installation de chantier, clôtures provisoires, signalisation et exigences QHSEE",
+          "unit": "FF",
+          "qty": 1.0,
+          "pu": 15120000,
+          "total": 15120000,
+          "note": ""
+        },
+        {
+          "code": "1.2",
+          "description": "Baraque de chantier, base de vie et gardiennage",
+          "unit": "FF",
+          "qty": 1.0,
+          "pu": 1260000,
+          "total": 1260000,
+          "note": ""
+        },
+        {
+          "code": "1.3",
+          "description": "Amenée et repli des matériels et engins de mise en œuvre",
+          "unit": "FF",
+          "qty": 1.0,
+          "pu": 5040000,
+          "total": 5040000,
+          "note": ""
+        },
+        {
+          "code": "1.4",
+          "description": "Études d'exécution, plans d'aménagement, notes de calcul (bassins, structures, réseaux)",
+          "unit": "FF",
+          "qty": 1.0,
+          "pu": 18900000,
+          "total": 18900000,
+          "note": ""
+        },
+        {
+          "code": "1.5",
+          "description": "Relevés topographiques, implantation et piquetage des ouvrages",
+          "unit": "FF",
+          "qty": 1.0,
+          "pu": 5040000,
+          "total": 5040000,
+          "note": ""
+        },
+        {
+          "code": "1.6",
+          "description": "Dossier d'autorisation, étude d'impact environnemental et social",
+          "unit": "FF",
+          "qty": 1.0,
+          "pu": 7560000,
+          "total": 7560000,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "num": 2,
+      "code": "LOT 2",
+      "name": "TERRASSEMENT ET TRAVAUX DE SOL",
+      "short": "Terrassement",
+      "note": "Décapage, terrassements, fouilles des bassins, remblais et terre végétale.",
+      "total": 322678510,
+      "lines": [
+        {
+          "code": "2.1",
+          "description": "Décapage de la terre végétale sur 20 cm d'épaisseur, y compris mise en dépôt",
+          "unit": "m²",
+          "qty": 25000.0,
+          "pu": 1900,
+          "total": 47500000,
+          "note": ""
+        },
+        {
+          "code": "2.2",
+          "description": "Terrassement en masse et modelé du terrain (déblais / remblais)",
+          "unit": "m³",
+          "qty": 6250.0,
+          "pu": 15100,
+          "total": 94375000,
+          "note": ""
+        },
+        {
+          "code": "2.3",
+          "description": "Fouille en pleine masse des bassins, piscines et fontaines, y compris sur-profondeur",
+          "unit": "m³",
+          "qty": 1444.64,
+          "pu": 12600,
+          "total": 18202461,
+          "note": ""
+        },
+        {
+          "code": "2.4",
+          "description": "Remblai latéritique compacté sous voiries, parvis et dallages",
+          "unit": "m³",
+          "qty": 3341.29,
+          "pu": 27700,
+          "total": 92553664,
+          "note": ""
+        },
+        {
+          "code": "2.5",
+          "description": "Apport et mise en œuvre de terre végétale pour les espaces verts",
+          "unit": "m³",
+          "qty": 1548.0,
+          "pu": 20200,
+          "total": 31269519,
+          "note": ""
+        },
+        {
+          "code": "2.6",
+          "description": "Transport et évacuation des déblais excédentaires vers la décharge autorisée",
+          "unit": "FF",
+          "qty": 1.0,
+          "pu": 12600000,
+          "total": 12600000,
+          "note": ""
+        },
+        {
+          "code": "2.7",
+          "description": "Désherbage chimique et traitement anti-termites des emprises",
+          "unit": "m²",
+          "qty": 23798.06,
+          "pu": 1100,
+          "total": 26177866,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "num": 3,
+      "code": "LOT 3",
+      "name": "VOIRIES, ALLÉES ET REVÊTEMENTS",
+      "short": "Voiries",
+      "note": "Pavés, béton désactivé, enrobé, bordures, marquage et cheminements PMR.",
+      "total": 224944018,
+      "lines": [
+        {
+          "code": "3.1",
+          "description": "Pavés de pierre naturelle sur lit de sable, y compris bordure et calepinage",
+          "unit": "m²",
+          "qty": 2547.91,
+          "pu": 67400,
+          "total": 171729134,
+          "note": ""
+        },
+        {
+          "code": "3.2",
+          "description": "Parvis et aires de services en béton désactivé, y compris joints et finition",
+          "unit": "m²",
+          "qty": 396.55,
+          "pu": 37800,
+          "total": 14989590,
+          "note": ""
+        },
+        {
+          "code": "3.3",
+          "description": "Voiries d'accès et de service en enrobé, y compris couche de fondation",
+          "unit": "m²",
+          "qty": 1201.94,
+          "pu": 15100,
+          "total": 18149294,
+          "note": ""
+        },
+        {
+          "code": "3.4",
+          "description": "Bordures et caniveaux de délimitation des voiries et allées",
+          "unit": "ml",
+          "qty": 1200.0,
+          "pu": 12000,
+          "total": 14400000,
+          "note": ""
+        },
+        {
+          "code": "3.5",
+          "description": "Marquage et signalisation au sol des cheminements",
+          "unit": "m²",
+          "qty": 300.0,
+          "pu": 3800,
+          "total": 1140000,
+          "note": ""
+        },
+        {
+          "code": "3.6",
+          "description": "Rampe PMR et cheminements accessibles, y compris garde-corps",
+          "unit": "ml",
+          "qty": 120.0,
+          "pu": 37800,
+          "total": 4536000,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "num": 4,
+      "code": "LOT 4",
+      "name": "BASSINS, PISCINES ET JEUX D'EAU",
+      "short": "Bassins",
+      "note": "Bassins, piscines, fontaine, filtration, étanchéité et hydraulique des jeux d'eau.",
+      "total": 273107951,
+      "lines": [
+        {
+          "code": "4.1",
+          "description": "Béton de propreté dosé à 150 kg/m³ sous radier des bassins (ép. 5 cm)",
+          "unit": "m³",
+          "qty": 69.1,
+          "pu": 119700,
+          "total": 8270911,
+          "note": ""
+        },
+        {
+          "code": "4.2",
+          "description": "Béton armé dosé à 350 kg/m³ : radier et parois des bassins",
+          "unit": "m³",
+          "qty": 407.73,
+          "pu": 252000,
+          "total": 102747230,
+          "note": "Radier ép. 25 cm + parois ép. 20 cm, coffrage et ferraillage compris."
+        },
+        {
+          "code": "4.3",
+          "description": "Étanchéité des bassins par membrane PVC armée 1,5 mm, y compris relevés et soudures",
+          "unit": "m²",
+          "qty": 1648.4,
+          "pu": 22700,
+          "total": 37418573,
+          "note": ""
+        },
+        {
+          "code": "4.4",
+          "description": "Carrelage antidérapant des piscines, y compris plage et ligne d'eau",
+          "unit": "m²",
+          "qty": 718.62,
+          "pu": 40300,
+          "total": 28960331,
+          "note": ""
+        },
+        {
+          "code": "4.5",
+          "description": "Goulottes de débordement, ligne d'eau et échelles inox",
+          "unit": "ml",
+          "qty": 165.37,
+          "pu": 37800,
+          "total": 6250906,
+          "note": ""
+        },
+        {
+          "code": "4.6",
+          "description": "Local technique, groupe de filtration, pompes et accessoires des piscines",
+          "unit": "ENS.",
+          "qty": 1.0,
+          "pu": 35280000,
+          "total": 35280000,
+          "note": ""
+        },
+        {
+          "code": "4.7",
+          "description": "Équipement hydraulique des jeux d'eau (buses, pompes, vannes, régulation)",
+          "unit": "ENS.",
+          "qty": 1.0,
+          "pu": 27720000,
+          "total": 27720000,
+          "note": ""
+        },
+        {
+          "code": "4.8",
+          "description": "Fontaine décorative avec vasque et jeux de buses",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 15120000,
+          "total": 15120000,
+          "note": ""
+        },
+        {
+          "code": "4.9",
+          "description": "Traitement automatique de l'eau et automatismes de régulation",
+          "unit": "ENS.",
+          "qty": 1.0,
+          "pu": 11340000,
+          "total": 11340000,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "num": 5,
+      "code": "LOT 5",
+      "name": "TERRAINS DE SPORT",
+      "short": "Sports",
+      "note": "Football, handball, basket, padel, tennis, piste d'athlétisme et équipements fixes.",
+      "total": 472367536,
+      "lines": [
+        {
+          "code": "5.1",
+          "description": "Dallage en béton armé dosé à 350 kg/m³, ép. 15 cm, sous terrains de sport",
+          "unit": "m³",
+          "qty": 804.57,
+          "pu": 226800,
+          "total": 182475455,
+          "note": ""
+        },
+        {
+          "code": "5.2",
+          "description": "Revêtement sportif (béton poreux / résine) sur terrains de sport",
+          "unit": "m²",
+          "qty": 5363.77,
+          "pu": 20200,
+          "total": 108348154,
+          "note": ""
+        },
+        {
+          "code": "5.3",
+          "description": "Tracés, marquage et équipements de délimitation des aires de jeu",
+          "unit": "ENS.",
+          "qty": 1.0,
+          "pu": 5670000,
+          "total": 5670000,
+          "note": ""
+        },
+        {
+          "code": "5.4",
+          "description": "Court de padel complet : structure, vitrage, gazon synthétique, équipements et éclairage",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 27720000,
+          "total": 27720000,
+          "note": ""
+        },
+        {
+          "code": "5.5",
+          "description": "Court de tennis : revêtement, filets, poteaux et accessoires",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 20160000,
+          "total": 20160000,
+          "note": ""
+        },
+        {
+          "code": "5.6",
+          "description": "Fourniture, pose et scellement des buts de football avec filets",
+          "unit": "U",
+          "qty": 2.0,
+          "pu": 1134000,
+          "total": 2268000,
+          "note": ""
+        },
+        {
+          "code": "5.7",
+          "description": "Fourniture, pose et scellement des buts de handball avec filets",
+          "unit": "U",
+          "qty": 2.0,
+          "pu": 1008000,
+          "total": 2016000,
+          "note": ""
+        },
+        {
+          "code": "5.8",
+          "description": "Fourniture, pose et scellement des poteaux et panneaux de basket",
+          "unit": "U",
+          "qty": 2.0,
+          "pu": 945000,
+          "total": 1890000,
+          "note": ""
+        },
+        {
+          "code": "5.9",
+          "description": "Piste d'athlétisme : revêtement sportif coulé, bordures et tracés des couloirs",
+          "unit": "m²",
+          "qty": 3068.27,
+          "pu": 37800,
+          "total": 115980606,
+          "note": ""
+        },
+        {
+          "code": "5.10",
+          "description": "Aire de dégagement périphérique des terrains, revêtement et raccord à l'aire de jeu",
+          "unit": "m²",
+          "qty": 386.71,
+          "pu": 15100,
+          "total": 5839321,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "num": 6,
+      "code": "LOT 6",
+      "name": "AIRES DE JEUX ET FITNESS",
+      "short": "Jeux & fitness",
+      "note": "Six agrès EN 1176, sol EPDM, ombrage, clôture et plateau de fitness.",
+      "total": 64144200,
+      "lines": [
+        {
+          "code": "6.1",
+          "description": "Structure de jeu combinée (tour, pont de singe, filet, toboggan)",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 10080000,
+          "total": 10080000,
+          "note": ""
+        },
+        {
+          "code": "6.2",
+          "description": "Balançoires 3 places, portique acier galvanisé et assises souples",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 567000,
+          "total": 567000,
+          "note": ""
+        },
+        {
+          "code": "6.3",
+          "description": "Tourniquet / carrousel avec frein intégré",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 1890000,
+          "total": 1890000,
+          "note": ""
+        },
+        {
+          "code": "6.4",
+          "description": "Jeux à ressort (cheval, moto, libellule)",
+          "unit": "U",
+          "qty": 3.0,
+          "pu": 378000,
+          "total": 1134000,
+          "note": ""
+        },
+        {
+          "code": "6.5",
+          "description": "Mur d'escalade bas avec filet et prises de main",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 2520000,
+          "total": 2520000,
+          "note": ""
+        },
+        {
+          "code": "6.6",
+          "description": "Parcours d'équilibre (poutres, rondins, pas japonais)",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 3150000,
+          "total": 3150000,
+          "note": ""
+        },
+        {
+          "code": "6.7",
+          "description": "Bac à sable avec pompe à eau manuelle, drainage et couvercle",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 1890000,
+          "total": 1890000,
+          "note": ""
+        },
+        {
+          "code": "6.8",
+          "description": "Sol amortissant EPDM sous agrès, ép. 30 mm",
+          "unit": "m²",
+          "qty": 350.0,
+          "pu": 56700,
+          "total": 19845000,
+          "note": ""
+        },
+        {
+          "code": "6.9",
+          "description": "Clôture de l'aire de jeux h = 1,20 m avec deux portillons à fermeture automatique",
+          "unit": "ml",
+          "qty": 90.0,
+          "pu": 31500,
+          "total": 2835000,
+          "note": ""
+        },
+        {
+          "code": "6.10",
+          "description": "Voiles d'ombrage sur l'aire de jeux",
+          "unit": "m²",
+          "qty": 72.0,
+          "pu": 10100,
+          "total": 727200,
+          "note": ""
+        },
+        {
+          "code": "6.11",
+          "description": "Sol souple et massifs de scellement du plateau de fitness",
+          "unit": "m²",
+          "qty": 200.0,
+          "pu": 37800,
+          "total": 7560000,
+          "note": ""
+        },
+        {
+          "code": "6.12",
+          "description": "Agrès de fitness extérieur, y compris scellement",
+          "unit": "U",
+          "qty": 6.0,
+          "pu": 1890000,
+          "total": 11340000,
+          "note": ""
+        },
+        {
+          "code": "6.13",
+          "description": "Jeux au sol peints (marelle, escargot, circuit)",
+          "unit": "m²",
+          "qty": 60.0,
+          "pu": 10100,
+          "total": 606000,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "num": 7,
+      "code": "LOT 7",
+      "name": "ESPACES VERTS, PLANTATIONS ET ARROSAGE",
+      "short": "Espaces verts",
+      "note": "Gazon, plantations, arrosage automatique, parterres et entretien de reprise 12 mois.",
+      "total": 171971940,
+      "lines": [
+        {
+          "code": "7.1",
+          "description": "Fourniture et pose de gazon en plaques, y compris arrosage de reprise",
+          "unit": "m²",
+          "qty": 2584.1,
+          "pu": 7600,
+          "total": 19639160,
+          "note": ""
+        },
+        {
+          "code": "7.2",
+          "description": "Semis de gazon sur terre végétale amendée",
+          "unit": "m²",
+          "qty": 1391.44,
+          "pu": 3500,
+          "total": 4870040,
+          "note": ""
+        },
+        {
+          "code": "7.3",
+          "description": "Arbres d'alignement (sujets 3-4 m), y compris fosse de plantation et tuteurage",
+          "unit": "U",
+          "qty": 124.0,
+          "pu": 56700,
+          "total": 7030800,
+          "note": ""
+        },
+        {
+          "code": "7.4",
+          "description": "Arbres isolés et arbres fruitiers du verger",
+          "unit": "U",
+          "qty": 34.0,
+          "pu": 56700,
+          "total": 1927800,
+          "note": ""
+        },
+        {
+          "code": "7.5",
+          "description": "Arbustes et plantes de massifs",
+          "unit": "U",
+          "qty": 3837.0,
+          "pu": 11300,
+          "total": 43358100,
+          "note": ""
+        },
+        {
+          "code": "7.6",
+          "description": "Haies taillées, y compris préparation du sol",
+          "unit": "ml",
+          "qty": 300.0,
+          "pu": 8800,
+          "total": 2640000,
+          "note": ""
+        },
+        {
+          "code": "7.7",
+          "description": "Réseau d'arrosage automatique (aspersion et goutte-à-goutte), y compris programmation",
+          "unit": "m²",
+          "qty": 7739.98,
+          "pu": 7600,
+          "total": 58823848,
+          "note": ""
+        },
+        {
+          "code": "7.8",
+          "description": "Paillage minéral et organique des massifs",
+          "unit": "m²",
+          "qty": 766.24,
+          "pu": 3200,
+          "total": 2451968,
+          "note": ""
+        },
+        {
+          "code": "7.9",
+          "description": "Création de parterres fleuris : terre végétale amendée, plantations et paillage",
+          "unit": "m²",
+          "qty": 566.24,
+          "pu": 15100,
+          "total": 8550224,
+          "note": ""
+        },
+        {
+          "code": "7.10",
+          "description": "Entretien et garantie de reprise des espaces verts pendant 12 mois",
+          "unit": "FF",
+          "qty": 1.0,
+          "pu": 22680000,
+          "total": 22680000,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "num": 8,
+      "code": "LOT 8",
+      "name": "CONSTRUCTIONS ET BÂTIMENTS",
+      "short": "Constructions",
+      "note": "Kiosques, sanitaire, accueil, gardiennage, local technique, halle et théâtre de verdure.",
+      "total": 139860000,
+      "lines": [
+        {
+          "code": "8.1",
+          "description": "Kiosques 4,50 × 4,00 m : fondation, structure, couverture, électricité et finitions",
+          "unit": "U",
+          "qty": 5.0,
+          "pu": 6300000,
+          "total": 31500000,
+          "note": ""
+        },
+        {
+          "code": "8.2",
+          "description": "Bloc sanitaire 5,00 × 4,00 m : gros œuvre, second œuvre, appareils sanitaires et raccordements",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 7560000,
+          "total": 7560000,
+          "note": ""
+        },
+        {
+          "code": "8.3",
+          "description": "Bureau d'accueil 11,00 × 4,00 m : gros œuvre, second œuvre et électricité",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 15120000,
+          "total": 15120000,
+          "note": ""
+        },
+        {
+          "code": "8.4",
+          "description": "Poste de gardiennage 4,50 × 4,00 m : construction complète",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 6300000,
+          "total": 6300000,
+          "note": ""
+        },
+        {
+          "code": "8.5",
+          "description": "Local technique 4,00 × 3,50 m : construction complète",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 5040000,
+          "total": 5040000,
+          "note": ""
+        },
+        {
+          "code": "8.6",
+          "description": "Halle de pique-nique 14,00 × 8,00 m : structure, couverture et mobilier fixe",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 17640000,
+          "total": 17640000,
+          "note": ""
+        },
+        {
+          "code": "8.7",
+          "description": "Théâtre de verdure : gradins engazonnés, scène et murs de soutènement",
+          "unit": "ENS.",
+          "qty": 1.0,
+          "pu": 56700000,
+          "total": 56700000,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "num": 9,
+      "code": "LOT 9",
+      "name": "MOBILIER ET SIGNALÉTIQUE",
+      "short": "Mobilier",
+      "note": "Bancs, tables, poubelles de tri, fontaines à boire et signalétique.",
+      "total": 34209000,
+      "lines": [
+        {
+          "code": "9.1",
+          "description": "Bancs 2,00 m en bois et acier, y compris scellement",
+          "unit": "U",
+          "qty": 14.0,
+          "pu": 567000,
+          "total": 7938000,
+          "note": ""
+        },
+        {
+          "code": "9.2",
+          "description": "Tables de pique-nique avec bancs intégrés",
+          "unit": "U",
+          "qty": 8.0,
+          "pu": 945000,
+          "total": 7560000,
+          "note": ""
+        },
+        {
+          "code": "9.3",
+          "description": "Poubelles de tri sélectif",
+          "unit": "U",
+          "qty": 20.0,
+          "pu": 378000,
+          "total": 7560000,
+          "note": ""
+        },
+        {
+          "code": "9.4",
+          "description": "Fontaines à boire avec raccordement",
+          "unit": "U",
+          "qty": 2.0,
+          "pu": 2520000,
+          "total": 5040000,
+          "note": ""
+        },
+        {
+          "code": "9.5",
+          "description": "Panneaux de signalétique, d'information et de règles d'usage",
+          "unit": "U",
+          "qty": 10.0,
+          "pu": 157500,
+          "total": 1575000,
+          "note": ""
+        },
+        {
+          "code": "9.6",
+          "description": "Mobilier PMR et garde-corps des cheminements",
+          "unit": "ml",
+          "qty": 120.0,
+          "pu": 37800,
+          "total": 4536000,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "num": 10,
+      "code": "LOT 10",
+      "name": "CLÔTURE, ACCÈS ET SÉCURITÉ",
+      "short": "Clôture",
+      "note": "Bahut 1 m, grille fer forgé 2,5 m, 368 poteaux, portail 8 m et accès.",
+      "total": 230812000,
+      "lines": [
+        {
+          "code": "10.1",
+          "description": "Fouille et fondation filante en béton armé pour mur bahut (0,40 × 0,30 m)",
+          "unit": "m³",
+          "qty": 132.0,
+          "pu": 226800,
+          "total": 29937600,
+          "note": ""
+        },
+        {
+          "code": "10.2",
+          "description": "Mur bahut en agglos de 20 cm, hauteur 1,00 m, y compris chaînage",
+          "unit": "m²",
+          "qty": 1100.0,
+          "pu": 15100,
+          "total": 16610000,
+          "note": ""
+        },
+        {
+          "code": "10.3",
+          "description": "Enduit deux faces du mur bahut",
+          "unit": "m²",
+          "qty": 2200.0,
+          "pu": 6500,
+          "total": 14300000,
+          "note": ""
+        },
+        {
+          "code": "10.4",
+          "description": "Couronnement du mur bahut",
+          "unit": "ml",
+          "qty": 1100.0,
+          "pu": 15100,
+          "total": 16610000,
+          "note": ""
+        },
+        {
+          "code": "10.5",
+          "description": "Poteaux de clôture 20 × 20 cm décorés, tous les 3,00 m, y compris fondation et scellement",
+          "unit": "U",
+          "qty": 368.0,
+          "pu": 35300,
+          "total": 12990400,
+          "note": ""
+        },
+        {
+          "code": "10.6",
+          "description": "Grille en fer forgé h = 2,50 m sur bahut, y compris fixations, gonds et peinture de finition",
+          "unit": "ml",
+          "qty": 1100.0,
+          "pu": 107100,
+          "total": 117810000,
+          "note": ""
+        },
+        {
+          "code": "10.7",
+          "description": "Portail d'entrée principal coulissant motorisé de 8,00 m",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 11340000,
+          "total": 11340000,
+          "note": ""
+        },
+        {
+          "code": "10.8",
+          "description": "Portails secondaires de 4,00 m",
+          "unit": "U",
+          "qty": 2.0,
+          "pu": 3150000,
+          "total": 6300000,
+          "note": ""
+        },
+        {
+          "code": "10.9",
+          "description": "Portillons piétons avec fermeture automatique",
+          "unit": "U",
+          "qty": 4.0,
+          "pu": 441000,
+          "total": 1764000,
+          "note": ""
+        },
+        {
+          "code": "10.10",
+          "description": "Signalisation de sécurité et plans d'évacuation",
+          "unit": "ENS.",
+          "qty": 1.0,
+          "pu": 3150000,
+          "total": 3150000,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "num": 11,
+      "code": "LOT 11",
+      "name": "INFRASTRUCTURE ÉLECTRIQUE ET RÉSEAUX",
+      "short": "Électricité",
+      "note": "Branchement BT, tableaux, câblage, mâts, mise à la terre et groupe de secours.",
+      "total": 124780800,
+      "lines": [
+        {
+          "code": "11.1",
+          "description": "Branchement BT, comptage Senelec et raccordement au réseau public",
+          "unit": "FF",
+          "qty": 1.0,
+          "pu": 504000,
+          "total": 504000,
+          "note": ""
+        },
+        {
+          "code": "11.2",
+          "description": "Tableau général BT, armoires divisionnaires et protections",
+          "unit": "ENS.",
+          "qty": 1.0,
+          "pu": 15120000,
+          "total": 15120000,
+          "note": ""
+        },
+        {
+          "code": "11.3",
+          "description": "Réseau de câblage BT en tranchée : fourreaux, câbles, regards et chambres de tirage",
+          "unit": "ml",
+          "qty": 1500.0,
+          "pu": 11300,
+          "total": 16950000,
+          "note": ""
+        },
+        {
+          "code": "11.4",
+          "description": "Mâts d'éclairage de 6 m, massifs et scellements",
+          "unit": "U",
+          "qty": 34.0,
+          "pu": 567000,
+          "total": 19278000,
+          "note": ""
+        },
+        {
+          "code": "11.5",
+          "description": "Mâts d'éclairage sportif de 12 m, massifs et scellements",
+          "unit": "U",
+          "qty": 8.0,
+          "pu": 2520000,
+          "total": 20160000,
+          "note": ""
+        },
+        {
+          "code": "11.6",
+          "description": "Supports de bornes basses d'éclairage",
+          "unit": "U",
+          "qty": 11.0,
+          "pu": 226800,
+          "total": 2494800,
+          "note": ""
+        },
+        {
+          "code": "11.7",
+          "description": "Supports, massifs et fourreaux des caméras de vidéosurveillance",
+          "unit": "U",
+          "qty": 8.0,
+          "pu": 441000,
+          "total": 3528000,
+          "note": ""
+        },
+        {
+          "code": "11.8",
+          "description": "Alimentation électrique des jets d'eau et fontaines : pompes, électrovannes, câblage et régulation",
+          "unit": "ENS.",
+          "qty": 1.0,
+          "pu": 10080000,
+          "total": 10080000,
+          "note": ""
+        },
+        {
+          "code": "11.9",
+          "description": "Infrastructure des postes de recharge pour mobilités : génie civil, support, câblage et protection",
+          "unit": "U",
+          "qty": 6.0,
+          "pu": 1071000,
+          "total": 6426000,
+          "note": ""
+        },
+        {
+          "code": "11.10",
+          "description": "Mise à la terre générale et protection contre la foudre",
+          "unit": "ENS.",
+          "qty": 1.0,
+          "pu": 5040000,
+          "total": 5040000,
+          "note": ""
+        },
+        {
+          "code": "11.11",
+          "description": "Éclairage de sécurité et d'évacuation",
+          "unit": "ENS.",
+          "qty": 1.0,
+          "pu": 2520000,
+          "total": 2520000,
+          "note": ""
+        },
+        {
+          "code": "11.12",
+          "description": "Groupe électrogène de secours 60 kVA avec coffret d'inversion",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 22680000,
+          "total": 22680000,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "num": 12,
+      "code": "LOT 12",
+      "name": "FORAGE ET ALIMENTATION EN EAU",
+      "short": "Forage",
+      "note": "Forage 80 m, pompe, château d'eau 10 m³ et réseau AEP.",
+      "total": 44998000,
+      "lines": [
+        {
+          "code": "12.1",
+          "description": "Étude hydrogéologique et implantation du forage",
+          "unit": "FF",
+          "qty": 1.0,
+          "pu": 3150000,
+          "total": 3150000,
+          "note": ""
+        },
+        {
+          "code": "12.2",
+          "description": "Forage Ø 8\" à 80 m : tubage PVC Ø 125, crépines inox et massif de gravier",
+          "unit": "ml",
+          "qty": 80.0,
+          "pu": 75600,
+          "total": 6048000,
+          "note": ""
+        },
+        {
+          "code": "12.3",
+          "description": "Développement, essai de pompage et analyses physico-chimiques de l'eau",
+          "unit": "FF",
+          "qty": 1.0,
+          "pu": 3150000,
+          "total": 3150000,
+          "note": ""
+        },
+        {
+          "code": "12.4",
+          "description": "Tête de forage, margelle, regard et protection",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 1890000,
+          "total": 1890000,
+          "note": ""
+        },
+        {
+          "code": "12.5",
+          "description": "Pompe immergée 5,5 kW, câble, sonde de niveau et raccordements",
+          "unit": "ENS.",
+          "qty": 1.0,
+          "pu": 5670000,
+          "total": 5670000,
+          "note": ""
+        },
+        {
+          "code": "12.6",
+          "description": "Coffret électrique, protection et comptage du forage",
+          "unit": "ENS.",
+          "qty": 1.0,
+          "pu": 3150000,
+          "total": 3150000,
+          "note": ""
+        },
+        {
+          "code": "12.7",
+          "description": "Château d'eau métallique de 10 m³ sur tour de 6 m",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 10080000,
+          "total": 10080000,
+          "note": ""
+        },
+        {
+          "code": "12.8",
+          "description": "Réseau de distribution AEP en PEHD, regards et vannes",
+          "unit": "ml",
+          "qty": 800.0,
+          "pu": 10100,
+          "total": 8080000,
+          "note": ""
+        },
+        {
+          "code": "12.9",
+          "description": "Raccordement forage → château d'eau → réseau d'arrosage et fontaines",
+          "unit": "ENS.",
+          "qty": 1.0,
+          "pu": 3780000,
+          "total": 3780000,
+          "note": ""
+        }
+      ]
+    },
+    {
+      "num": 13,
+      "code": "LOT 13",
+      "name": "PARKING ET CANTINES EN CONTENEURS",
+      "short": "Parking & cantines",
+      "note": "312 places, voirie, drainage, éclairage et 43 cantines en conteneurs.",
+      "total": 510266200,
+      "lines": [
+        {
+          "code": "13.1",
+          "description": "Décapage de la terre végétale sur 20 cm d'épaisseur",
+          "unit": "m²",
+          "qty": 7800.0,
+          "pu": 1900,
+          "total": 14820000,
+          "note": ""
+        },
+        {
+          "code": "13.2",
+          "description": "Terrassement et mise à niveau du parking",
+          "unit": "m³",
+          "qty": 1560.0,
+          "pu": 15100,
+          "total": 23556000,
+          "note": ""
+        },
+        {
+          "code": "13.3",
+          "description": "Couche de forme en latérite compactée ép. 20 cm",
+          "unit": "m³",
+          "qty": 1560.0,
+          "pu": 31500,
+          "total": 49140000,
+          "note": ""
+        },
+        {
+          "code": "13.4",
+          "description": "Revêtement du parking en grave traitée, y compris réglage et compactage",
+          "unit": "m²",
+          "qty": 7800.0,
+          "pu": 17600,
+          "total": 137280000,
+          "note": ""
+        },
+        {
+          "code": "13.5",
+          "description": "Bordures de délimitation périphériques",
+          "unit": "ml",
+          "qty": 820.0,
+          "pu": 12000,
+          "total": 9840000,
+          "note": ""
+        },
+        {
+          "code": "13.6",
+          "description": "Marquage des places de stationnement (bandes et numéros)",
+          "unit": "U",
+          "qty": 312.0,
+          "pu": 12600,
+          "total": 3931200,
+          "note": ""
+        },
+        {
+          "code": "13.7",
+          "description": "Caniveaux de drainage des eaux pluviales, y compris grilles",
+          "unit": "ml",
+          "qty": 780.0,
+          "pu": 113400,
+          "total": 88452000,
+          "note": ""
+        },
+        {
+          "code": "13.8",
+          "description": "Mâts d'éclairage de 8 m, massifs et scellements",
+          "unit": "U",
+          "qty": 14.0,
+          "pu": 756000,
+          "total": 10584000,
+          "note": ""
+        },
+        {
+          "code": "13.9",
+          "description": "Réseau d'alimentation en eau et électricité des cantines",
+          "unit": "ml",
+          "qty": 500.0,
+          "pu": 11300,
+          "total": 5650000,
+          "note": ""
+        },
+        {
+          "code": "13.10",
+          "description": "Branchements individuels des cantines (eau, électricité, évacuation)",
+          "unit": "U",
+          "qty": 43.0,
+          "pu": 441000,
+          "total": 18963000,
+          "note": ""
+        },
+        {
+          "code": "13.11",
+          "description": "Kiosque en conteneur aménagé 20 pieds",
+          "unit": "U",
+          "qty": 1.0,
+          "pu": 2520000,
+          "total": 2520000,
+          "note": ""
+        },
+        {
+          "code": "13.12",
+          "description": "Boutiques en conteneurs aménagés 20 pieds",
+          "unit": "U",
+          "qty": 29.0,
+          "pu": 2520000,
+          "total": 73080000,
+          "note": ""
+        },
+        {
+          "code": "13.13",
+          "description": "Restaurants / fast food en conteneurs aménagés 40 pieds",
+          "unit": "U",
+          "qty": 5.0,
+          "pu": 6930000,
+          "total": 34650000,
+          "note": ""
+        },
+        {
+          "code": "13.14",
+          "description": "Cafés en conteneurs aménagés 20 pieds",
+          "unit": "U",
+          "qty": 6.0,
+          "pu": 3780000,
+          "total": 22680000,
+          "note": ""
+        },
+        {
+          "code": "13.15",
+          "description": "Salle de jeux en conteneurs aménagés 40 pieds",
+          "unit": "U",
+          "qty": 2.0,
+          "pu": 7560000,
+          "total": 15120000,
+          "note": ""
+        }
+      ]
+    }
+  ],
+  "exclusions": [
+    "Luminaires et projecteurs",
+    "Caméras et vidéosurveillance",
+    "Bornes de recharge pour mobilités",
+    "Étude géotechnique",
+    "Raccordements aux réseaux concessionnaires (eau, assainissement) au-delà du branchement BT",
+    "Démolition d'ouvrages existants",
+    "Mobilier mobile (chaises, parasols)",
+    "Entretien au-delà des 12 mois de garantie de reprise"
+  ]
+}

@@ -1,0 +1,1933 @@
+{
+  "meta": {
+    "ref": "DQE202611-THS-PARC",
+    "title": "Jardin Grand Standing de Thiès — Parc linéaire 50 × 500 m",
+    "subtitle": "Aménagement d'un parc public linéaire de 25 000 m² (500,00 × 50,00 m), avec son parking de 7 800 m² (390,00 × 20,00 m) et 43 cantines en conteneurs de l'autre côté de la rue.",
+    "client": "Mairie de Thiès",
+    "maitreOuvrage": "ERT",
+    "presentateur": "DIEYLANI — Architecture · Étude · Réalisation",
+    "location": "Thiès – Sénégal (14°46'51.2\"N 16°56'54.5\"W)",
+    "surfaceParc": "25 000,00 m² (500,00 × 50,00 m)",
+    "perimetreParc": "1 100,00 ml",
+    "surfaceParking": "7 800,00 m² (390,00 × 20,00 m)",
+    "perimetreParking": "820,00 ml",
+    "placesParking": 312,
+    "cantinesCount": 43,
+    "currency": "FCFA"
+  },
+  "totals": {
+    "ht": 3171908028,
+    "tvaRate": 0.18,
+    "tva": 570943445,
+    "ttc": 3742851473,
+    "lineCount": 132,
+    "lotCount": 13,
+    "ttcWords": "Trois milliards sept cent quarante-deux millions huit cent cinquante-et-un mille quatre cent soixante-treize francs CFA TTC"
+  },
+  "exclusions": [
+    "Luminaires et projecteurs",
+    "Caméras et vidéosurveillance",
+    "Bornes de recharge pour mobilités",
+    "Étude géotechnique",
+    "Raccordements aux réseaux concessionnaires (eau, assainissement) au-delà du branchement BT",
+    "Démolition d'ouvrages existants",
+    "Mobilier mobile (chaises, parasols)",
+    "Entretien au-delà des 12 mois de garantie de reprise"
+  ],
+  "soilSynthesis": [
+    {
+      "label": "Espaces verts (pelouse, herbe, parterre, jardin)",
+      "area": 7739.98,
+      "share": "31,0 %"
+    },
+    {
+      "label": "Terrains de sport (béton)",
+      "area": 5363.77,
+      "share": "21,5 %"
+    },
+    {
+      "label": "Circulations, parvis et voiries",
+      "area": 4301.59,
+      "share": "17,2 %"
+    },
+    {
+      "label": "Pavés de pierre naturelle",
+      "area": 2547.91,
+      "share": "10,2 %"
+    },
+    {
+      "label": "Aires de jeux enfants",
+      "area": 1967.61,
+      "share": "7,9 %"
+    },
+    {
+      "label": "Plans d'eau, piscines et bassins",
+      "area": 1381.94,
+      "share": "5,5 %"
+    },
+    {
+      "label": "Courts de padel et de tennis",
+      "area": 400.0,
+      "share": "1,6 %"
+    }
+  ],
+  "sections": [
+    {
+      "id": "vrd",
+      "title": "TRAVAUX PRÉPARATOIRES ET VRD",
+      "totalHt": 663508401,
+      "lots": [
+        {
+          "id": 1,
+          "code": "LOT 1",
+          "title": "TRAVAUX PRÉLIMINAIRES ET ÉTUDES",
+          "totalHt": 52920000,
+          "lines": [
+            {
+              "id": "1.1",
+              "desc": "Installation de chantier, clôtures provisoires, signalisation et exigences QHSEE",
+              "unit": "FF",
+              "qty": 1,
+              "pu": 15120000,
+              "total": 15120000
+            },
+            {
+              "id": "1.2",
+              "desc": "Baraque de chantier, base de vie et gardiennage",
+              "unit": "FF",
+              "qty": 1,
+              "pu": 1260000,
+              "total": 1260000
+            },
+            {
+              "id": "1.3",
+              "desc": "Amenée et repli des matériels et engins de mise en œuvre",
+              "unit": "FF",
+              "qty": 1,
+              "pu": 5040000,
+              "total": 5040000
+            },
+            {
+              "id": "1.4",
+              "desc": "Études d'exécution, plans d'aménagement, notes de calcul (bassins, structures, réseaux)",
+              "unit": "FF",
+              "qty": 1,
+              "pu": 18900000,
+              "total": 18900000
+            },
+            {
+              "id": "1.5",
+              "desc": "Relevés topographiques, implantation et piquetage des ouvrages",
+              "unit": "FF",
+              "qty": 1,
+              "pu": 5040000,
+              "total": 5040000
+            },
+            {
+              "id": "1.6",
+              "desc": "Dossier d'autorisation, étude d'impact environnemental et social",
+              "unit": "FF",
+              "qty": 1,
+              "pu": 7560000,
+              "total": 7560000
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "code": "LOT 2",
+          "title": "TERRASSEMENT ET TRAVAUX DE SOL",
+          "totalHt": 323753201,
+          "lines": [
+            {
+              "id": "2.1",
+              "desc": "Décapage de la terre végétale sur 20 cm d'épaisseur, y compris mise en dépôt",
+              "unit": "m²",
+              "qty": 25000,
+              "pu": 1900,
+              "total": 47500000
+            },
+            {
+              "id": "2.2",
+              "desc": "Terrassement en masse et modelé du terrain (déblais / remblais)",
+              "unit": "m³",
+              "qty": 6250,
+              "pu": 15100,
+              "total": 94375000
+            },
+            {
+              "id": "2.3",
+              "desc": "Fouille en pleine masse des bassins, piscines et fontaines, y compris sur-profondeur",
+              "unit": "m³",
+              "qty": 1444.64,
+              "pu": 12600,
+              "total": 18202461
+            },
+            {
+              "id": "2.4",
+              "desc": "Remblai latéritique compacté sous voiries, parvis et dallages",
+              "unit": "m³",
+              "qty": 3380.09,
+              "pu": 27700,
+              "total": 93628355
+            },
+            {
+              "id": "2.5",
+              "desc": "Apport et mise en œuvre de terre végétale pour les espaces verts",
+              "unit": "m³",
+              "qty": 1548.0,
+              "pu": 20200,
+              "total": 31269519
+            },
+            {
+              "id": "2.6",
+              "desc": "Transport et évacuation des déblais excédentaires vers la décharge autorisée",
+              "unit": "FF",
+              "qty": 1,
+              "pu": 12600000,
+              "total": 12600000
+            },
+            {
+              "id": "2.7",
+              "desc": "Désherbage chimique et traitement anti-termites des emprises",
+              "unit": "m²",
+              "qty": 23798.06,
+              "pu": 1100,
+              "total": 26177866
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "code": "LOT 3",
+          "title": "VOIRIES, ALLÉES ET REVÊTEMENTS",
+          "totalHt": 286835200,
+          "lines": [
+            {
+              "id": "3.1",
+              "desc": "Pavés de pierre naturelle sur lit de sable, y compris bordure et calepinage",
+              "unit": "m²",
+              "qty": 2547.91,
+              "pu": 67400,
+              "total": 171729134
+            },
+            {
+              "id": "3.2",
+              "desc": "Parvis et espaces de services en béton désactivé, y compris joints et finition",
+              "unit": "m²",
+              "qty": 551.74,
+              "pu": 37800,
+              "total": 20855772
+            },
+            {
+              "id": "3.3",
+              "desc": "Voiries d'accès et de service en enrobé, y compris couche de fondation",
+              "unit": "m²",
+              "qty": 1201.94,
+              "pu": 15100,
+              "total": 18149294
+            },
+            {
+              "id": "3.4",
+              "desc": "Bordures et caniveaux de délimitation des voiries et allées",
+              "unit": "ml",
+              "qty": 1200,
+              "pu": 12000,
+              "total": 14400000
+            },
+            {
+              "id": "3.5",
+              "desc": "Marquage et signalisation au sol des cheminements",
+              "unit": "m²",
+              "qty": 300,
+              "pu": 3800,
+              "total": 1140000
+            },
+            {
+              "id": "3.6",
+              "desc": "Rampe PMR et cheminements accessibles, y compris garde-corps",
+              "unit": "ml",
+              "qty": 120,
+              "pu": 37800,
+              "total": 4536000
+            },
+            {
+              "id": "3.7",
+              "desc": "Réseau d'assainissement des eaux usées et pluviales en PVC, y compris regards et raccordements",
+              "unit": "ml",
+              "qty": 900,
+              "pu": 22700,
+              "total": 20430000
+            },
+            {
+              "id": "3.8",
+              "desc": "Fosses septiques toutes eaux avec dispositif d'infiltration (sanitaires et cantines)",
+              "unit": "U",
+              "qty": 3,
+              "pu": 8190000,
+              "total": 24570000
+            },
+            {
+              "id": "3.9",
+              "desc": "Regards et chambres de visite du réseau d'assainissement",
+              "unit": "U",
+              "qty": 25,
+              "pu": 441000,
+              "total": 11025000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "amenagements",
+      "title": "AMÉNAGEMENTS PAYSAGERS ET ÉQUIPEMENTS",
+      "totalHt": 981591627,
+      "lots": [
+        {
+          "id": 4,
+          "code": "LOT 4",
+          "title": "BASSINS, PISCINES ET JEUX D'EAU",
+          "totalHt": 273107951,
+          "lines": [
+            {
+              "id": "4.1",
+              "desc": "Béton de propreté dosé à 150 kg/m³ sous radier des bassins (ép. 5 cm)",
+              "unit": "m³",
+              "qty": 69.1,
+              "pu": 119700,
+              "total": 8270911
+            },
+            {
+              "id": "4.2",
+              "desc": "Béton armé dosé à 350 kg/m³ : radier et parois des bassins",
+              "unit": "m³",
+              "qty": 407.73,
+              "pu": 252000,
+              "total": 102747230
+            },
+            {
+              "id": "4.2.a",
+              "desc": "• Radier ép. 25 cm sous bassins, y compris coffrage et ferraillage",
+              "unit": "m³",
+              "qty": 345.49,
+              "pu": null,
+              "total": null,
+              "isSubline": true
+            },
+            {
+              "id": "4.2.b",
+              "desc": "• Parois ép. 20 cm, y compris coffrage et ferraillage",
+              "unit": "m³",
+              "qty": 62.24,
+              "pu": null,
+              "total": null,
+              "isSubline": true
+            },
+            {
+              "id": "4.3",
+              "desc": "Étanchéité des bassins par membrane PVC armée 1,5 mm, y compris relevés et soudures",
+              "unit": "m²",
+              "qty": 1648.4,
+              "pu": 22700,
+              "total": 37418573
+            },
+            {
+              "id": "4.4",
+              "desc": "Carrelage antidérapant des piscines, y compris plage et ligne d'eau",
+              "unit": "m²",
+              "qty": 718.62,
+              "pu": 40300,
+              "total": 28960331
+            },
+            {
+              "id": "4.5",
+              "desc": "Goulottes de débordement, ligne d'eau et échelles inox",
+              "unit": "ml",
+              "qty": 165.37,
+              "pu": 37800,
+              "total": 6250906
+            },
+            {
+              "id": "4.6",
+              "desc": "Local technique, groupe de filtration, pompes et accessoires des piscines",
+              "unit": "ENS.",
+              "qty": 1,
+              "pu": 35280000,
+              "total": 35280000
+            },
+            {
+              "id": "4.7",
+              "desc": "Équipement hydraulique des jeux d'eau (buses, pompes, vannes, régulation)",
+              "unit": "ENS.",
+              "qty": 1,
+              "pu": 27720000,
+              "total": 27720000
+            },
+            {
+              "id": "4.8",
+              "desc": "Fontaine décorative avec vasque et jeux de buses",
+              "unit": "U",
+              "qty": 1,
+              "pu": 15120000,
+              "total": 15120000
+            },
+            {
+              "id": "4.9",
+              "desc": "Traitement automatique de l'eau et automatismes de régulation",
+              "unit": "ENS.",
+              "qty": 1,
+              "pu": 11340000,
+              "total": 11340000
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "code": "LOT 5",
+          "title": "TERRAINS DE SPORT",
+          "totalHt": 472367536,
+          "lines": [
+            {
+              "id": "5.1",
+              "desc": "Dallage en béton armé dosé à 350 kg/m³, ép. 15 cm, sous terrains de sport",
+              "unit": "m³",
+              "qty": 804.57,
+              "pu": 226800,
+              "total": 182475455
+            },
+            {
+              "id": "5.2",
+              "desc": "Revêtement sportif (béton poreux / résine) sur terrains de sport",
+              "unit": "m²",
+              "qty": 5363.77,
+              "pu": 20200,
+              "total": 108348154
+            },
+            {
+              "id": "5.3",
+              "desc": "Tracés, marquage et équipements de délimitation des aires de jeu",
+              "unit": "ENS.",
+              "qty": 1,
+              "pu": 5670000,
+              "total": 5670000
+            },
+            {
+              "id": "5.4",
+              "desc": "Court de padel complet : structure, vitrage, gazon synthétique, équipements et éclairage",
+              "unit": "U",
+              "qty": 1,
+              "pu": 27720000,
+              "total": 27720000
+            },
+            {
+              "id": "5.5",
+              "desc": "Court de tennis : revêtement, filets, poteaux et accessoires",
+              "unit": "U",
+              "qty": 1,
+              "pu": 20160000,
+              "total": 20160000
+            },
+            {
+              "id": "5.6",
+              "desc": "Fourniture, pose et scellement des buts de football avec filets",
+              "unit": "U",
+              "qty": 2,
+              "pu": 1134000,
+              "total": 2268000
+            },
+            {
+              "id": "5.7",
+              "desc": "Fourniture, pose et scellement des buts de handball avec filets",
+              "unit": "U",
+              "qty": 2,
+              "pu": 1008000,
+              "total": 2016000
+            },
+            {
+              "id": "5.8",
+              "desc": "Fourniture, pose et scellement des poteaux et panneaux de basket",
+              "unit": "U",
+              "qty": 2,
+              "pu": 945000,
+              "total": 1890000
+            },
+            {
+              "id": "5.9",
+              "desc": "Piste d'athlétisme : revêtement sportif coulé, bordures et tracés des couloirs",
+              "unit": "m²",
+              "qty": 3068.27,
+              "pu": 37800,
+              "total": 115980606
+            },
+            {
+              "id": "5.10",
+              "desc": "Aire de dégagement périphérique des terrains, revêtement et raccord à l'aire de jeu",
+              "unit": "m²",
+              "qty": 386.71,
+              "pu": 15100,
+              "total": 5839321
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "code": "LOT 6",
+          "title": "AIRES DE JEUX ET FITNESS",
+          "totalHt": 64144200,
+          "lines": [
+            {
+              "id": "6.1",
+              "desc": "Structure de jeu combinée (tour, pont de singe, filet, toboggan)",
+              "unit": "U",
+              "qty": 1,
+              "pu": 10080000,
+              "total": 10080000
+            },
+            {
+              "id": "6.2",
+              "desc": "Balançoires 3 places, portique acier galvanisé et assises souples",
+              "unit": "U",
+              "qty": 1,
+              "pu": 567000,
+              "total": 567000
+            },
+            {
+              "id": "6.3",
+              "desc": "Tourniquet / carrousel avec frein intégré",
+              "unit": "U",
+              "qty": 1,
+              "pu": 1890000,
+              "total": 1890000
+            },
+            {
+              "id": "6.4",
+              "desc": "Jeux à ressort (cheval, moto, libellule)",
+              "unit": "U",
+              "qty": 3,
+              "pu": 378000,
+              "total": 1134000
+            },
+            {
+              "id": "6.5",
+              "desc": "Mur d'escalade bas avec filet et prises de main",
+              "unit": "U",
+              "qty": 1,
+              "pu": 2520000,
+              "total": 2520000
+            },
+            {
+              "id": "6.6",
+              "desc": "Parcours d'équilibre (poutres, rondins, pas japonais)",
+              "unit": "U",
+              "qty": 1,
+              "pu": 3150000,
+              "total": 3150000
+            },
+            {
+              "id": "6.7",
+              "desc": "Bac à sable avec pompe à eau manuelle, drainage et couvercle",
+              "unit": "U",
+              "qty": 1,
+              "pu": 1890000,
+              "total": 1890000
+            },
+            {
+              "id": "6.8",
+              "desc": "Sol amortissant EPDM sous agrès, ép. 30 mm",
+              "unit": "m²",
+              "qty": 350,
+              "pu": 56700,
+              "total": 19845000
+            },
+            {
+              "id": "6.9",
+              "desc": "Clôture de l'aire de jeux h = 1,20 m avec deux portillons à fermeture automatique",
+              "unit": "ml",
+              "qty": 90,
+              "pu": 31500,
+              "total": 2835000
+            },
+            {
+              "id": "6.10",
+              "desc": "Voiles d'ombrage sur l'aire de jeux",
+              "unit": "m²",
+              "qty": 72,
+              "pu": 10100,
+              "total": 727200
+            },
+            {
+              "id": "6.11",
+              "desc": "Sol souple et massifs de scellement du plateau de fitness",
+              "unit": "m²",
+              "qty": 200,
+              "pu": 37800,
+              "total": 7560000
+            },
+            {
+              "id": "6.12",
+              "desc": "Agrès de fitness extérieur, y compris scellement",
+              "unit": "U",
+              "qty": 6,
+              "pu": 1890000,
+              "total": 11340000
+            },
+            {
+              "id": "6.13",
+              "desc": "Jeux au sol peints (marelle, escargot, circuit)",
+              "unit": "m²",
+              "qty": 60,
+              "pu": 10100,
+              "total": 606000
+            }
+          ]
+        },
+        {
+          "id": 7,
+          "code": "LOT 7",
+          "title": "ESPACES VERTS, PLANTATIONS ET ARROSAGE",
+          "totalHt": 171971940,
+          "lines": [
+            {
+              "id": "7.1",
+              "desc": "Fourniture et pose de gazon en plaques, y compris arrosage de reprise",
+              "unit": "m²",
+              "qty": 2584.1,
+              "pu": 7600,
+              "total": 19639160
+            },
+            {
+              "id": "7.2",
+              "desc": "Semis de gazon sur terre végétale amendée",
+              "unit": "m²",
+              "qty": 1391.44,
+              "pu": 3500,
+              "total": 4870040
+            },
+            {
+              "id": "7.3",
+              "desc": "Arbres d'alignement (sujets 3-4 m), y compris fosse de plantation et tuteurage",
+              "unit": "U",
+              "qty": 124,
+              "pu": 56700,
+              "total": 7030800
+            },
+            {
+              "id": "7.4",
+              "desc": "Arbres isolés et arbres fruitiers du verger",
+              "unit": "U",
+              "qty": 34,
+              "pu": 56700,
+              "total": 1927800
+            },
+            {
+              "id": "7.5",
+              "desc": "Arbustes et plantes de massifs",
+              "unit": "U",
+              "qty": 3837,
+              "pu": 11300,
+              "total": 43358100
+            },
+            {
+              "id": "7.6",
+              "desc": "Haies taillées, y compris préparation du sol",
+              "unit": "ml",
+              "qty": 300,
+              "pu": 8800,
+              "total": 2640000
+            },
+            {
+              "id": "7.7",
+              "desc": "Réseau d'arrosage automatique (aspersion et goutte-à-goutte), y compris programmation",
+              "unit": "m²",
+              "qty": 7739.98,
+              "pu": 7600,
+              "total": 58823848
+            },
+            {
+              "id": "7.8",
+              "desc": "Paillage minéral et organique des massifs",
+              "unit": "m²",
+              "qty": 766.24,
+              "pu": 3200,
+              "total": 2451968
+            },
+            {
+              "id": "7.9",
+              "desc": "Création de parterres fleuris : terre végétale amendée, plantations et paillage",
+              "unit": "m²",
+              "qty": 566.24,
+              "pu": 15100,
+              "total": 8550224
+            },
+            {
+              "id": "7.10",
+              "desc": "Entretien et garantie de reprise des espaces verts pendant 12 mois",
+              "unit": "FF",
+              "qty": 1,
+              "pu": 22680000,
+              "total": 22680000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "constructions",
+      "title": "CONSTRUCTIONS, MOBILIER ET SÉCURITÉ",
+      "totalHt": 534661000,
+      "lots": [
+        {
+          "id": 8,
+          "code": "LOT 8",
+          "title": "CONSTRUCTIONS ET BÂTIMENTS",
+          "totalHt": 269640000,
+          "lines": [
+            {
+              "id": "8.1",
+              "desc": "Kiosques 4,50 × 4,00 m : fondation, structure, couverture, électricité et finitions",
+              "unit": "U",
+              "qty": 10,
+              "pu": 6300000,
+              "total": 63000000
+            },
+            {
+              "id": "8.2",
+              "desc": "Bloc sanitaire 5,00 × 4,00 m : gros œuvre, second œuvre, appareils sanitaires et raccordements",
+              "unit": "U",
+              "qty": 2,
+              "pu": 7560000,
+              "total": 15120000
+            },
+            {
+              "id": "8.3",
+              "desc": "Bureau d'accueil 11,00 × 4,00 m : gros œuvre, second œuvre et électricité",
+              "unit": "U",
+              "qty": 2,
+              "pu": 15120000,
+              "total": 30240000
+            },
+            {
+              "id": "8.4",
+              "desc": "Poste de gardiennage 4,50 × 4,00 m : construction complète",
+              "unit": "U",
+              "qty": 1,
+              "pu": 6300000,
+              "total": 6300000
+            },
+            {
+              "id": "8.5",
+              "desc": "Local technique 4,00 × 3,50 m : construction complète",
+              "unit": "U",
+              "qty": 1,
+              "pu": 5040000,
+              "total": 5040000
+            },
+            {
+              "id": "8.6",
+              "desc": "Halle de pique-nique 14,00 × 8,00 m : structure, couverture et mobilier fixe",
+              "unit": "U",
+              "qty": 1,
+              "pu": 17640000,
+              "total": 17640000
+            },
+            {
+              "id": "8.7",
+              "desc": "Théâtre de verdure : gradins engazonnés, scène et murs de soutènement",
+              "unit": "ENS.",
+              "qty": 1,
+              "pu": 56700000,
+              "total": 56700000
+            },
+            {
+              "id": "8.8",
+              "desc": "Vestiaires et douches des piscines : construction complète, sanitaires et équipements",
+              "unit": "ENS.",
+              "qty": 1,
+              "pu": 56700000,
+              "total": 56700000
+            },
+            {
+              "id": "8.9",
+              "desc": "Sanitaires PMR accessibles, construction complète",
+              "unit": "U",
+              "qty": 2,
+              "pu": 9450000,
+              "total": 18900000
+            }
+          ]
+        },
+        {
+          "id": 9,
+          "code": "LOT 9",
+          "title": "MOBILIER ET SIGNALÉTIQUE",
+          "totalHt": 34209000,
+          "lines": [
+            {
+              "id": "9.1",
+              "desc": "Bancs 2,00 m en bois et acier, y compris scellement",
+              "unit": "U",
+              "qty": 14,
+              "pu": 567000,
+              "total": 7938000
+            },
+            {
+              "id": "9.2",
+              "desc": "Tables de pique-nique avec bancs intégrés",
+              "unit": "U",
+              "qty": 8,
+              "pu": 945000,
+              "total": 7560000
+            },
+            {
+              "id": "9.3",
+              "desc": "Poubelles de tri sélectif",
+              "unit": "U",
+              "qty": 20,
+              "pu": 378000,
+              "total": 7560000
+            },
+            {
+              "id": "9.4",
+              "desc": "Fontaines à boire avec raccordement",
+              "unit": "U",
+              "qty": 2,
+              "pu": 2520000,
+              "total": 5040000
+            },
+            {
+              "id": "9.5",
+              "desc": "Panneaux de signalétique, d'information et de règles d'usage",
+              "unit": "U",
+              "qty": 10,
+              "pu": 157500,
+              "total": 1575000
+            },
+            {
+              "id": "9.6",
+              "desc": "Mobilier PMR et garde-corps des cheminements",
+              "unit": "ml",
+              "qty": 120,
+              "pu": 37800,
+              "total": 4536000
+            }
+          ]
+        },
+        {
+          "id": 10,
+          "code": "LOT 10",
+          "title": "CLÔTURE, ACCÈS ET SÉCURITÉ",
+          "totalHt": 230812000,
+          "lines": [
+            {
+              "id": "10.1",
+              "desc": "Fouille et fondation filante en béton armé pour mur bahut (0,40 × 0,30 m)",
+              "unit": "m³",
+              "qty": 132,
+              "pu": 226800,
+              "total": 29937600
+            },
+            {
+              "id": "10.2",
+              "desc": "Mur bahut en agglos de 20 cm, hauteur 1,00 m, y compris chaînage",
+              "unit": "m²",
+              "qty": 1100,
+              "pu": 15100,
+              "total": 16610000
+            },
+            {
+              "id": "10.3",
+              "desc": "Enduit deux faces du mur bahut",
+              "unit": "m²",
+              "qty": 2200,
+              "pu": 6500,
+              "total": 14300000
+            },
+            {
+              "id": "10.4",
+              "desc": "Couronnement du mur bahut",
+              "unit": "ml",
+              "qty": 1100,
+              "pu": 15100,
+              "total": 16610000
+            },
+            {
+              "id": "10.5",
+              "desc": "Poteaux de clôture 20 × 20 cm décorés, tous les 3,00 m, y compris fondation et scellement",
+              "unit": "U",
+              "qty": 368,
+              "pu": 35300,
+              "total": 12990400
+            },
+            {
+              "id": "10.6",
+              "desc": "Grille en fer forgé h = 2,50 m sur bahut, y compris fixations, gonds et peinture de finition",
+              "unit": "ml",
+              "qty": 1100,
+              "pu": 107100,
+              "total": 117810000
+            },
+            {
+              "id": "10.7",
+              "desc": "Portail d'entrée principal coulissant motorisé de 8,00 m",
+              "unit": "U",
+              "qty": 1,
+              "pu": 11340000,
+              "total": 11340000
+            },
+            {
+              "id": "10.8",
+              "desc": "Portails secondaires de 4,00 m",
+              "unit": "U",
+              "qty": 2,
+              "pu": 3150000,
+              "total": 6300000
+            },
+            {
+              "id": "10.9",
+              "desc": "Portillons piétons avec fermeture automatique",
+              "unit": "U",
+              "qty": 4,
+              "pu": 441000,
+              "total": 1764000
+            },
+            {
+              "id": "10.10",
+              "desc": "Signalisation de sécurité et plans d'évacuation",
+              "unit": "ENS.",
+              "qty": 1,
+              "pu": 3150000,
+              "total": 3150000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "techniques",
+      "title": "INFRASTRUCTURES TECHNIQUES",
+      "totalHt": 228998800,
+      "lots": [
+        {
+          "id": 11,
+          "code": "LOT 11",
+          "title": "INFRASTRUCTURE ÉLECTRIQUE ET RÉSEAUX",
+          "totalHt": 184000800,
+          "lines": [
+            {
+              "id": "11.1",
+              "desc": "Branchement BT, comptage Senelec et raccordement au réseau public",
+              "unit": "FF",
+              "qty": 1,
+              "pu": 504000,
+              "total": 504000
+            },
+            {
+              "id": "11.2",
+              "desc": "Tableau général BT, armoires divisionnaires et protections",
+              "unit": "ENS.",
+              "qty": 1,
+              "pu": 15120000,
+              "total": 15120000
+            },
+            {
+              "id": "11.3",
+              "desc": "Réseau de câblage BT en tranchée : fourreaux, câbles, regards et chambres de tirage",
+              "unit": "ml",
+              "qty": 1500,
+              "pu": 11300,
+              "total": 16950000
+            },
+            {
+              "id": "11.4",
+              "desc": "Mâts d'éclairage de 6 m, massifs et scellements",
+              "unit": "U",
+              "qty": 34,
+              "pu": 567000,
+              "total": 19278000
+            },
+            {
+              "id": "11.5",
+              "desc": "Mâts d'éclairage sportif de 12 m, massifs et scellements",
+              "unit": "U",
+              "qty": 8,
+              "pu": 2520000,
+              "total": 20160000
+            },
+            {
+              "id": "11.6",
+              "desc": "Supports de bornes basses d'éclairage",
+              "unit": "U",
+              "qty": 11,
+              "pu": 226800,
+              "total": 2494800
+            },
+            {
+              "id": "11.7",
+              "desc": "Supports, massifs et fourreaux des caméras de vidéosurveillance",
+              "unit": "U",
+              "qty": 8,
+              "pu": 441000,
+              "total": 3528000
+            },
+            {
+              "id": "11.8",
+              "desc": "Alimentation électrique des jets d'eau et fontaines : pompes, électrovannes, câblage et régulation",
+              "unit": "ENS.",
+              "qty": 1,
+              "pu": 10080000,
+              "total": 10080000
+            },
+            {
+              "id": "11.9",
+              "desc": "Infrastructure des postes de recharge pour mobilités : génie civil, support, câblage et protection",
+              "unit": "U",
+              "qty": 6,
+              "pu": 1071000,
+              "total": 6426000
+            },
+            {
+              "id": "11.10",
+              "desc": "Mise à la terre générale et protection contre la foudre",
+              "unit": "ENS.",
+              "qty": 1,
+              "pu": 5040000,
+              "total": 5040000
+            },
+            {
+              "id": "11.11",
+              "desc": "Éclairage de sécurité et d'évacuation",
+              "unit": "ENS.",
+              "qty": 1,
+              "pu": 2520000,
+              "total": 2520000
+            },
+            {
+              "id": "11.12",
+              "desc": "Groupe électrogène de secours 60 kVA avec coffret d'inversion",
+              "unit": "U",
+              "qty": 1,
+              "pu": 22680000,
+              "total": 22680000
+            },
+            {
+              "id": "11.13",
+              "desc": "Sécurité incendie : extincteurs, RIA, BAES, signalétique et consignes",
+              "unit": "ENS.",
+              "qty": 1,
+              "pu": 15120000,
+              "total": 15120000
+            },
+            {
+              "id": "11.14",
+              "desc": "Poste de transformation 160 kVA, génie civil, cellule HTA et raccordement BT",
+              "unit": "ENS.",
+              "qty": 1,
+              "pu": 44100000,
+              "total": 44100000
+            }
+          ]
+        },
+        {
+          "id": 12,
+          "code": "LOT 12",
+          "title": "FORAGE ET ALIMENTATION EN EAU",
+          "totalHt": 44998000,
+          "lines": [
+            {
+              "id": "12.1",
+              "desc": "Étude hydrogéologique et implantation du forage",
+              "unit": "FF",
+              "qty": 1,
+              "pu": 3150000,
+              "total": 3150000
+            },
+            {
+              "id": "12.2",
+              "desc": "Forage Ø 8\" à 80 m : tubage PVC Ø 125, crépines inox et massif de gravier",
+              "unit": "ml",
+              "qty": 80,
+              "pu": 75600,
+              "total": 6048000
+            },
+            {
+              "id": "12.3",
+              "desc": "Développement, essai de pompage et analyses physico-chimiques de l'eau",
+              "unit": "FF",
+              "qty": 1,
+              "pu": 3150000,
+              "total": 3150000
+            },
+            {
+              "id": "12.4",
+              "desc": "Tête de forage, margelle, regard et protection",
+              "unit": "U",
+              "qty": 1,
+              "pu": 1890000,
+              "total": 1890000
+            },
+            {
+              "id": "12.5",
+              "desc": "Pompe immergée 5,5 kW, câble, sonde de niveau et raccordements",
+              "unit": "ENS.",
+              "qty": 1,
+              "pu": 5670000,
+              "total": 5670000
+            },
+            {
+              "id": "12.6",
+              "desc": "Coffret électrique, protection et comptage du forage",
+              "unit": "ENS.",
+              "qty": 1,
+              "pu": 3150000,
+              "total": 3150000
+            },
+            {
+              "id": "12.7",
+              "desc": "Château d'eau métallique de 10 m³ sur tour de 6 m",
+              "unit": "U",
+              "qty": 1,
+              "pu": 10080000,
+              "total": 10080000
+            },
+            {
+              "id": "12.8",
+              "desc": "Réseau de distribution AEP en PEHD, regards et vannes",
+              "unit": "ml",
+              "qty": 800,
+              "pu": 10100,
+              "total": 8080000
+            },
+            {
+              "id": "12.9",
+              "desc": "Raccordement forage → château d'eau → réseau d'arrosage et fontaines",
+              "unit": "ENS.",
+              "qty": 1,
+              "pu": 3780000,
+              "total": 3780000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "parking",
+      "title": "PARKING ET CANTINES EN CONTENEURS",
+      "totalHt": 763148200,
+      "lots": [
+        {
+          "id": 13,
+          "code": "LOT 13",
+          "title": "PARKING ET CANTINES EN CONTENEURS",
+          "totalHt": 763148200,
+          "lines": [
+            {
+              "id": "13.1",
+              "desc": "Décapage de la terre végétale sur 20 cm d'épaisseur",
+              "unit": "m²",
+              "qty": 7800,
+              "pu": 1900,
+              "total": 14820000
+            },
+            {
+              "id": "13.2",
+              "desc": "Terrassement et mise à niveau du parking",
+              "unit": "m³",
+              "qty": 1560,
+              "pu": 15100,
+              "total": 23556000
+            },
+            {
+              "id": "13.3",
+              "desc": "Couche de forme en latérite compactée ép. 20 cm",
+              "unit": "m³",
+              "qty": 1560,
+              "pu": 31500,
+              "total": 49140000
+            },
+            {
+              "id": "13.4",
+              "desc": "Revêtement du parking en grave traitée, y compris réglage et compactage",
+              "unit": "m²",
+              "qty": 7800,
+              "pu": 17600,
+              "total": 137280000
+            },
+            {
+              "id": "13.5",
+              "desc": "Bordures de délimitation périphériques",
+              "unit": "ml",
+              "qty": 820,
+              "pu": 12000,
+              "total": 9840000
+            },
+            {
+              "id": "13.6",
+              "desc": "Marquage des places de stationnement (bandes et numéros)",
+              "unit": "U",
+              "qty": 312,
+              "pu": 12600,
+              "total": 3931200
+            },
+            {
+              "id": "13.7",
+              "desc": "Caniveaux de drainage des eaux pluviales, y compris grilles",
+              "unit": "ml",
+              "qty": 780,
+              "pu": 113400,
+              "total": 88452000
+            },
+            {
+              "id": "13.8",
+              "desc": "Mâts d'éclairage de 8 m, massifs et scellements",
+              "unit": "U",
+              "qty": 14,
+              "pu": 756000,
+              "total": 10584000
+            },
+            {
+              "id": "13.9",
+              "desc": "Réseau d'alimentation en eau et électricité des cantines",
+              "unit": "ml",
+              "qty": 500,
+              "pu": 11300,
+              "total": 5650000
+            },
+            {
+              "id": "13.10",
+              "desc": "Branchements individuels des cantines (eau, électricité, évacuation)",
+              "unit": "U",
+              "qty": 43,
+              "pu": 441000,
+              "total": 18963000
+            },
+            {
+              "id": "13.11",
+              "desc": "Kiosque en conteneur 20 pieds, clé en main : transport, découpe, traitement anticorrosion, fondation, revêtements et installation électrique",
+              "unit": "U",
+              "qty": 1,
+              "pu": 5670000,
+              "total": 5670000
+            },
+            {
+              "id": "13.12",
+              "desc": "Boutiques en conteneurs 20 pieds, clé en main : transport, découpe, traitement anticorrosion, fondation, revêtements, vitrine et installation électrique",
+              "unit": "U",
+              "qty": 29,
+              "pu": 6930000,
+              "total": 200970000
+            },
+            {
+              "id": "13.13",
+              "desc": "Restaurants / fast food en conteneurs 40 pieds, clé en main : transport, découpe, traitement anticorrosion, fondation, revêtements, équipement cuisine et installation électrique",
+              "unit": "U",
+              "qty": 5,
+              "pu": 13860000,
+              "total": 69300000
+            },
+            {
+              "id": "13.14",
+              "desc": "Cafés en conteneurs 20 pieds, clé en main : transport, découpe, traitement anticorrosion, fondation, revêtements, comptoir, plomberie et installation électrique",
+              "unit": "U",
+              "qty": 6,
+              "pu": 7560000,
+              "total": 45360000
+            },
+            {
+              "id": "13.15",
+              "desc": "Salles de jeux en conteneurs 40 pieds, clé en main : transport, découpe, traitement anticorrosion, fondation, revêtements, climatisation et installation électrique",
+              "unit": "U",
+              "qty": 2,
+              "pu": 15120000,
+              "total": 30240000
+            },
+            {
+              "id": "13.16",
+              "desc": "Clôture périphérique du parking en grille soudée h = 1,50 m, y compris poteaux et fondation",
+              "unit": "ml",
+              "qty": 820,
+              "pu": 44100,
+              "total": 36162000
+            },
+            {
+              "id": "13.17",
+              "desc": "Portail coulissant motorisé de 6,00 m à l'entrée du parking",
+              "unit": "U",
+              "qty": 1,
+              "pu": 7560000,
+              "total": 7560000
+            },
+            {
+              "id": "13.18",
+              "desc": "Guérite de gardien 2,50 × 2,50 m, construction complète",
+              "unit": "U",
+              "qty": 1,
+              "pu": 5670000,
+              "total": 5670000
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "spaceDetails": {
+    "foot": {
+      "sector": "Pôle Sportif Ouest",
+      "surfaceLabel": "1 500 m² (foot) · 406,17 m² (sprint) · 2 662,10 m² (piste)",
+      "capacityLabel": "Football à 7/11 · 6 couloirs sprint · Boucle 1 100 ml",
+      "lotIds": [
+        5,
+        11
+      ],
+      "dedicatedLineIds": [
+        "5.6",
+        "5.9"
+      ],
+      "sharedLineIds": [
+        "5.1",
+        "5.2",
+        "5.3",
+        "5.10",
+        "11.5"
+      ],
+      "specs": [
+        {
+          "label": "Terrain de football",
+          "value": "1 500,00 m² · béton poreux / résine sur dallage BA 15 cm"
+        },
+        {
+          "label": "Piste d'athlétisme",
+          "value": "3 068,27 m² cumulés (boucle extérieure + couloirs sprint)"
+        },
+        {
+          "label": "Équipements fournis",
+          "value": "2 buts de football scellés avec filets, tracés réglementaires"
+        },
+        {
+          "label": "Aires de dégagement",
+          "value": "386,71 m² périphériques raccordés aux cheminements"
+        }
+      ],
+      "amenities": [
+        {
+          "title": "Revêtement sportif coulé",
+          "detail": "Dallage béton armé 350 kg/m³ ép. 15 cm et résine sportive antidérapante drainante."
+        },
+        {
+          "title": "Éclairage sportif grande hauteur",
+          "detail": "8 supports de mâts de 12 m avec massifs et fourreaux BT couvrant les matchs en soirée."
+        },
+        {
+          "title": "Confort & accès",
+          "detail": "Liaison directe avec la piste périphérique rouge, bancs de touche et cheminements PMR."
+        }
+      ]
+    },
+    "raquettes": {
+      "sector": "Pôle Sportif Ouest",
+      "surfaceLabel": "400,00 m² (200 m² Padel + 200 m² Tennis)",
+      "capacityLabel": "2 courts dédiés équipés (8 joueurs simultanés)",
+      "lotIds": [
+        5,
+        11
+      ],
+      "dedicatedLineIds": [
+        "5.4",
+        "5.5"
+      ],
+      "sharedLineIds": [
+        "5.1",
+        "5.2",
+        "5.3",
+        "5.10",
+        "11.5"
+      ],
+      "specs": [
+        {
+          "label": "Court de padel",
+          "value": "20,00 × 10,00 m · structure acier, vitrage tempéré, gazon synthétique"
+        },
+        {
+          "label": "Court de tennis",
+          "value": "20,00 × 10,00 m · revêtement poreux, filets horizontaux, poteaux scellés"
+        },
+        {
+          "label": "Orientation",
+          "value": "Biais à 45° optimisant l'ombrage naturel et l'intégration paysagère"
+        },
+        {
+          "label": "Forfait clé en main",
+          "value": "Padel et tennis traités au forfait avec équipements, filets et clôtures"
+        }
+      ],
+      "amenities": [
+        {
+          "title": "Parois vitrées & filets",
+          "detail": "Structure vitrée périphérique de sécurité sur le padel et filets tendus dans l'axe transversal."
+        },
+        {
+          "title": "Tracés réglementaires",
+          "detail": "Zones de service, lignes de fond et couloirs tracés en peinture routière/résine blanche."
+        },
+        {
+          "title": "Desserte paysagère",
+          "detail": "Bordures fleuries d'agrément, bancs bois-acier à proximité et mâts d'éclairage 12 m."
+        }
+      ]
+    },
+    "multisports": {
+      "sector": "Pôle Sportif Ouest",
+      "surfaceLabel": "420,00 m² (Basket) · 958,63 m² (Sable : Beach Soccer, Handball & Volley)",
+      "capacityLabel": "Terrain de basket + arène en sable de plage multifonction",
+      "lotIds": [
+        5,
+        11
+      ],
+      "dedicatedLineIds": [
+        "5.7",
+        "5.8"
+      ],
+      "sharedLineIds": [
+        "5.1",
+        "5.2",
+        "5.3",
+        "5.10",
+        "11.5"
+      ],
+      "specs": [
+        {
+          "label": "Terrain de basketball",
+          "value": "420,00 m² · 2 ensembles poteaux + panneaux scellés, arcs à 3 points"
+        },
+        {
+          "label": "Arène sur sable fin",
+          "value": "958,63 m² · sable de plage pour Beach Soccer, Beach Handball & Beach Volley"
+        },
+        {
+          "label": "Équipements beach & buts",
+          "value": "2 buts de handball/beach soccer avec filets scellés + filet de beach volley"
+        },
+        {
+          "label": "Accessibilité",
+          "value": "Bordure de retenue de sable, raccord aux allées pavées et gradins"
+        }
+      ],
+      "amenities": [
+        {
+          "title": "Revêtement en sable de plage",
+          "detail": "Aire dédiée en sable fin doré délimitée par une bordure périphérique pour sports de sable pieds nus."
+        },
+        {
+          "title": "Polyvalence Beach Soccer / Volley",
+          "detail": "Filet central amovible de beach volleyball combiné aux buts permanents aux extrémités."
+        },
+        {
+          "title": "Éclairage & gradins",
+          "detail": "Mâts d'éclairage 12 m couvrant les tournois en soirée et gradins d'accompagnement."
+        }
+      ]
+    },
+    "fitness": {
+      "sector": "Transition Sport / Bien-être",
+      "surfaceLabel": "200,00 m² (Fitness) + 496,97 m² (Arts Martiaux)",
+      "capacityLabel": "6 agrès extérieurs scellés + tatami plein air",
+      "lotIds": [
+        6,
+        5
+      ],
+      "dedicatedLineIds": [
+        "6.11",
+        "6.12"
+      ],
+      "sharedLineIds": [
+        "5.1",
+        "5.2",
+        "7.3",
+        "9.1"
+      ],
+      "specs": [
+        {
+          "label": "Plateau fitness",
+          "value": "200,00 m² · sol souple amortissant et massifs de scellement"
+        },
+        {
+          "label": "Agrès extérieurs",
+          "value": "6 stations d'entraînement plein air polyvalentes"
+        },
+        {
+          "label": "Espace Arts Martiaux",
+          "value": "496,97 m² en revêtement sportif dédié aux pratiques de groupe"
+        },
+        {
+          "label": "Végétation d'accompagnement",
+          "value": "Jardins plantés périphériques et ombre naturelle des arbres d'alignement"
+        }
+      ],
+      "amenities": [
+        {
+          "title": "Sol souple sécurisé",
+          "detail": "Revêtement amortissant continu réduisant l'impact articulaire lors des exercices."
+        },
+        {
+          "title": "Fontaine & repos",
+          "detail": "Accès direct aux points d'eau potable et aux bancs des allées nord et sud."
+        },
+        {
+          "title": "Éclairage de promenade",
+          "detail": "Bornes basses de jardin et mâts 6 m assurant une pratique matinale et nocturne sûre."
+        }
+      ]
+    },
+    "piscines": {
+      "sector": "Pôle Aquatique Central",
+      "surfaceLabel": "425,52 m² (Adulte) + 92,51 m² (Enfant) · 718,62 m² carrelés",
+      "capacityLabel": "2 bassins différenciés · Vestiaires & filtration dédiés",
+      "lotIds": [
+        4,
+        8
+      ],
+      "dedicatedLineIds": [
+        "4.4",
+        "4.5",
+        "4.6",
+        "8.8"
+      ],
+      "sharedLineIds": [
+        "4.1",
+        "4.2",
+        "4.3",
+        "4.9"
+      ],
+      "specs": [
+        {
+          "label": "Piscine adulte",
+          "value": "425,52 m² · profondeur 1,60 m, goulottes de débordement et échelles inox"
+        },
+        {
+          "label": "Piscine enfant",
+          "value": "92,51 m² · profondeur sécurisée 0,60 m adaptée aux jeunes baigneurs"
+        },
+        {
+          "label": "Étanchéité & finition",
+          "value": "Radier BA 25 cm, parois BA 20 cm, membrane PVC armée 1,5 mm, carrelage antidérapant"
+        },
+        {
+          "label": "Locaux associés",
+          "value": "Local technique de filtration automatisé et bloc vestiaires / douches complet"
+        }
+      ],
+      "amenities": [
+        {
+          "title": "Qualité & traitement de l'eau",
+          "detail": "Groupe de filtration haute capacité et station de traitement automatique avec régulation."
+        },
+        {
+          "title": "Vestiaires & sanitaires complets",
+          "detail": "Douches, cabines de change et raccordements AEP / évacuation dédiés au pôle aquatique."
+        },
+        {
+          "title": "Plages antidérapantes",
+          "detail": "Carrelage grès antidérapant de sécurité sur 718,62 m² incluant plages et lignes d'eau."
+        }
+      ]
+    },
+    "entree": {
+      "sector": "Axe d'Accueil Central",
+      "surfaceLabel": "551,74 m² de parvis en béton désactivé",
+      "capacityLabel": "2 bureaux d'accueil · 1 poste gardiennage · Portail 8 m",
+      "lotIds": [
+        3,
+        8,
+        10
+      ],
+      "dedicatedLineIds": [
+        "3.2",
+        "8.3",
+        "8.4",
+        "10.7"
+      ],
+      "sharedLineIds": [
+        "3.1",
+        "3.6",
+        "10.5",
+        "10.6",
+        "10.8",
+        "10.9"
+      ],
+      "specs": [
+        {
+          "label": "Parvis monumental",
+          "value": "551,74 m² en béton désactivé sous auvent architectural cintré"
+        },
+        {
+          "label": "Bureaux d'accueil",
+          "value": "2 unités de 11,00 × 4,00 m (gros œuvre, second œuvre et électricité)"
+        },
+        {
+          "label": "Contrôle d'accès",
+          "value": "Poste de gardiennage 4,50 × 4,00 m et portail coulissant motorisé 8,00 m"
+        },
+        {
+          "label": "Clôture du parc",
+          "value": "1 100 ml de mur bahut (1,00 m) + grille en fer forgé (2,50 m), hauteur totale 3,50 m"
+        }
+      ],
+      "amenities": [
+        {
+          "title": "Accessibilité universelle PMR",
+          "detail": "120 ml de rampes normalisées avec garde-corps assurant la continuité jusqu'aux allées."
+        },
+        {
+          "title": "Sécurité périmétrique",
+          "detail": "368 poteaux décorés tous les 3 m, 2 portails secondaires de 4 m et 4 portillons automatiques."
+        },
+        {
+          "title": "Signalétique & orientation",
+          "detail": "Panneaux d'accueil, plans d'évacuation et bornes de guidage lumineux à la tombée du jour."
+        }
+      ]
+    },
+    "bassin": {
+      "sector": "Cœur Paysager Central",
+      "surfaceLabel": "557,73 m² (Bassin central) · 1 381,94 m² d'eau totaux",
+      "capacityLabel": "Bassin miroir central · Jets d'eau & 6 fontaines décoratives",
+      "lotIds": [
+        4,
+        11,
+        12
+      ],
+      "dedicatedLineIds": [
+        "4.7",
+        "4.8",
+        "11.8"
+      ],
+      "sharedLineIds": [
+        "4.1",
+        "4.2",
+        "4.3",
+        "4.9",
+        "12.9"
+      ],
+      "specs": [
+        {
+          "label": "Bassin et jet d'eau",
+          "value": "557,73 m² · profondeur 0,70 m · hydraulique multi-buses"
+        },
+        {
+          "label": "Fontaines décoratives",
+          "value": "6 bassins fontaines (dont vasque principale), profondeur 0,50 m"
+        },
+        {
+          "label": "Génie civil hydraulique",
+          "value": "Béton de propreté 5 cm, béton armé 350 kg/m³ et étanchéité membrane PVC 1,5 mm"
+        },
+        {
+          "label": "Alimentation en eau",
+          "value": "Raccordement direct depuis le forage 80 m et le château d'eau 10 m³"
+        }
+      ],
+      "amenities": [
+        {
+          "title": "Jeux d'eau & microclimat",
+          "detail": "Buses, pompes et électrovannes régulées créant un îlot de fraîcheur au centre du jardin."
+        },
+        {
+          "title": "Mise en lumière nocturne",
+          "detail": "Câblage dédié aux jets d'eau et ceinture de bornes basses d'ambiance autour du parvis."
+        },
+        {
+          "title": "Promenade riveraine",
+          "detail": "Pavés de pierre naturelle, bancs périphériques bois-acier et perspectives sur l'amphithéâtre."
+        }
+      ]
+    },
+    "theatre": {
+      "sector": "Pôle Culturel & Services",
+      "surfaceLabel": "758,38 m² de gradins engazonnés · 10 kiosques (4,50 × 4,00 m)",
+      "capacityLabel": "Amphithéâtre en plein air · 10 kiosques · 4 blocs sanitaires",
+      "lotIds": [
+        8,
+        9
+      ],
+      "dedicatedLineIds": [
+        "8.1",
+        "8.2",
+        "8.7",
+        "8.9"
+      ],
+      "sharedLineIds": [
+        "9.1",
+        "9.3",
+        "9.4",
+        "11.4"
+      ],
+      "specs": [
+        {
+          "label": "Théâtre de verdure",
+          "value": "758,38 m² de gradins engazonnés en hémicycle, scène et murs de soutènement"
+        },
+        {
+          "label": "Kiosques couverts",
+          "value": "10 kiosques bâtis de 4,50 × 4,00 m avec toitures et raccordement électrique"
+        },
+        {
+          "label": "Sanitaires publics",
+          "value": "2 blocs sanitaires 5,00 × 4,00 m + 2 blocs sanitaires PMR accessibles"
+        },
+        {
+          "label": "Espaces de services",
+          "value": "Placettes en béton désactivé de part et d'autre de l'hémicycle"
+        }
+      ],
+      "amenities": [
+        {
+          "title": "Programmation culturelle",
+          "detail": "Scène ouverte sur le plan d'eau pour concerts, rencontres citoyennes et animations locales."
+        },
+        {
+          "title": "Hygiène & confort",
+          "detail": "4 blocs sanitaires dont 2 entièrement accessibles PMR, reliés aux fosses toutes eaux."
+        },
+        {
+          "title": "Éclairage scénique & allées",
+          "detail": "Mâts d'éclairage 6 m en couronne et éclairage d'ambiance sous les auvents des kiosques."
+        }
+      ]
+    },
+    "jeux": {
+      "sector": "Pôle Familles Centre-Est",
+      "surfaceLabel": "1 967,61 m² cumulés (dont 350 m² sol amortissant EPDM)",
+      "capacityLabel": "6 agrès majeurs EN 1176 + bac à sable + jeux au sol",
+      "lotIds": [
+        6
+      ],
+      "dedicatedLineIds": [
+        "6.1",
+        "6.2",
+        "6.3",
+        "6.4",
+        "6.5",
+        "6.6",
+        "6.7",
+        "6.8",
+        "6.9",
+        "6.10",
+        "6.13"
+      ],
+      "sharedLineIds": [
+        "9.1",
+        "9.3",
+        "9.4"
+      ],
+      "specs": [
+        {
+          "label": "Structure combinée",
+          "value": "Tour multi-activités avec pont de singe, filet et toboggan"
+        },
+        {
+          "label": "Agrès complémentaires",
+          "value": "Balançoire 3 places, carrousel à frein, 3 jeux à ressort, mur d'escalade, parcours"
+        },
+        {
+          "label": "Zone sable & ombrage",
+          "value": "Bac à sable avec pompe manuelle drainée + 72 m² de voiles d'ombrage"
+        },
+        {
+          "label": "Sécurité enfants",
+          "value": "Sol amortissant EPDM 30 mm (350 m²), clôture 90 ml h = 1,20 m à 2 portillons"
+        }
+      ],
+      "amenities": [
+        {
+          "title": "Protection des chutes",
+          "detail": "Revêtement amortissant EPDM et zones sur sable répondant aux exigences EN 1176."
+        },
+        {
+          "title": "Confort thermique",
+          "detail": "Voiles d'ombrage tendus sur les jeux principaux et plantations d'accompagnement."
+        },
+        {
+          "title": "Assises parents",
+          "detail": "Bancs de surveillance en lisière de l'enceinte clôturée et corbeilles de tri sélectif."
+        }
+      ]
+    },
+    "petanque": {
+      "sector": "Pôle Détente Centre-Est",
+      "surfaceLabel": "1 152,25 m² cumulés (4 terrains & plateau convivial)",
+      "capacityLabel": "Terrains de boules, jeux de dames, tables & bancs",
+      "lotIds": [
+        5,
+        9
+      ],
+      "dedicatedLineIds": [
+        "9.1",
+        "9.2",
+        "9.3",
+        "9.5"
+      ],
+      "sharedLineIds": [
+        "5.1",
+        "5.2",
+        "7.3",
+        "11.4"
+      ],
+      "specs": [
+        {
+          "label": "Aires de pétanque & dames",
+          "value": "Plateaux stabilisés bordés pour rencontres intergénérationnelles"
+        },
+        {
+          "label": "Assises & pique-nique",
+          "value": "14 bancs bois-acier 2,00 m et 8 tables de pique-nique à bancs intégrés"
+        },
+        {
+          "label": "Propreté & points d'eau",
+          "value": "20 poubelles de tri sélectif, 2 fontaines à boire et 10 panneaux d'usage"
+        },
+        {
+          "label": "Ombrage naturel",
+          "value": "Mail d'arbres d'alignement et jardinières arborées tout au long du secteur"
+        }
+      ],
+      "amenities": [
+        {
+          "title": "Convivialité intergénérationnelle",
+          "detail": "Zones ombragées conçues pour la pétanque, les jeux de société et les échanges quotidiens."
+        },
+        {
+          "title": "Signalétique de parc",
+          "detail": "Panneaux informatifs sur les usages du jardin et repères d'orientation est/ouest."
+        },
+        {
+          "title": "Cheminements doux",
+          "detail": "Accès continu en pavés de pierre naturelle sans ressaut depuis les aires de jeux et jardins."
+        }
+      ]
+    },
+    "jardin": {
+      "sector": "Promenade Botanique Est",
+      "surfaceLabel": "7 739,98 m² d'espaces verts · 112 m² halle pique-nique",
+      "capacityLabel": "158 arbres · 3 837 arbustes · 566,24 m² parterres fleuris",
+      "lotIds": [
+        7,
+        8,
+        12
+      ],
+      "dedicatedLineIds": [
+        "7.1",
+        "7.2",
+        "7.3",
+        "7.4",
+        "7.5",
+        "7.6",
+        "7.7",
+        "7.8",
+        "7.9",
+        "7.10",
+        "8.6"
+      ],
+      "sharedLineIds": [
+        "12.7",
+        "12.8",
+        "12.9",
+        "9.2"
+      ],
+      "specs": [
+        {
+          "label": "Gazonnement total",
+          "value": "3 975,54 m² (2 584,10 m² en plaques + 1 391,44 m² par semis)"
+        },
+        {
+          "label": "Strate arborée & arbustive",
+          "value": "124 arbres d'alignement (3-4 m), 34 isolés/fruitiers, 3 837 arbustes, 300 ml haies"
+        },
+        {
+          "label": "Parterres fleuris",
+          "value": "566,24 m² fleuris sur terre végétale amendée (1 548 m³ apportés) + 766,24 m² paillés"
+        },
+        {
+          "label": "Arrosage & halle",
+          "value": "7 739,98 m² d'arrosage automatique + halle de pique-nique 14,00 × 8,00 m + garantie 12 mois"
+        }
+      ],
+      "amenities": [
+        {
+          "title": "Autonomie hydrique par forage",
+          "detail": "Forage de 80 m (pompe 5,5 kW) et château d'eau 10 m³ alimentant l'arrosage automatique."
+        },
+        {
+          "title": "Halle de pique-nique 112 m²",
+          "detail": "Ouvrage couvert 14 × 8 m doté de mobilier fixe pour les sorties familiales et scolaires."
+        },
+        {
+          "title": "Biodiversité & fraîcheur",
+          "detail": "Palette florale diversifiée, arbres fruitiers du verger et entretien assuré 12 mois."
+        }
+      ]
+    },
+    "parking": {
+      "sector": "Plateau Commercial Nord",
+      "surfaceLabel": "7 800,00 m² (390,00 × 20,00 m) · 820 ml de périmètre",
+      "capacityLabel": "312 places de stationnement · 43 cantines en conteneurs",
+      "lotIds": [
+        13
+      ],
+      "dedicatedLineIds": [
+        "13.1",
+        "13.2",
+        "13.3",
+        "13.4",
+        "13.5",
+        "13.6",
+        "13.7",
+        "13.8",
+        "13.9",
+        "13.10",
+        "13.11",
+        "13.12",
+        "13.13",
+        "13.14",
+        "13.15",
+        "13.16",
+        "13.17",
+        "13.18"
+      ],
+      "sharedLineIds": [
+        "11.14"
+      ],
+      "specs": [
+        {
+          "label": "Stationnement",
+          "value": "312 places marquées sur grave traitée (latérite 20 cm, 780 ml caniveaux)"
+        },
+        {
+          "label": "43 cantines conteneurs",
+          "value": "1 kiosque 20', 29 boutiques 20', 5 restos 40', 6 cafés 20', 2 salles de jeux 40'"
+        },
+        {
+          "label": "Réseaux dédiés",
+          "value": "500 ml de réseau eau/électricité et 43 branchements individuels (eau, élec, évac)"
+        },
+        {
+          "label": "Sécurité & éclairage",
+          "value": "Clôture grille soudée 820 ml, portail motorisé 6 m, guérite, 14 mâts de 8 m"
+        }
+      ],
+      "amenities": [
+        {
+          "title": "Commerces & restauration clé en main",
+          "detail": "Conteneurs 20 et 40 pieds traités anticorrosion, vitrés et équipés selon l'activité."
+        },
+        {
+          "title": "Drainage pluvial & assainissement",
+          "detail": "780 ml de caniveaux à grilles et raccordement aux fosses septiques de forte capacité."
+        },
+        {
+          "title": "Liaison piétonne sécurisée",
+          "detail": "Promenade nord desservant directement l'avenue principale face à l'entrée du parc."
+        }
+      ]
+    }
+  }
+}
