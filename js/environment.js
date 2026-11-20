@@ -817,6 +817,10 @@ export function buildVegetation(scene, data, textures, windUniforms) {
 
   const isClearOuter = (x, z, bldMargin = 2.6) => {
     if (isOnRoad(x, z)) return false;
+    // Hors emprises de la Banque et des 2 Stations-service
+    if (x > -136 && x < -105 && z > -86 && z < -60) return false;
+    if (x > -276 && x < -198 && z > -98 && z < -42) return false;
+    if (x > -320 && x < -270 && z > -17 && z < 1) return false;
     if (cantines.some((c) => pointNearPoly2D([x, z], c, 2.0))) return false;
     if (nearBuildings.some((b) => pointNearPoly2D([x, z], b.poly, bldMargin))) return false;
     return true;
@@ -1312,44 +1316,63 @@ export function buildUrbanContextLandmarks(scene) {
   const addServiceStation = ({ cx, cz, canopyW, canopyD, canopyY = 5.4, shopX, shopZ, shopW, shopD, totemX, totemZ }) => {
     const st = new THREE.Group();
 
-    // Dalle piste de distribution
+    // Dalle piste de distribution (top strictement à 0.19 m, sous les îlots à 0.20 m)
     const pad = new THREE.Mesh(
-      new THREE.BoxGeometry(canopyW + 8, 0.16, canopyD + 8),
+      new THREE.BoxGeometry(canopyW + 4, 0.14, canopyD + 3),
       new THREE.MeshStandardMaterial({ color: 0xe6dfd3, roughness: 0.92 })
     );
     pad.position.set(cx, 0.12, cz);
     pad.receiveShadow = true;
     st.add(pad);
 
-    // Auvent principal + bandeau périmétrique terracotta
-    const canopy = new THREE.Mesh(new THREE.BoxGeometry(canopyW, 0.45, canopyD), stoneMat);
+    // Auvent principal (dalle centrale crème + 4 bandeaux périmétriques terracotta sans aucun chevauchement 3D)
+    const rimT = 0.38;
+    const canopyH = 0.46;
+    const fasciaH = 0.54;
+    const canopy = new THREE.Mesh(
+      new THREE.BoxGeometry(canopyW - rimT * 2, canopyH, canopyD - rimT * 2),
+      stoneMat
+    );
     canopy.position.set(cx, canopyY, cz);
     canopy.castShadow = true;
     canopy.receiveShadow = true;
 
-    const fascia = new THREE.Mesh(new THREE.BoxGeometry(canopyW + 0.16, 0.28, canopyD + 0.16), redAccentMat);
-    fascia.position.set(cx, canopyY + 0.08, cz);
-    st.add(canopy, fascia);
+    const fasciaN = new THREE.Mesh(new THREE.BoxGeometry(canopyW, fasciaH, rimT), redAccentMat);
+    fasciaN.position.set(cx, canopyY, cz - (canopyD - rimT) * 0.5);
+    const fasciaS = new THREE.Mesh(new THREE.BoxGeometry(canopyW, fasciaH, rimT), redAccentMat);
+    fasciaS.position.set(cx, canopyY, cz + (canopyD - rimT) * 0.5);
+    const fasciaW = new THREE.Mesh(
+      new THREE.BoxGeometry(rimT, fasciaH, canopyD - rimT * 2),
+      redAccentMat
+    );
+    fasciaW.position.set(cx - (canopyW - rimT) * 0.5, canopyY, cz);
+    const fasciaE = new THREE.Mesh(
+      new THREE.BoxGeometry(rimT, fasciaH, canopyD - rimT * 2),
+      redAccentMat
+    );
+    fasciaE.position.set(cx + (canopyW - rimT) * 0.5, canopyY, cz);
+    st.add(canopy, fasciaN, fasciaS, fasciaW, fasciaE);
 
-    // Colonnes porteuses et îlots de pompes à essence
-    const colGeo = new THREE.CylinderGeometry(0.24, 0.26, canopyY - 0.2, 10);
-    const islandGeo = new THREE.BoxGeometry(4.4, 0.24, 1.35);
-    const pumpGeo = new THREE.BoxGeometry(0.95, 1.65, 0.65);
-    const pumpTopGeo = new THREE.BoxGeometry(1.0, 0.28, 0.7);
+    // Colonnes porteuses (arrêtées sous la sous-face de l'auvent) et îlots de pompes à essence
+    const colH = canopyY - canopyH * 0.5 - 0.2;
+    const colGeo = new THREE.CylinderGeometry(0.24, 0.26, colH, 10);
+    const islandGeo = new THREE.BoxGeometry(4.4, 0.22, 1.35);
+    const pumpGeo = new THREE.BoxGeometry(0.95, 1.5, 0.65);
+    const pumpTopGeo = new THREE.BoxGeometry(1.0, 0.26, 0.7);
 
     const xOffsets = [-canopyW * 0.34, 0, canopyW * 0.34];
     for (const ox of xOffsets) {
       for (const sz of [-1, 1]) {
         const col = new THREE.Mesh(colGeo, colMat);
-        col.position.set(cx + ox, (canopyY - 0.2) * 0.5 + 0.1, cz + sz * (canopyD * 0.34));
+        col.position.set(cx + ox, 0.2 + colH * 0.5, cz + sz * (canopyD * 0.34));
         col.castShadow = true;
         st.add(col);
       }
 
       const isl = new THREE.Mesh(islandGeo, roofTrimMat);
-      isl.position.set(cx + ox, 0.28, cz);
+      isl.position.set(cx + ox, 0.31, cz);
       const pump = new THREE.Mesh(pumpGeo, pumpBodyMat);
-      pump.position.set(cx + ox, 1.15, cz);
+      pump.position.set(cx + ox, 1.17, cz);
       pump.castShadow = true;
       const pTop = new THREE.Mesh(pumpTopGeo, redAccentMat);
       pTop.position.set(cx + ox, 2.05, cz);
@@ -1358,20 +1381,36 @@ export function buildUrbanContextLandmarks(scene) {
 
     // Boutique / bâtiment de station
     if (shopW && shopD) {
-      const shop = new THREE.Mesh(new THREE.BoxGeometry(shopW, 4.1, shopD), stoneMat);
-      shop.position.set(shopX, 2.15, shopZ);
+      const shop = new THREE.Mesh(new THREE.BoxGeometry(shopW, 4.0, shopD), stoneMat);
+      shop.position.set(shopX, 2.2, shopZ);
       shop.castShadow = true;
       shop.receiveShadow = true;
-      const shopGlass = new THREE.Mesh(new THREE.BoxGeometry(shopW * 0.72, 2.3, 0.14), glassMat);
-      shopGlass.position.set(shopX, 1.65, shopZ + (cz > shopZ ? shopD * 0.51 : -shopD * 0.51));
+      const sideBySide = Math.abs(cz - shopZ) < 1.5;
+      const shopGlass = new THREE.Mesh(
+        new THREE.BoxGeometry(sideBySide ? 0.12 : shopW * 0.72, 2.3, sideBySide ? shopD * 0.72 : 0.12),
+        glassMat
+      );
+      if (sideBySide) {
+        shopGlass.position.set(
+          shopX + (cx > shopX ? shopW * 0.5 + 0.08 : -shopW * 0.5 - 0.08),
+          1.65,
+          shopZ
+        );
+      } else {
+        shopGlass.position.set(
+          shopX,
+          1.65,
+          shopZ + (cz > shopZ ? shopD * 0.5 + 0.08 : -shopD * 0.5 - 0.08)
+        );
+      }
       st.add(shop, shopGlass);
     }
 
-    // Totem prix en bordure de voie
-    const totemBody = new THREE.Mesh(new THREE.BoxGeometry(1.45, 5.8, 0.48), darkSlateMat);
-    totemBody.position.set(totemX, 3.0, totemZ);
+    // Totem prix en bordure de voie (sans chevauchement vertical)
+    const totemBody = new THREE.Mesh(new THREE.BoxGeometry(1.45, 4.4, 0.48), darkSlateMat);
+    totemBody.position.set(totemX, 2.3, totemZ);
     totemBody.castShadow = true;
-    const totemCap = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.35, 0.54), redAccentMat);
+    const totemCap = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.3, 0.54), redAccentMat);
     totemCap.position.set(totemX, 5.15, totemZ);
     st.add(totemBody, totemCap);
 
@@ -1393,19 +1432,19 @@ export function buildUrbanContextLandmarks(scene) {
     totemZ: -46,
   });
 
-  // 2. Station-service Ouest (en face du terrain de football, X=-303, Z=-7)
+  // 2. Station-service Ouest (en face du terrain de football, parcelle Nord-Sud z=[-15..-1], X=-292, Z=-7.5)
   addServiceStation({
-    cx: -303,
-    cz: -7,
-    canopyW: 19,
-    canopyD: 10.5,
+    cx: -288,
+    cz: -7.5,
+    canopyW: 16,
+    canopyD: 9.2,
     canopyY: 5.3,
-    shopX: -303,
-    shopZ: 7.5,
-    shopW: 18,
-    shopD: 8.5,
-    totemX: -282,
-    totemZ: -16,
+    shopX: -308,
+    shopZ: -7.5,
+    shopW: 12,
+    shopD: 8.2,
+    totemX: -274,
+    totemZ: -12.5,
   });
 
   // 3. Banque (parcelle Nord face à la boucle d'accès, X=-121, Z=-73 : édifice sobre à façade anthracite & colonnade)
@@ -1413,31 +1452,31 @@ export function buildUrbanContextLandmarks(scene) {
   const bx = -120.6;
   const bz = -73.1;
 
-  // Parvis et marches de la banque
-  const bankPlinth = new THREE.Mesh(new THREE.BoxGeometry(24, 0.35, 22), roofTrimMat);
-  bankPlinth.position.set(bx, 0.22, bz);
+  // Parvis et marches de la banque (strates Y strictement disjointes)
+  const bankPlinth = new THREE.Mesh(new THREE.BoxGeometry(24, 0.32, 22), roofTrimMat);
+  bankPlinth.position.set(bx, 0.2, bz);
   bankPlinth.receiveShadow = true;
 
-  // Volume architectural principal + corniche et bandeau anthracite (le repère sobre de la banque)
-  const bankCore = new THREE.Mesh(new THREE.BoxGeometry(18.5, 9.2, 16.5), stoneMat);
-  bankCore.position.set(bx, 4.8, bz);
+  // Volume architectural principal + corniche et bandeau anthracite (sans chevauchement)
+  const bankCore = new THREE.Mesh(new THREE.BoxGeometry(18.5, 8.8, 16.5), stoneMat);
+  bankCore.position.set(bx, 4.76, bz);
   bankCore.castShadow = true;
   bankCore.receiveShadow = true;
 
-  const bankCrown = new THREE.Mesh(new THREE.BoxGeometry(19.4, 0.9, 17.4), darkSlateMat);
-  bankCrown.position.set(bx, 9.5, bz);
+  const bankCrown = new THREE.Mesh(new THREE.BoxGeometry(19.4, 0.7, 17.4), darkSlateMat);
+  bankCrown.position.set(bx, 9.51, bz);
   bankCrown.castShadow = true;
 
-  const bankRoofTop = new THREE.Mesh(new THREE.BoxGeometry(17.8, 0.35, 15.8), roofTrimMat);
-  bankRoofTop.position.set(bx, 9.95, bz);
+  const bankRoofTop = new THREE.Mesh(new THREE.BoxGeometry(17.8, 0.3, 15.8), roofTrimMat);
+  bankRoofTop.position.set(bx, 10.01, bz);
   bankRoofTop.receiveShadow = true;
 
   // Façade vitrée Sud face à la demi-lune et au jardin + portique anthracite
-  const bankGlass = new THREE.Mesh(new THREE.BoxGeometry(14.8, 6.8, 0.22), glassMat);
-  bankGlass.position.set(bx, 4.2, bz + 8.3);
+  const bankGlass = new THREE.Mesh(new THREE.BoxGeometry(14.8, 6.8, 0.14), glassMat);
+  bankGlass.position.set(bx, 4.2, bz + 8.35);
 
-  const portalFrame = new THREE.Mesh(new THREE.BoxGeometry(7.6, 5.2, 1.4), darkSlateMat);
-  portalFrame.position.set(bx, 2.8, bz + 8.6);
+  const portalFrame = new THREE.Mesh(new THREE.BoxGeometry(7.6, 5.2, 0.9), darkSlateMat);
+  portalFrame.position.set(bx, 2.96, bz + 8.9);
   portalFrame.castShadow = true;
 
   // 4 colonnes de façade
