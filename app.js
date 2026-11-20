@@ -281,6 +281,7 @@ let trafficCtrl;
 let pedestrianCtrl;
 let lightingCtrl;
 let atmosphereCtrl;
+let contextCtrl;
 let dossierCtrl;
 let audioCtrl;
 
@@ -904,7 +905,7 @@ function buildScene(data, thiesMapTex) {
 
   // 11. Nuages subtils, papillons, oiseaux diurnes et repères urbains voisins (2 stations-service + banque, hors jardin)
   atmosphereCtrl = buildDayAtmosphere(scene, textures, isMobile);
-  buildUrbanContextLandmarks(scene);
+  contextCtrl = buildUrbanContextLandmarks(scene);
   renderer.shadowMap.needsUpdate = true;
 
   // Références thème Jour/Nuit
@@ -1465,6 +1466,9 @@ function applyThemeLerp(f, hour = state.timeOfDay) {
   }
   if (lightingCtrl) {
     lightingCtrl.applyNightFactor(f, performance.now());
+  }
+  if (contextCtrl) {
+    contextCtrl.updateNight(f);
   }
 }
 

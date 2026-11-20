@@ -1382,35 +1382,37 @@ export function buildUrbanContextLandmarks(scene) {
 
   const stoneMat = new THREE.MeshStandardMaterial({ color: 0xf4eee4, roughness: 0.86 });
   const roofTrimMat = new THREE.MeshStandardMaterial({ color: 0xe2d8c8, roughness: 0.82 });
+  const padMat = new THREE.MeshStandardMaterial({ color: 0xe6dfd3, roughness: 0.92 });
   const redAccentMat = new THREE.MeshStandardMaterial({
     color: 0xa64234,
-    emissive: 0x3b120c,
-    emissiveIntensity: 0.25,
-    roughness: 0.55,
+    emissive: 0xc84b38,
+    emissiveIntensity: 0.18,
+    roughness: 0.52,
   });
   const darkSlateMat = new THREE.MeshStandardMaterial({
     color: 0x26292e,
     roughness: 0.5,
     metalness: 0.18,
   });
-  const glassMat = new THREE.MeshStandardMaterial({
-    color: 0x9ab0b8,
-    roughness: 0.18,
-    metalness: 0.25,
+  const glassMat = new THREE.MeshBasicMaterial({
+    color: 0x7c7367,
     transparent: true,
-    opacity: 0.55,
+    opacity: 0.76,
+  });
+  const ledCanopyMat = new THREE.MeshBasicMaterial({
+    color: 0xe8e2d8,
   });
   const colMat = new THREE.MeshStandardMaterial({ color: 0xded7cb, roughness: 0.78 });
   const pumpBodyMat = new THREE.MeshStandardMaterial({ color: 0xfbf9f5, roughness: 0.7 });
 
-  // Constructeur d'une station-service architecturale sobre (auvent sur colonnes, bandeau terracotta, îlots de pompes, totem)
+  // Constructeur d'une station-service architecturale sobre (auvent sur colonnes, plafonniers LED, bandeau terracotta, îlots de pompes, totem éclairé)
   const addServiceStation = ({ cx, cz, canopyW, canopyD, canopyY = 5.4, shopX, shopZ, shopW, shopD, totemX, totemZ }) => {
     const st = new THREE.Group();
 
     // Dalle piste de distribution (top strictement à 0.19 m, sous les îlots à 0.20 m)
     const pad = new THREE.Mesh(
       new THREE.BoxGeometry(canopyW + 4, 0.14, canopyD + 3),
-      new THREE.MeshStandardMaterial({ color: 0xe6dfd3, roughness: 0.92 })
+      padMat
     );
     pad.position.set(cx, 0.12, cz);
     pad.receiveShadow = true;
@@ -1444,12 +1446,13 @@ export function buildUrbanContextLandmarks(scene) {
     fasciaE.position.set(cx + (canopyW - rimT) * 0.5, canopyY, cz);
     st.add(canopy, fasciaN, fasciaS, fasciaW, fasciaE);
 
-    // Colonnes porteuses (arrêtées sous la sous-face de l'auvent) et îlots de pompes à essence
+    // Colonnes porteuses, plafonniers LED sous auvent et îlots de pompes à essence
     const colH = canopyY - canopyH * 0.5 - 0.2;
     const colGeo = new THREE.CylinderGeometry(0.24, 0.26, colH, 10);
     const islandGeo = new THREE.BoxGeometry(4.4, 0.22, 1.35);
     const pumpGeo = new THREE.BoxGeometry(0.95, 1.5, 0.65);
     const pumpTopGeo = new THREE.BoxGeometry(1.0, 0.26, 0.7);
+    const ledGeo = new THREE.BoxGeometry(2.6, 0.08, 1.15);
 
     const xOffsets = [-canopyW * 0.34, 0, canopyW * 0.34];
     for (const ox of xOffsets) {
@@ -1460,6 +1463,11 @@ export function buildUrbanContextLandmarks(scene) {
         st.add(col);
       }
 
+      // Plafonnier LED lumineux sous l'auvent au-dessus de chaque îlot de pompe
+      const ceilingLed = new THREE.Mesh(ledGeo, ledCanopyMat);
+      ceilingLed.position.set(cx + ox, canopyY - canopyH * 0.5 - 0.05, cz);
+      st.add(ceilingLed);
+
       const isl = new THREE.Mesh(islandGeo, roofTrimMat);
       isl.position.set(cx + ox, 0.31, cz);
       const pump = new THREE.Mesh(pumpGeo, pumpBodyMat);
@@ -1467,10 +1475,12 @@ export function buildUrbanContextLandmarks(scene) {
       pump.castShadow = true;
       const pTop = new THREE.Mesh(pumpTopGeo, redAccentMat);
       pTop.position.set(cx + ox, 2.05, cz);
-      st.add(isl, pump, pTop);
+      const pScreen = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.42, 0.72), ledCanopyMat);
+      pScreen.position.set(cx + ox, 1.42, cz);
+      st.add(isl, pump, pTop, pScreen);
     }
 
-    // Boutique / bâtiment de station
+    // Boutique / bâtiment de station avec vitrine et porte éclairées
     if (shopW && shopD) {
       const shop = new THREE.Mesh(new THREE.BoxGeometry(shopW, 4.0, shopD), stoneMat);
       shop.position.set(shopX, 2.2, shopZ);
@@ -1497,13 +1507,15 @@ export function buildUrbanContextLandmarks(scene) {
       st.add(shop, shopGlass);
     }
 
-    // Totem prix en bordure de voie (sans chevauchement vertical)
+    // Totem prix en bordure de voie avec afficheurs LED lumineux
     const totemBody = new THREE.Mesh(new THREE.BoxGeometry(1.45, 4.4, 0.48), darkSlateMat);
     totemBody.position.set(totemX, 2.3, totemZ);
     totemBody.castShadow = true;
     const totemCap = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.3, 0.54), redAccentMat);
     totemCap.position.set(totemX, 5.15, totemZ);
-    st.add(totemBody, totemCap);
+    const totemDisplay = new THREE.Mesh(new THREE.BoxGeometry(1.05, 1.85, 0.56), ledCanopyMat);
+    totemDisplay.position.set(totemX, 3.15, totemZ);
+    st.add(totemBody, totemCap, totemDisplay);
 
     group.add(st);
   };
@@ -1562,7 +1574,7 @@ export function buildUrbanContextLandmarks(scene) {
   bankRoofTop.position.set(bx, 10.01, bz);
   bankRoofTop.receiveShadow = true;
 
-  // Façade vitrée Sud face à la demi-lune et au jardin + portique anthracite
+  // Façade vitrée Sud face à la demi-lune et au jardin + portique anthracite + porte éclairée et bandeau lumineux sous corniche
   const bankGlass = new THREE.Mesh(new THREE.BoxGeometry(14.8, 6.8, 0.14), glassMat);
   bankGlass.position.set(bx, 4.2, bz + 8.35);
 
@@ -1570,18 +1582,53 @@ export function buildUrbanContextLandmarks(scene) {
   portalFrame.position.set(bx, 2.96, bz + 8.9);
   portalFrame.castShadow = true;
 
-  // 4 colonnes de façade
+  const bankDoorLight = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.8, 0.12), ledCanopyMat);
+  bankDoorLight.position.set(bx, 1.76, bz + 9.38);
+
+  const bankCorniceLight = new THREE.Mesh(new THREE.BoxGeometry(18.8, 0.14, 16.8), ledCanopyMat);
+  bankCorniceLight.position.set(bx, 9.1, bz);
+
+  // 4 colonnes de façade + spots au pied des colonnes
   const bColGeo = new THREE.CylinderGeometry(0.28, 0.3, 7.6, 12);
+  const bSpotGeo = new THREE.CylinderGeometry(0.36, 0.38, 0.14, 10);
   for (const ox of [-6.8, -2.6, 2.6, 6.8]) {
     const c = new THREE.Mesh(bColGeo, colMat);
     c.position.set(bx + ox, 4.0, bz + 8.75);
     c.castShadow = true;
-    bankGroup.add(c);
+    const sp = new THREE.Mesh(bSpotGeo, ledCanopyMat);
+    sp.position.set(bx + ox, 0.42, bz + 8.75);
+    bankGroup.add(c, sp);
   }
 
-  bankGroup.add(bankPlinth, bankCore, bankCrown, bankRoofTop, bankGlass, portalFrame);
+  bankGroup.add(bankPlinth, bankCore, bankCrown, bankRoofTop, bankGlass, portalFrame, bankDoorLight, bankCorniceLight);
   group.add(bankGroup);
 
   scene.add(group);
-  return group;
+
+  const dayStone = new THREE.Color(0xf4eee4);
+  const nightStone = new THREE.Color(0x28364a);
+  const dayTrim = new THREE.Color(0xe2d8c8);
+  const nightTrim = new THREE.Color(0x232f42);
+  const dayPad = new THREE.Color(0xe6dfd3);
+  const nightPad = new THREE.Color(0x222c3c);
+  const dayGlass = new THREE.Color(0x7c7367);
+  const nightGlass = new THREE.Color(0xffd28a);
+  const dayLed = new THREE.Color(0xdad2c6);
+  const nightLed = new THREE.Color(0xfff1c4);
+
+  return {
+    group,
+    updateNight(f) {
+      stoneMat.color.lerpColors(dayStone, nightStone, f);
+      roofTrimMat.color.lerpColors(dayTrim, nightTrim, f);
+      padMat.color.lerpColors(dayPad, nightPad, f);
+      colMat.color.lerpColors(dayTrim, nightStone, f);
+      pumpBodyMat.color.lerpColors(dayStone, nightTrim, f);
+      const winF = THREE.MathUtils.smoothstep(f, 0.12, 0.92);
+      glassMat.color.lerpColors(dayGlass, nightGlass, winF);
+      glassMat.opacity = THREE.MathUtils.lerp(0.76, 0.9, winF);
+      ledCanopyMat.color.lerpColors(dayLed, nightLed, winF);
+      redAccentMat.emissiveIntensity = THREE.MathUtils.lerp(0.18, 1.15, winF);
+    },
+  };
 }

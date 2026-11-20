@@ -759,12 +759,18 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     const bz = -1.6 + Math.sin(ang) * 14.5;
     if (isClearOfPoolsAndCourts(bx, bz)) bollards.push([bx, bz]);
   }
-  // Bornes autour des cantines nord
+  // Bornes autour des cantines nord + parvis de la Banque
   for (let x = -45; x <= 295; x += 18) {
     bollards.push([x, -44.6]);
   }
+  bollards.push(
+    [-131.5, -62.5],
+    [-109.7, -62.5],
+    [-131.5, -83.6],
+    [-109.7, -83.6]
+  );
 
-  // 2. Lampadaires d'allées de parc (~48) + mâts parking & promenade cantines (~34)
+  // 2. Lampadaires d'allées de parc (~48) + mâts parking, promenade cantines & abords Banque / Stations-service
   for (let x = -236; x <= 236; x += 18) {
     if (isClearOfPoolsAndCourts(x, -23.6)) parkPoles.push([x, -23.6, 6.0, 0]);
     if (isClearOfPoolsAndCourts(x, 23.6)) parkPoles.push([x, 23.6, 6.0, Math.PI]);
@@ -778,6 +784,15 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
   for (let x = -50; x <= 300; x += 24) {
     parkPoles.push([x, -44.2, 5.5, Math.PI]); // lampadaires devant cantines
   }
+  // Lampadaires dédiés sur le parvis de la Banque et les pistes des 2 Stations-service
+  parkPoles.push(
+    [-133.2, -64.2, 6.2, 0],
+    [-108.0, -64.2, 6.2, 0],
+    [-251.5, -52.5, 6.4, 0],
+    [-220.5, -52.5, 6.4, 0],
+    [-277.5, -1.2, 6.0, 0],
+    [-298.5, -1.2, 6.0, 0]
+  );
 
   // 3. 12 mâts sportifs (11 m) strictly outside courts & Sprint lanes
   [
@@ -1002,6 +1017,29 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     scene.add(stPost, stHead);
   }
 
+  // Halos lumineux directs sous les auvents des 2 Stations-service et la colonnade de la Banque
+  [
+    // Station-service Nord-Ouest (3 îlots de pompes + débord lumineux auvent + boutique + totem)
+    [-243.5, 0.22, -58.5, 19.5],
+    [-236.0, 0.22, -58.5, 21.5],
+    [-228.5, 0.22, -58.5, 19.5],
+    [-236.0, 0.22, -71.0, 16.5],
+    [-255.0, 0.14, -46.0, 11.5],
+    // Station-service Ouest (3 îlots de pompes + débord lumineux auvent + boutique + totem)
+    [-293.4, 0.22, -6.5, 16.5],
+    [-288.0, 0.22, -6.5, 18.5],
+    [-282.6, 0.22, -6.5, 16.5],
+    [-301.0, 0.22, -7.5, 15.0],
+    [-274.0, 0.14, -12.5, 11.0],
+    // Banque (colonnade Sud, entrée & façades latérales)
+    [-127.4, 0.38, -63.5, 14.5],
+    [-120.6, 0.38, -62.5, 17.5],
+    [-113.8, 0.38, -63.5, 14.5],
+    [-120.6, 0.38, -82.5, 13.0],
+  ].forEach(([x, y, z, size]) => {
+    lightPools.push({ x, y, z, size, delay: calcWaveDelay(x, z, 0.08) });
+  });
+
   // Halos lumineux au sol (AdditiveBlending, polygonOffset pour zéro Z-fighting)
   const poolMat = new THREE.MeshBasicMaterial({
     map: textures.lightPool,
@@ -1199,6 +1237,50 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     if (z.kind !== "building") continue;
     pushFacadeWindows(z.poly, 1.45, 2.35, 1.3, 2.2, false);
   }
+
+  // Fenêtres architecturales sur les façades de la Banque (3 niveaux Est/Ouest/Nord) et des boutiques des 2 Stations-service
+  const bankPoly = [
+    [-129.85, -81.35],
+    [-111.35, -81.35],
+    [-111.35, -64.85],
+    [-129.85, -64.85],
+  ];
+  for (let lv = 0; lv < 3; lv++) {
+    const floorBase = 0.36 + lv * 2.8;
+    // Ignorer la façade Sud (edgeIdx === 2) qui possède déjà sa grande verrière et son portique
+    pushFacadeWindows(bankPoly, floorBase + 0.9, floorBase + 1.85, 1.4, 2.8, false, {
+      edgeIdx: 2,
+      sCenter: 9.25,
+      clearHalf: 12.0,
+    });
+  }
+  // Boutiques des 2 Stations-service (façades arrière et latérales)
+  pushFacadeWindows(
+    [
+      [-246.0, -82.75],
+      [-226.0, -82.75],
+      [-226.0, -73.25],
+      [-246.0, -73.25],
+    ],
+    1.35,
+    2.35,
+    1.45,
+    2.9,
+    false
+  );
+  pushFacadeWindows(
+    [
+      [-314.0, -11.6],
+      [-302.0, -11.6],
+      [-302.0, -3.4],
+      [-314.0, -3.4],
+    ],
+    1.35,
+    2.35,
+    1.35,
+    2.6,
+    false
+  );
 
   const dayWinCol = new THREE.Color(0x7c7367);
   const nightWinCol = new THREE.Color(0xffd28a);
