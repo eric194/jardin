@@ -376,17 +376,19 @@ function buildScene(data, thiesMapTex) {
   // Plan macro carte vectorielle de la Région de Thiès (centré sur 0, 0)
   thiesBackdrop = buildThiesBackdrop(scene, textures);
 
-  // Emprises enterrées (Terrain de Basket, Terrain de Beach Sable, et Gradin central entre les deux)
-  const sunkenHoles = (data.zones || [])
-    .filter((z) => {
-      const u = z.name.toUpperCase();
-      return (
-        u === "BASKET" ||
-        u.includes("BEACH") ||
-        (z.kind === "gradin" && z.centroid[0] > -180)
-      );
-    })
-    .map((z) => z.poly);
+  // Emprise unifiée du pôle enterré (Terrain de Basket + son dégagement + Gradin central + Terrain de Beach Sable) :
+  // un seul bassin excavé continu, sans aucun mur de séparation interne entre le gradin et les deux terrains !
+  const SUNKEN_BOWL_POLY = [
+    [-172.88, -0.68],
+    [-151.59, -21.96],
+    [-139.5, -9.87],
+    [-136.99, -9.87],
+    [-136.99, -17.58],
+    [-110.99, -17.58],
+    [-110.99, 19.3],
+    [-152.9, 19.3],
+  ];
+  const sunkenHoles = [SUNKEN_BOWL_POLY];
 
   // Plan de sol local (découpé sous les 3 arènes/gradins enterrés pour laisser voir les marches en contrebas)
   const groundMat = new THREE.MeshStandardMaterial({
@@ -523,11 +525,21 @@ function buildScene(data, thiesMapTex) {
   const scalePolyToward = (poly, cx, cz, s) =>
     poly.map(([x, z]) => [cx + (x - cx) * s, cz + (z - cz) * s]);
 
+  // Dalle de fond continue du pôle enterré (-0.36 m) sous Basket + Gradin central + Beach (zéro mur interne)
+  pushKindGeom("paving", extrudePoly(SUNKEN_BOWL_POLY, 0.08, -0.44));
+
   for (const z of data.zones) {
     try {
       if (z.kind === "water") continue;
       if (z.kind === "building") {
         kioskGeoms.push(extrudePoly(z.poly, 3.05, 0.355));
+        continue;
+      }
+      // Ignorer le cadre AIRE DE DEGAGEMENT haut (+0.35 m) autour du Basket qui formait un muret entre Basket et Gradin
+      if (
+        z.kind === "paving" &&
+        Math.hypot(z.centroid[0] + 156.18, z.centroid[1] + 5.27) < 1.2
+      ) {
         continue;
       }
       // Ignorer tout doublon géométrique exact sport/play (ex. Pétanque / Jeux Enfants 716,1 m²)
@@ -688,23 +700,15 @@ function buildScene(data, thiesMapTex) {
         continue;
       }
 
-      // B. Terrain de Basket enterré (-0.35 m) SANS gradin autour du terrain (simple bordure de soutènement fine)
+      // B. Terrain de Basket enterré (-0.35 m) ouvert directement sur le gradin central (aucun mur de séparation)
       if (zu === "BASKET") {
-        const [cx, cz] = z.centroid;
-        const p0 = z.poly;
-        const pInner = scalePolyToward(p0, cx, cz, 0.985);
-        pushKindGeom("paving", extrudePoly(p0, 0.75, -0.40, [pInner]));
-        pushKindGeom("sport", extrudePoly(pInner, 0.10, -0.45)); // top -0.35 m
+        pushKindGeom("sport", extrudePoly(z.poly, 0.08, -0.43)); // top -0.35 m
         continue;
       }
 
-      // C. Terrain de Beach Sable enterré (-0.35 m) SANS gradin autour du terrain (simple bordure de soutènement fine)
+      // C. Terrain de Beach Sable enterré (-0.35 m) ouvert directement sur le gradin central (aucun mur de séparation)
       if (zu.includes("BEACH")) {
-        const [cx, cz] = z.centroid;
-        const p0 = z.poly;
-        const pInner = scalePolyToward(p0, cx, cz, 0.985);
-        pushKindGeom("paving", extrudePoly(p0, 0.75, -0.40, [pInner]));
-        pushKindGeom("sand", extrudePoly(pInner, 0.10, -0.45)); // top -0.35 m
+        pushKindGeom("sand", extrudePoly(z.poly, 0.08, -0.43)); // top -0.35 m
         continue;
       }
 
