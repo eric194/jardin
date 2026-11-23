@@ -18,6 +18,9 @@
 <body>
   <canvas id="scene-canvas" aria-label="Maquette 3D interactive du Jardin Grand Standing de Thiès"></canvas>
 
+  <!-- Effet Maquette / Tilt-Shift optique (activable) -->
+  <div id="tiltshift-overlay" class="tiltshift-overlay" aria-hidden="true"></div>
+
   <!-- Curseur minimaliste bureau -->
   <div id="cursor-ring" class="cursor-ring" aria-hidden="true"></div>
 
@@ -121,6 +124,29 @@
         <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
           <rect x="2.5" y="4" width="13" height="10" rx="1.5" stroke="currentColor" stroke-width="1.35"/>
           <path d="M2.5 9h13M9 4v10" stroke="currentColor" stroke-width="1.15" opacity="0.6"/>
+        </svg>
+      </button>
+
+      <button type="button" id="btn-tiltshift" class="icon-btn" aria-label="Activer l'effet maquette Tilt-Shift" aria-pressed="false" title="Effet Maquette Tilt-Shift (T)">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <rect x="2.5" y="6.8" width="13" height="4.4" rx="1" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M4 3.8h10M4 14.2h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="1.5 2"/>
+        </svg>
+      </button>
+
+      <button type="button" id="btn-fly" class="icon-btn" aria-label="Lancer la visite survolée du parc" aria-pressed="false" title="Survol guidé du parc (F)">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <path d="M15.4 3.2 2.8 8.3l4.6 1.9 1.9 4.6 6.1-11.6Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+          <path d="M7.4 10.2 15.2 3.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <button type="button" id="btn-share" class="icon-btn" aria-label="Copier le lien de cette vue" title="Partager cet angle de vue">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <circle cx="13" cy="4.8" r="2" stroke="currentColor" stroke-width="1.3"/>
+          <circle cx="5" cy="9" r="2" stroke="currentColor" stroke-width="1.3"/>
+          <circle cx="13" cy="13.2" r="2" stroke="currentColor" stroke-width="1.3"/>
+          <path d="m6.8 8 4.4-2.3M6.8 10l4.4 2.3" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
         </svg>
       </button>
 
@@ -321,6 +347,30 @@
 
   <!-- Vue complète de consultation du devis -->
   <div id="devis-modal" class="dossier-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Consultation du devis estimatif et quantitatif"></div>
+
+  <!-- Minimap interactive du parc linéaire (500 m) -->
+  <div id="park-minimap" class="park-minimap" aria-hidden="true" title="Cliquer pour déplacer la vue dans le parc">
+    <svg id="minimap-svg" class="minimap-svg" viewBox="-260 -70 520 108" preserveAspectRatio="xMidYMid meet">
+      <rect x="-54" y="-63" width="304" height="23" rx="3" fill="rgba(195,180,158,0.42)"/>
+      <rect x="-252" y="-27" width="504" height="54" rx="8" fill="rgba(220,212,196,0.38)" stroke="#b85947" stroke-width="2.2"/>
+      <rect x="-245" y="-21" width="132" height="42" rx="3" fill="rgba(210,185,146,0.48)"/>
+      <rect x="-68" y="-20" width="38" height="24" rx="4" fill="#63b9c8" opacity="0.72"/>
+      <ellipse cx="0" cy="-2" rx="22" ry="12" fill="#74c2ce" opacity="0.78"/>
+      <rect x="38" y="-20" width="198" height="40" rx="4" fill="rgba(125,155,102,0.42)"/>
+      <circle id="minimap-fov" cx="0" cy="-5" r="24" fill="rgba(166,66,52,0.16)" stroke="rgba(166,66,52,0.5)" stroke-width="1.6"/>
+      <circle id="minimap-dot" cx="0" cy="-5" r="5.5" fill="#a64234" stroke="#ffffff" stroke-width="2"/>
+    </svg>
+  </div>
+
+  <!-- Bandeau discret pendant le mode Survol guidé (Fly) -->
+  <div id="fly-banner" class="fly-banner" aria-hidden="true">
+    <span class="fly-pulse" aria-hidden="true"></span>
+    <span id="fly-label" class="fly-label">Survol · Terrain de Football</span>
+    <button type="button" id="btn-fly-stop" class="fly-stop-btn">Arrêter</button>
+  </div>
+
+  <!-- Notification copie de lien -->
+  <div id="copy-toast" class="copy-toast" role="status" aria-live="polite" aria-hidden="true">Lien de cette vue copié</div>
 
   <!-- Indicateur d'échelle et de distance dynamique -->
   <div id="distance-hud" class="distance-hud" aria-hidden="true">

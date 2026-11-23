@@ -395,6 +395,49 @@ export function buildSportCourts(scene, data) {
   addRacketCourt("TENNIS", false);
   addRacketCourt("PADEL", true);
 
+  // 5b. Espace Arts Martiaux (-75.7, -15.5) : tatami encadré bois & cercle de compétition
+  const amZone = data.zones.find((z) => z.name.toUpperCase() === "ART MARTIAUX");
+  if (amZone) {
+    const dx = -75.7;
+    const dz = -16.8;
+    const deckFrame = new THREE.Mesh(
+      new THREE.BoxGeometry(12.6, 0.08, 10.6),
+      new THREE.MeshStandardMaterial({ color: 0xb99d7c, roughness: 0.85 })
+    );
+    deckFrame.position.set(dx, 0.45, dz);
+    deckFrame.receiveShadow = true;
+
+    const matRim = new THREE.Mesh(
+      new THREE.BoxGeometry(11.8, 0.085, 9.8),
+      new THREE.MeshStandardMaterial({ color: 0x9c5548, roughness: 0.88 })
+    );
+    matRim.position.set(dx, 0.458, dz);
+    matRim.receiveShadow = true;
+
+    const tatamiCenter = new THREE.Mesh(
+      new THREE.BoxGeometry(9.6, 0.09, 7.6),
+      new THREE.MeshStandardMaterial({ color: 0xdfd0ba, roughness: 0.9 })
+    );
+    tatamiCenter.position.set(dx, 0.464, dz);
+    tatamiCenter.receiveShadow = true;
+
+    const amRing = new THREE.Mesh(
+      new THREE.RingGeometry(2.85, 3.0, 32),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+    );
+    amRing.rotation.x = -Math.PI / 2;
+    amRing.position.set(dx, 0.514, dz);
+
+    const benchMat = new THREE.MeshStandardMaterial({ color: 0xc2a886, roughness: 0.82 });
+    const bWest = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.44, 4.2), benchMat);
+    bWest.position.set(dx - 7.1, 0.64, dz);
+    bWest.castShadow = true;
+    const bEast = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.44, 4.2), benchMat);
+    bEast.position.set(dx + 7.1, 0.64, dz);
+    bEast.castShadow = true;
+    scene.add(deckFrame, matRim, tatamiCenter, amRing, bWest, bEast);
+  }
+
   // 6. Piste périphérique rouge extérieure (pointillés blancs sur l'axe exact DXF)
   for (let x = -242; x <= 238; x += 12) {
     rbTrack.addSegment(x, -26.17, x + 5.5, -26.17, 0.16);
@@ -1077,13 +1120,14 @@ export function buildVegetation(scene, data, textures, windUniforms) {
     return p && Math.abs(p[0]) < 365 && Math.abs(p[1]) < 160;
   });
 
-  const isClearOuter = (x, z, bldMargin = 2.6) => {
+  const isClearOuter = (x, z, bldMargin = 3.8) => {
     if (isOnRoad(x, z)) return false;
     // Hors emprises de la Banque et des 2 Stations-service
     if (x > -136 && x < -105 && z > -86 && z < -60) return false;
     if (x > -276 && x < -198 && z > -98 && z < -42) return false;
     if (x > -320 && x < -270 && z > -17 && z < 1) return false;
-    if (cantines.some((c) => pointNearPoly2D([x, z], c, 2.0))) return false;
+    // Dégager les toits des 43 cantines le long du parking Nord
+    if (cantines.some((c) => pointNearPoly2D([x, z], c, 3.8))) return false;
     if (nearBuildings.some((b) => pointNearPoly2D([x, z], b.poly, bldMargin))) return false;
     return true;
   };
@@ -1138,11 +1182,11 @@ export function buildVegetation(scene, data, textures, windUniforms) {
     // Dégager l'axe du parvis d'entrée Nord & arrière Théâtre Sud
     if (Math.abs(x) < 15.5) continue;
     // Bordure Nord extérieure à la piste rouge (BANDE DE GAZON Nord)
-    if (isClearOuter(x, -28.05, 2.2) && isClearInner(x, -28.05)) {
+    if (isClearOuter(x, -28.05, 3.4) && isClearInner(x, -28.05)) {
       addTreeIfClear(x + (rng() - 0.5) * 0.6, -28.05, 0.88 + rng() * 0.34, 0.36, 7.5);
     }
     // Bordure Sud extérieure à la piste rouge (trottoir Sud longeant le parc)
-    if (isClearOuter(x, 28.85, 2.2) && isClearInner(x, 28.85)) {
+    if (isClearOuter(x, 28.85, 3.4) && isClearInner(x, 28.85)) {
       addTreeIfClear(x + (rng() - 0.5) * 0.6, 28.85, 0.88 + rng() * 0.36, 0.14, 7.5);
     }
   }
@@ -1150,16 +1194,16 @@ export function buildVegetation(scene, data, textures, windUniforms) {
   // Alignements de boulevards entourant le parc et le parking
   for (let x = -242; x <= 296; x += 16.5) {
     if (Math.abs(x) < 16) continue;
-    // Entre avenue Nord et parking Nord
-    if (isClearOuter(x, -42.0, 2.4)) {
+    // Entre avenue Nord et parking Nord (uniquement hors emprise des cantines)
+    if (isClearOuter(x, -42.0, 3.8)) {
       addTreeIfClear(x, -42.0, 0.92 + rng() * 0.32, 0.12, 7.5);
     }
     // Bordure Nord au-dessus des 43 cantines
-    if (x >= -56 && isClearOuter(x, -65.2, 2.4)) {
+    if (x >= -56 && isClearOuter(x, -65.2, 3.8)) {
       addTreeIfClear(x, -65.2, 0.9 + rng() * 0.32, 0.12, 8.0);
     }
     // Promenade ombragée côté Sud de l'avenue Sud
-    if (x <= 242 && isClearOuter(x, 34.8, 2.4)) {
+    if (x <= 242 && isClearOuter(x, 34.8, 3.8)) {
       addTreeIfClear(x, 34.8, 0.86 + rng() * 0.32, 0.12, 8.0);
     }
   }
@@ -1167,12 +1211,12 @@ export function buildVegetation(scene, data, textures, windUniforms) {
   // Flancs Ouest et Est autour des extrémités du jardin
   for (let z = -72; z <= 72; z += 14.0) {
     for (const wx of [-255.2, -270.0]) {
-      if (isClearOuter(wx, z, 2.4)) {
+      if (isClearOuter(wx, z, 3.8)) {
         addTreeIfClear(wx, z, 0.88 + rng() * 0.3, 0.12, 7.5);
       }
     }
     for (const ex of [255.8, 273.5]) {
-      if (isClearOuter(ex, z, 2.4)) {
+      if (isClearOuter(ex, z, 3.8)) {
         addTreeIfClear(ex, z, 0.88 + rng() * 0.3, 0.12, 7.5);
       }
     }
@@ -1186,7 +1230,7 @@ export function buildVegetation(scene, data, textures, windUniforms) {
     // Hors emprise parc + piste + parking
     if (ux > -256 && ux < 256 && uz > -31 && uz < 31) continue;
     if (ux > -68 && ux < 328 && uz > -66 && uz < -41) continue;
-    if (!isClearOuter(ux, uz, 2.8)) continue;
+    if (!isClearOuter(ux, uz, 4.0)) continue;
     if (addTreeIfClear(ux, uz, 0.78 + rng() * 0.52, 0.1, 8.2)) urbanAdded++;
   }
 

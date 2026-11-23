@@ -737,64 +737,33 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
       z.kind === "play" ||
       z.kind === "track" ||
       z.kind === "gradin" ||
+      z.kind === "building" ||
       z.name.toUpperCase().includes("BEACH") ||
       z.name.toUpperCase().includes("SABLE")
   );
-  const isClearOfPoolsAndCourts = (x, z) =>
-    !forbiddenZones.some((fz) => inZone2D([x, z], fz));
-
-  // 1. Lampes basses de jardin enrichies (~125 bornes) : 15 DXF + allées, bassin, amphithéâtre, jardins et cantines
-  for (const [lx, lz] of data.lights || []) {
-    if (isClearOfPoolsAndCourts(lx, lz)) bollards.push([lx, lz]);
-  }
-  for (let x = -234; x <= 238; x += 14) {
-    if (isClearOfPoolsAndCourts(x, -4.5)) bollards.push([x, -4.5]);
-    if (isClearOfPoolsAndCourts(x, 4.5)) bollards.push([x, 4.5]);
-    if (isClearOfPoolsAndCourts(x, -21.2)) bollards.push([x, -21.2]);
-    if (isClearOfPoolsAndCourts(x, 21.2)) bollards.push([x, 21.2]);
-  }
-  for (let a = 0; a < 14; a++) {
-    const ang = (a / 14) * Math.PI * 2;
-    const bx = Math.cos(ang) * 20;
-    const bz = -1.6 + Math.sin(ang) * 14.5;
-    if (isClearOfPoolsAndCourts(bx, bz)) bollards.push([bx, bz]);
-  }
-  // Bornes autour des cantines nord + parvis de la Banque
-  for (let x = -45; x <= 295; x += 18) {
-    bollards.push([x, -44.6]);
-  }
-  bollards.push(
-    [-131.5, -62.5],
-    [-109.7, -62.5],
-    [-131.5, -83.6],
-    [-109.7, -83.6]
-  );
-
-  // 2. Lampadaires d'allées de parc (~48) + mâts parking, promenade cantines & abords Banque / Stations-service
-  for (let x = -236; x <= 236; x += 18) {
-    if (isClearOfPoolsAndCourts(x, -23.6)) parkPoles.push([x, -23.6, 6.0, 0]);
-    if (isClearOfPoolsAndCourts(x, 23.6)) parkPoles.push([x, 23.6, 6.0, Math.PI]);
-    if (Math.abs(x) < 185 && x > 20 && isClearOfPoolsAndCourts(x, 0)) {
-      parkPoles.push([x, 0, 5.4, 0]);
+  const isNearZone2D = (pt, z, margin) => {
+    if (inZone2D(pt, z)) return true;
+    if (margin <= 0) return false;
+    const inHoles = z.holes && z.holes.some((h) => pointInPoly2D(pt, h));
+    if (!inHoles && pointNearPoly2D(pt, z.poly, margin)) return true;
+    if (pointInPoly2D(pt, z.poly) && z.holes && z.holes.some((h) => pointNearPoly2D(pt, h, margin))) {
+      return true;
     }
-  }
-  for (let x = -54; x <= 316; x += 20) {
-    parkPoles.push([x, -53.5, 8.0, 0]); // mâts centraux parking nord
-  }
-  for (let x = -50; x <= 300; x += 24) {
-    parkPoles.push([x, -44.2, 5.5, Math.PI]); // lampadaires devant cantines
-  }
-  // Lampadaires dédiés sur le parvis de la Banque et les pistes des 2 Stations-service
-  parkPoles.push(
-    [-133.2, -64.2, 6.2, 0],
-    [-108.0, -64.2, 6.2, 0],
-    [-251.5, -52.5, 6.4, 0],
-    [-220.5, -52.5, 6.4, 0],
-    [-277.5, -1.2, 6.0, 0],
-    [-298.5, -1.2, 6.0, 0]
-  );
+    return false;
+  };
+  const isClearOfPoolsAndCourts = (x, z, margin = 1.4) => {
+    // Dégager la boucle rouge semi-circulaire au Sud du Théâtre de Verdure
+    if (Math.abs(x) < 15.5 && z > 18.5 && z < 28.0) return false;
+    return !forbiddenZones.some((fz) => isNearZone2D([x, z], fz, margin));
+  };
 
-  // 3. 12 mâts sportifs (11 m) strictly outside courts & Sprint lanes
+  // Registres d'espacement unifiés pour éviter toute redondance ou superposition visuelle
+  const placedTallPoles = [];
+  const placedBollards = [];
+  const nearAny = (arr, x, z, minDist) =>
+    arr.some(([ax, az]) => Math.hypot(ax - x, az - z) < minDist);
+
+  // 1. Mâts sportifs (11 m) — priorité n° 1 sur le pôle sportif Ouest
   [
     [-246.5, -14.8],
     [-191.5, -14.8],
@@ -809,20 +778,88 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     [-64, -20],
     [-64, 18],
   ].forEach(([sx, sz]) => {
-    if (isClearOfPoolsAndCourts(sx, sz)) sportMasts.push([sx, sz]);
+    if (isClearOfPoolsAndCourts(sx, sz, 0.9) && !nearAny(placedTallPoles, sx, sz, 11.0)) {
+      sportMasts.push([sx, sz]);
+      placedTallPoles.push([sx, sz]);
+    }
   });
 
-  // 4. Lampadaires densifiés sur toutes les routes principales
-  for (let x = -288; x <= 288; x += 24) {
-    roadPoles.push([x, -29.0, 0]);
-    roadPoles.push([x, -42.4, Math.PI]);
-    roadPoles.push([x, 28.8, Math.PI]);
+  // 2. Lampadaires d'avenues principales (pas régulier de 34 m sans surdensité)
+  const addRoadPole = (x, z, rot) => {
+    if (nearAny(placedTallPoles, x, z, 12.0)) return;
+    roadPoles.push([x, z, rot]);
+    placedTallPoles.push([x, z]);
+  };
+  for (let x = -272; x <= 272; x += 34) {
+    addRoadPole(x, -29.0, 0);
+    addRoadPole(x, -42.4, Math.PI);
+    addRoadPole(x, 28.8, Math.PI);
   }
-  for (let z = -128; z <= 112; z += 28) {
+  for (let z = -126; z <= 112; z += 36) {
     if (Math.abs(z) < 34) continue;
-    roadPoles.push([-256, z, Math.PI / 2]);
-    roadPoles.push([258, z, -Math.PI / 2]);
+    addRoadPole(-256, z, Math.PI / 2);
+    addRoadPole(258, z, -Math.PI / 2);
   }
+
+  // 3. Lampadaires d'allées de parc & parking (espacés et décalés en quinconce par rapport aux avenues)
+  const addParkPole = (x, z, h, rot, checkZones = true, minSep = 13.5) => {
+    if (checkZones && !isClearOfPoolsAndCourts(x, z, 1.8)) return;
+    if (nearAny(placedTallPoles, x, z, minSep)) return;
+    parkPoles.push([x, z, h, rot]);
+    placedTallPoles.push([x, z]);
+  };
+  for (let x = -222; x <= 222; x += 34) {
+    // Pas d'alignement redondant à 5 m devant les candélabres d'avenue ; uniquement là où l'espacement est libre et décalé
+    if (Math.abs(x) < 16) continue;
+    addParkPole(x, -23.4, 5.8, 0, true, 13.5);
+    addParkPole(x, 23.4, 5.8, Math.PI, true, 13.5);
+  }
+  for (let x = 28; x <= 185; x += 34) {
+    addParkPole(x, 0, 5.4, 0, true, 14.0);
+  }
+  for (let x = -50; x <= 316; x += 28) {
+    addParkPole(x, -53.5, 8.0, 0, false, 16.0); // mâts centraux parking nord (sans double rangée devant cantines)
+  }
+  // Lampadaires dédiés sur le parvis de la Banque et les pistes des 2 Stations-service
+  [
+    [-133.2, -64.2, 6.2, 0],
+    [-108.0, -64.2, 6.2, 0],
+    [-251.5, -52.5, 6.4, 0],
+    [-220.5, -52.5, 6.4, 0],
+    [-277.5, -1.2, 6.0, 0],
+    [-298.5, -1.2, 6.0, 0],
+  ].forEach(([px, pz, ph, prot]) => addParkPole(px, pz, ph, prot, false, 10.0));
+
+  // 4. Bornes basses architecturales de jardin (nettoyées des zones exiguës et des doublons)
+  const addBollard = (x, z, checkZones = true, minPoleDist = 8.5, minBollardDist = 10.5) => {
+    if (checkZones && !isClearOfPoolsAndCourts(x, z, 1.3)) return;
+    if (nearAny(placedTallPoles, x, z, minPoleDist)) return;
+    if (nearAny(placedBollards, x, z, minBollardDist)) return;
+    bollards.push([x, z]);
+    placedBollards.push([x, z]);
+  };
+  for (const [lx, lz] of data.lights || []) {
+    addBollard(lx, lz, true, 7.0, 8.0);
+  }
+  for (let x = -228; x <= 232; x += 26) {
+    addBollard(x, -4.5, true, 9.0, 12.0);
+    addBollard(x, 4.5, true, 9.0, 12.0);
+  }
+  for (let a = 0; a < 8; a++) {
+    const ang = (a / 8) * Math.PI * 2;
+    const bx = Math.cos(ang) * 20;
+    const bz = -1.6 + Math.sin(ang) * 14.5;
+    addBollard(bx, bz, true, 8.0, 10.0);
+  }
+  for (let x = -42; x <= 298; x += 34) {
+    addBollard(x, -44.6, false, 9.0, 14.0);
+  }
+  [
+    [-131.5, -62.5],
+    [-109.7, -62.5],
+    [-131.5, -83.6],
+    [-109.7, -83.6],
+  ].forEach(([bx, bz]) => addBollard(bx, bz, false, 7.0, 8.0));
 
   // 4b. Quelques lampadaires à faible luminosité dans les rues secondaires des quartiers voisins
   const streetPoles = [];

@@ -97,6 +97,8 @@ const state = {
   hasInteracted: false,
   guideOpen: false,
   audioEnabled: false,
+  isTiltShift: false,
+  autoFly: null,
   reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   fly: null,
   pointerDownPos: null,
@@ -117,6 +119,7 @@ const windUniforms = {
 
 function cacheDom() {
   dom.canvas = document.getElementById("scene-canvas");
+  dom.tiltshiftOverlay = document.getElementById("tiltshift-overlay");
   dom.cursorRing = document.getElementById("cursor-ring");
   dom.spaceLabels = document.getElementById("space-labels");
   dom.satBanner = document.getElementById("sat-banner");
@@ -134,12 +137,23 @@ function cacheDom() {
   dom.timeSlider = document.getElementById("time-slider");
   dom.btnTheme = document.getElementById("btn-theme");
   dom.btnViewMode = document.getElementById("btn-view-mode");
+  dom.btnTiltshift = document.getElementById("btn-tiltshift");
+  dom.btnFly = document.getElementById("btn-fly");
+  dom.btnShare = document.getElementById("btn-share");
   dom.btnReset = document.getElementById("btn-reset");
   dom.btnGuide = document.getElementById("btn-guide");
   dom.navGuide = document.getElementById("nav-guide");
   dom.btnCloseGuide = document.getElementById("btn-close-guide");
   dom.btnMenu = document.getElementById("btn-menu");
   dom.gestureHint = document.getElementById("gesture-hint");
+  dom.parkMinimap = document.getElementById("park-minimap");
+  dom.minimapSvg = document.getElementById("minimap-svg");
+  dom.minimapDot = document.getElementById("minimap-dot");
+  dom.minimapFov = document.getElementById("minimap-fov");
+  dom.flyBanner = document.getElementById("fly-banner");
+  dom.flyLabel = document.getElementById("fly-label");
+  dom.btnFlyStop = document.getElementById("btn-fly-stop");
+  dom.copyToast = document.getElementById("copy-toast");
   dom.spaceCard = document.getElementById("space-card");
   dom.cardIndex = document.getElementById("card-index");
   dom.cardCategory = document.getElementById("card-category");
@@ -951,28 +965,21 @@ function buildScene(data, thiesMapTex) {
 }
 
 function buildSpaceMarkers(spaces, isMobile = false) {
-  const discGeo = new THREE.CylinderGeometry(1.8, 1.8, 0.36, 24);
+  const discGeo = new THREE.CylinderGeometry(1.38, 1.38, 0.3, 24);
   discGeo.rotateX(Math.PI / 2);
-  const ringGeo = new THREE.TorusGeometry(1.9, 0.12, 8, 24);
-  const stemGeo = new THREE.CylinderGeometry(0.07, 0.07, 5.6, 6);
-  const baseDotGeo = new THREE.CircleGeometry(0.65, 16);
+  const ringGeo = new THREE.TorusGeometry(1.45, 0.1, 8, 24);
+  const stemGeo = new THREE.CylinderGeometry(0.055, 0.055, 4.7, 6);
+  const baseDotGeo = new THREE.CircleGeometry(0.48, 16);
   baseDotGeo.rotateX(-Math.PI / 2);
-  const pulseGeo = new THREE.RingGeometry(0.95, 1.24, 24);
+  const pulseGeo = new THREE.RingGeometry(0.75, 1.0, 24);
   pulseGeo.rotateX(-Math.PI / 2);
-  const hitGeo = new THREE.SphereGeometry(isMobile ? 7.0 : 5.8, 10, 10);
+  const hitGeo = new THREE.SphereGeometry(isMobile ? 6.4 : 5.2, 10, 10);
   const hitMat = new THREE.MeshBasicMaterial({ visible: false });
-  const sharedRingMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const sharedStemMat = new THREE.MeshBasicMaterial({
-    color: 0x8f887d,
-    transparent: true,
-    opacity: 0.55,
-  });
-  const sharedDotMat = new THREE.MeshBasicMaterial({ color: 0xa64234 });
 
   spaces.forEach((sp, idx) => {
     const group = new THREE.Group();
     group.position.set(sp.pos[0], 0.44, sp.pos[1]);
-    group.userData = { spaceId: sp.id, phase: idx * 0.45 };
+    group.userData = { spaceId: sp.id, phase: idx * 0.45, curOp: 1 };
 
     const discMat = new THREE.MeshStandardMaterial({
       color: 0xa64234,
@@ -980,17 +987,36 @@ function buildSpaceMarkers(spaces, isMobile = false) {
       emissiveIntensity: 0.35,
       roughness: 0.48,
       metalness: 0.04,
+      transparent: true,
+      opacity: 1,
     });
     const disc = new THREE.Mesh(discGeo, discMat);
-    disc.position.y = 6.2;
+    disc.position.y = 5.2;
 
-    const ring = new THREE.Mesh(ringGeo, sharedRingMat);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 1,
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
     disc.add(ring);
 
-    const stem = new THREE.Mesh(stemGeo, sharedStemMat);
-    stem.position.y = 2.95;
+    const stemMat = new THREE.MeshBasicMaterial({
+      color: 0x8f887d,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+    });
+    const stem = new THREE.Mesh(stemGeo, stemMat);
+    stem.position.y = 2.45;
 
-    const baseDot = new THREE.Mesh(baseDotGeo, sharedDotMat);
+    const dotMat = new THREE.MeshBasicMaterial({
+      color: 0xa64234,
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false,
+    });
+    const baseDot = new THREE.Mesh(baseDotGeo, dotMat);
     baseDot.position.y = 0.08;
 
     const pulseMat = new THREE.MeshBasicMaterial({
@@ -1004,12 +1030,15 @@ function buildSpaceMarkers(spaces, isMobile = false) {
     pulseRing.position.y = 0.1;
 
     const hitProxy = new THREE.Mesh(hitGeo, hitMat);
-    hitProxy.position.y = 5.8;
+    hitProxy.position.y = 5.0;
     hitProxy.userData = { spaceId: sp.id, markerGroup: group };
 
     group.add(disc, stem, baseDot, pulseRing, hitProxy);
     group.userData.disc = disc;
     group.userData.discMat = discMat;
+    group.userData.ringMat = ringMat;
+    group.userData.stemMat = stemMat;
+    group.userData.dotMat = dotMat;
     group.userData.pulseRing = pulseRing;
     group.userData.pulseMat = pulseMat;
 
@@ -1115,6 +1144,8 @@ function enterExperience() {
   dom.spaceLabels.classList.add("is-visible");
   dom.spaceLabels.setAttribute("aria-hidden", "false");
   dom.distanceHud.classList.add("is-visible");
+  dom.parkMinimap?.classList.add("is-visible");
+  dom.parkMinimap?.setAttribute("aria-hidden", "false");
   controls.enabled = true;
   audioCtrl?.setEnabled(true);
   const ov = getOverviewCam();
@@ -1124,6 +1155,7 @@ function enterExperience() {
 function selectSpace(spaceId) {
   const sp = state.data.spaces.find((s) => s.id === spaceId);
   if (!sp) return;
+  stopAutoFly();
 
   if (state.isIntro) {
     state.isIntro = false;
@@ -1133,6 +1165,8 @@ function selectSpace(spaceId) {
     dom.spaceLabels.classList.add("is-visible");
     dom.spaceLabels.setAttribute("aria-hidden", "false");
     dom.distanceHud.classList.add("is-visible");
+    dom.parkMinimap?.classList.add("is-visible");
+    dom.parkMinimap?.setAttribute("aria-hidden", "false");
     controls.enabled = true;
   }
 
@@ -1142,6 +1176,7 @@ function selectSpace(spaceId) {
   state.selectedSpaceId = sp.id;
   state.isPlanView = false;
   dom.btnViewMode.setAttribute("aria-pressed", "false");
+  document.body.classList.add("is-card-open");
 
   const idxNum = state.data.spaces.findIndex((s) => s.id === sp.id) + 1;
   dom.cardIndex.textContent = `${String(idxNum).padStart(2, "0")} / ${state.data.spaces.length}`;
@@ -1178,6 +1213,7 @@ function selectSpace(spaceId) {
 function closeSpaceCard() {
   if (!state.selectedSpaceId) return;
   state.selectedSpaceId = null;
+  document.body.classList.remove("is-card-open");
   dom.spaceCard.classList.remove("is-open");
   dom.spaceCard.setAttribute("aria-hidden", "true");
   dom.header.classList.add("is-visible");
@@ -1201,8 +1237,10 @@ function stepSpace(delta) {
 
 function togglePlanView() {
   dismissGestureHint();
+  stopAutoFly();
   if (state.selectedSpaceId) {
     state.selectedSpaceId = null;
+    document.body.classList.remove("is-card-open");
     dom.spaceCard.classList.remove("is-open");
     dom.spaceCard.setAttribute("aria-hidden", "true");
     dom.header.classList.remove("is-hidden");
@@ -1219,6 +1257,7 @@ function togglePlanView() {
 
 function resetView() {
   dismissGestureHint();
+  stopAutoFly();
   state.isPlanView = false;
   dom.btnViewMode.setAttribute("aria-pressed", "false");
   if (state.selectedSpaceId) {
@@ -1226,6 +1265,122 @@ function resetView() {
   } else {
     const ov = getOverviewCam();
     flyTo(ov.pos, ov.target, 1280);
+  }
+}
+
+function toggleTiltShift(forceState = null) {
+  const next = forceState === null ? !state.isTiltShift : Boolean(forceState);
+  state.isTiltShift = next;
+  dom.tiltshiftOverlay?.classList.toggle("is-active", next);
+  dom.btnTiltshift?.setAttribute("aria-pressed", String(next));
+}
+
+const AUTO_FLY_STOPS = [
+  "football",
+  "basket",
+  "piscine-adulte",
+  "bassin",
+  "theatre",
+  "loisirs-enfants",
+  "pelouse-pique-nique",
+  "fontaine-est",
+  "parking",
+];
+
+function flyToAutoStop(idx) {
+  if (!state.data?.spaces?.length) return;
+  const id = AUTO_FLY_STOPS[idx % AUTO_FLY_STOPS.length];
+  const sp = state.data.spaces.find((s) => s.id === id) || state.data.spaces[0];
+  if (!sp) return;
+  if (dom.flyLabel) dom.flyLabel.textContent = `Survol · ${sp.title}`;
+  const target = [sp.pos[0], 1.2, sp.pos[1]];
+  const camPos = [
+    sp.pos[0] + sp.camOffset[0] * 1.15,
+    Math.max(26, sp.camOffset[1] * 1.05),
+    sp.pos[1] + sp.camOffset[2] * 1.15,
+  ];
+  flyTo(camPos, target, 2400);
+}
+
+function startAutoFly() {
+  if (state.isIntro) enterExperience();
+  if (state.selectedSpaceId) {
+    state.selectedSpaceId = null;
+    document.body.classList.remove("is-card-open");
+    dom.spaceCard.classList.remove("is-open");
+    dom.spaceCard.setAttribute("aria-hidden", "true");
+    dom.header.classList.add("is-visible");
+    dom.header.classList.remove("is-hidden");
+  }
+  closeMenu();
+  closeNavGuide();
+  dismissGestureHint();
+  state.isPlanView = false;
+  dom.btnViewMode.setAttribute("aria-pressed", "false");
+  state.autoFly = { idx: 0, nextStepTime: performance.now() + 4600 };
+  dom.btnFly?.setAttribute("aria-pressed", "true");
+  dom.flyBanner?.classList.add("is-visible");
+  dom.flyBanner?.setAttribute("aria-hidden", "false");
+  flyToAutoStop(0);
+}
+
+function stopAutoFly() {
+  if (!state.autoFly) return;
+  state.autoFly = null;
+  dom.btnFly?.setAttribute("aria-pressed", "false");
+  dom.flyBanner?.classList.remove("is-visible");
+  dom.flyBanner?.setAttribute("aria-hidden", "true");
+}
+
+function toggleAutoFly() {
+  if (state.autoFly) stopAutoFly();
+  else startAutoFly();
+}
+
+function jumpToMinimapClientXY(clientX, clientY) {
+  if (!dom.minimapSvg || state.isIntro) return;
+  stopAutoFly();
+  dismissGestureHint();
+  const rect = dom.minimapSvg.getBoundingClientRect();
+  if (rect.width < 1 || rect.height < 1) return;
+  const u = THREE.MathUtils.clamp((clientX - rect.left) / rect.width, 0, 1);
+  const v = THREE.MathUtils.clamp((clientY - rect.top) / rect.height, 0, 1);
+  const wx = THREE.MathUtils.clamp(-260 + u * 520, -252, 252);
+  const wz = THREE.MathUtils.clamp(-70 + v * 108, -62, 32);
+
+  const offset = camera.position.clone().sub(controls.target);
+  const dist = offset.length();
+  if (dist > 140) {
+    offset.normalize().multiplyScalar(82);
+  }
+  const destPos = [wx + offset.x, Math.max(16, offset.y), wz + offset.z];
+  flyTo(destPos, [wx, 0.8, wz], 750);
+}
+
+let copyToastTimer = null;
+function shareCurrentView() {
+  if (!camera || !controls) return;
+  const px = camera.position.x.toFixed(1);
+  const py = camera.position.y.toFixed(1);
+  const pz = camera.position.z.toFixed(1);
+  const tx = controls.target.x.toFixed(1);
+  const tz = controls.target.z.toFixed(1);
+  const hr = state.timeOfDay.toFixed(1);
+  const hash = `#v=${px},${py},${pz},${tx},${tz},${hr}`;
+  history.replaceState(null, "", `${window.location.pathname}${window.location.search}${hash}`);
+  const fullUrl = window.location.href;
+  try {
+    const p = navigator.clipboard?.writeText(fullUrl);
+    if (p && typeof p.catch === "function") p.catch(() => {});
+  } catch (_) {}
+  if (dom.copyToast) {
+    dom.copyToast.classList.add("is-visible");
+    dom.copyToast.setAttribute("aria-hidden", "false");
+    clearTimeout(copyToastTimer);
+    copyToastTimer = setTimeout(() => {
+      dom.copyToast?.classList.remove("is-visible");
+      dom.copyToast?.setAttribute("aria-hidden", "true");
+    }, 2200);
   }
 }
 
@@ -1338,7 +1493,9 @@ function pickMarkerAtClientXY(clientX, clientY) {
   state.pointerWorld.x = ((clientX - rect.left) / rect.width) * 2 - 1;
   state.pointerWorld.y = -((clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(state.pointerWorld, camera);
-  const markerHits = raycaster.intersectObjects(hitProxies, false);
+  const markerHits = raycaster
+    .intersectObjects(hitProxies, false)
+    .filter((h) => h.object.userData.markerGroup?.visible !== false);
   return markerHits.length > 0 ? markerHits[0].object.userData.spaceId : null;
 }
 
@@ -1348,7 +1505,9 @@ function pickSpaceAtClientXY(clientX, clientY) {
   state.pointerWorld.y = -((clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(state.pointerWorld, camera);
 
-  const markerHits = raycaster.intersectObjects(hitProxies, false);
+  const markerHits = raycaster
+    .intersectObjects(hitProxies, false)
+    .filter((h) => h.object.userData.markerGroup?.visible !== false);
   if (markerHits.length > 0) {
     return markerHits[0].object.userData.spaceId;
   }
@@ -1598,6 +1757,10 @@ function bindEvents() {
   });
   dom.btnAudio?.addEventListener("click", () => audioCtrl?.toggle());
   dom.btnViewMode.addEventListener("click", togglePlanView);
+  dom.btnTiltshift?.addEventListener("click", () => toggleTiltShift());
+  dom.btnFly?.addEventListener("click", toggleAutoFly);
+  dom.btnFlyStop?.addEventListener("click", stopAutoFly);
+  dom.btnShare?.addEventListener("click", shareCurrentView);
   dom.btnReset.addEventListener("click", resetView);
   dom.btnGuide?.addEventListener("click", toggleNavGuide);
   dom.btnCloseGuide?.addEventListener("click", closeNavGuide);
@@ -1606,6 +1769,25 @@ function bindEvents() {
     else openMenu();
   });
   dom.btnCloseMenu.addEventListener("click", closeMenu);
+
+  // Navigation directe par clic / glisser sur la minimap du parc
+  let minimapDragging = false;
+  dom.parkMinimap?.addEventListener("pointerdown", (e) => {
+    minimapDragging = true;
+    try {
+      dom.parkMinimap.setPointerCapture?.(e.pointerId);
+    } catch (_) {}
+    jumpToMinimapClientXY(e.clientX, e.clientY);
+  });
+  dom.parkMinimap?.addEventListener("pointermove", (e) => {
+    if (minimapDragging) jumpToMinimapClientXY(e.clientX, e.clientY);
+  });
+  dom.parkMinimap?.addEventListener("pointerup", () => {
+    minimapDragging = false;
+  });
+  dom.parkMinimap?.addEventListener("pointercancel", () => {
+    minimapDragging = false;
+  });
 
   // Fermer le guide si clic à l'extérieur du panneau et hors bouton guide
   document.addEventListener("pointerdown", (e) => {
@@ -1652,6 +1834,7 @@ function bindEvents() {
   dom.canvas.addEventListener("pointerdown", (e) => {
     state.pointerDownPos = { x: e.clientX, y: e.clientY };
     if (state.fly) state.fly = null;
+    stopAutoFly();
   });
 
   dom.canvas.addEventListener("pointermove", (e) => {
@@ -1711,7 +1894,10 @@ function bindEvents() {
   dom.canvas.addEventListener(
     "wheel",
     () => {
-      if (!state.isIntro) dismissGestureHint();
+      if (!state.isIntro) {
+        dismissGestureHint();
+        stopAutoFly();
+      }
     },
     { passive: true }
   );
@@ -1719,7 +1905,9 @@ function bindEvents() {
   document.addEventListener("keydown", (e) => {
     const inInput = e.target?.tagName === "INPUT" || e.target?.tagName === "TEXTAREA";
     if (e.key === "Escape") {
-      if (dossierCtrl?.isOpen()) {
+      if (state.autoFly) {
+        stopAutoFly();
+      } else if (dossierCtrl?.isOpen()) {
         dossierCtrl.closeAll();
       } else if (state.guideOpen) {
         closeNavGuide();
@@ -1740,6 +1928,16 @@ function bindEvents() {
 
     if (e.key === "m" || e.key === "M") {
       audioCtrl?.toggle();
+      return;
+    }
+
+    if ((e.key === "t" || e.key === "T") && !state.isIntro && !dossierCtrl?.isOpen()) {
+      toggleTiltShift();
+      return;
+    }
+
+    if ((e.key === "f" || e.key === "F") && !state.isIntro && !dossierCtrl?.isOpen()) {
+      toggleAutoFly();
       return;
     }
 
@@ -1806,6 +2004,9 @@ function bindEvents() {
         isNight: state.isNight,
         guideOpen: state.guideOpen,
         audioEnabled: state.audioEnabled,
+        isTiltShift: state.isTiltShift,
+        autoFlyActive: Boolean(state.autoFly),
+        minimapVisible: dom.parkMinimap?.classList.contains("is-visible") || false,
         nightFactor: Number(state.nightFactor.toFixed(2)),
         selectedSpaceId: state.selectedSpaceId,
         hoveredSpaceId: state.hoveredSpaceId,
@@ -1993,11 +2194,19 @@ function animate(now) {
   }
 
   if (state.navVel.lengthSq() > 0.01) {
+    stopAutoFly();
     camera.position.x += state.navVel.x * dt;
     camera.position.z += state.navVel.y * dt;
     controls.target.x += state.navVel.x * dt;
     controls.target.z += state.navVel.y * dt;
     state.navVel.multiplyScalar(Math.pow(0.015, dt));
+  }
+
+  // Visite guidée automatique (« Survol »)
+  if (state.autoFly && now >= state.autoFly.nextStepTime) {
+    state.autoFly.idx = (state.autoFly.idx + 1) % AUTO_FLY_STOPS.length;
+    state.autoFly.nextStepTime = now + 4800;
+    flyToAutoStop(state.autoFly.idx);
   }
 
   if (!state.isIntro) {
@@ -2031,12 +2240,42 @@ function animate(now) {
     if (pedestrianCtrl) pedestrianCtrl.update(dt, now, camY);
   }
 
-  // Disques 3D terracotta orientés face caméra + anneau pulsant au sol
+  // Disques 3D terracotta orientés face caméra + estompage fluide selon la distance au point ciblé + anneau pulsant
   const smoothK = state.reducedMotion ? 1 : 1 - Math.exp(-10 * dt);
+  const overviewFloor = THREE.MathUtils.clamp((camY - 90) / 140, 0, 1) * 0.36 + 0.16;
   markerGroups.forEach((g) => {
     const isSel = g.userData.spaceId === state.selectedSpaceId;
     const isHov = g.userData.spaceId === state.hoveredSpaceId;
-    const targetScale = isSel ? 0.76 : isHov ? 1.18 : 1.0;
+    const distFocus = Math.hypot(g.position.x - controls.target.x, g.position.z - controls.target.z);
+    const distCam = camera.position.distanceTo(g.position);
+
+    let targetOp = 1;
+    if (isHov) {
+      targetOp = 1;
+    } else if (isSel) {
+      // Adoucit légèrement le repère en très gros plan pour ne jamais gêner les détails (marches, bassins...)
+      targetOp = THREE.MathUtils.clamp((distCam - 11) / 18, 0.22, 0.92);
+    } else if (state.selectedSpaceId) {
+      targetOp = THREE.MathUtils.clamp(0.42 - distFocus / 220, 0.06, 0.36);
+    } else {
+      const farFade = 1 - THREE.MathUtils.smoothstep(distFocus, 48, 175) * (1 - overviewFloor);
+      const nearCamFade = THREE.MathUtils.clamp((distCam - 8) / 13, 0.18, 1.0);
+      targetOp = Math.min(farFade, nearCamFade);
+    }
+
+    const curOp = g.userData.curOp + (targetOp - g.userData.curOp) * smoothK;
+    g.userData.curOp = curOp;
+    g.visible = camY < 600 && curOp > 0.04;
+
+    if (g.visible) {
+      g.userData.discMat.opacity = curOp;
+      g.userData.discMat.depthWrite = curOp > 0.72;
+      if (g.userData.ringMat) g.userData.ringMat.opacity = curOp;
+      if (g.userData.stemMat) g.userData.stemMat.opacity = curOp * 0.52;
+      if (g.userData.dotMat) g.userData.dotMat.opacity = curOp * 0.88;
+    }
+
+    const targetScale = isHov ? 1.18 : isSel ? 0.74 : 0.72 + curOp * 0.28;
     const s = g.userData.disc.scale.x + (targetScale - g.userData.disc.scale.x) * smoothK;
     g.userData.disc.scale.set(s, s, s);
     const faceAngle = Math.atan2(
@@ -2045,17 +2284,16 @@ function animate(now) {
     );
     const sway = state.reducedMotion ? 0 : Math.sin(now * 0.0014 + g.userData.phase) * 0.24;
     g.userData.disc.rotation.y = faceAngle + sway;
-    const baseY = isSel ? 5.6 : 6.2;
-    const bob = state.reducedMotion ? 0 : Math.sin(now * 0.0022 + g.userData.phase) * 0.48;
+    const baseY = isSel ? 4.8 : 5.2;
+    const bob = state.reducedMotion ? 0 : Math.sin(now * 0.0022 + g.userData.phase) * 0.36;
     g.userData.disc.position.y = baseY + bob;
 
     if (g.userData.pulseRing && g.userData.pulseMat) {
       const cycle = ((now * 0.00055 + g.userData.phase * 0.25) % 1);
       const rScale = state.reducedMotion ? 1.1 : 0.9 + cycle * (isHov || isSel ? 2.4 : 1.7);
       g.userData.pulseRing.scale.set(rScale, rScale, 1);
-      g.userData.pulseMat.opacity = state.reducedMotion
-        ? 0.25
-        : (1 - cycle) * (isHov || isSel ? 0.62 : 0.34);
+      g.userData.pulseMat.opacity =
+        (state.reducedMotion ? 0.25 : (1 - cycle) * (isHov || isSel ? 0.62 : 0.34)) * curOp;
     }
   });
 
@@ -2067,10 +2305,21 @@ function animate(now) {
     audioCtrl.update(now, camera.position, state.nightFactor);
   }
 
-  // Étiquettes translucides, indice de distance et boussole (cadencés sur mobile pour éviter les reflows DOM)
+  // Étiquettes translucides, indice de distance, boussole et minimap (cadencés sur mobile pour éviter les reflows DOM)
   if (!state.isMobile || state.frameCount % 2 === 0) {
     syncSpaceLabels();
     updateDistanceHud();
+
+    if (dom.minimapDot && dom.minimapFov && !state.isIntro) {
+      const mx = THREE.MathUtils.clamp(controls.target.x, -254, 254).toFixed(1);
+      const mz = THREE.MathUtils.clamp(controls.target.z, -65, 32).toFixed(1);
+      const fovR = THREE.MathUtils.clamp(camera.position.distanceTo(controls.target) * 0.16, 10, 48).toFixed(1);
+      dom.minimapDot.setAttribute("cx", mx);
+      dom.minimapDot.setAttribute("cy", mz);
+      dom.minimapFov.setAttribute("cx", mx);
+      dom.minimapFov.setAttribute("cy", mz);
+      dom.minimapFov.setAttribute("r", fovR);
+    }
 
     if (dom.compassSvg) {
       const angleRad = Math.atan2(
@@ -2132,6 +2381,25 @@ async function init() {
         if (state.data.spaces.some((s) => s.id === spId)) {
           enterExperience();
           dossierCtrl.openSpacePage(spId);
+        }
+      } else if (h.startsWith("#v=")) {
+        const parts = h.slice(3).split(",").map(Number);
+        if (parts.length >= 6 && parts.every(Number.isFinite)) {
+          const [px, py, pz, tx, tz, hr] = parts;
+          enterExperience();
+          state.fly = null;
+          camera.position.set(
+            THREE.MathUtils.clamp(px, -600, 600),
+            THREE.MathUtils.clamp(py, 6, 450),
+            THREE.MathUtils.clamp(pz, -400, 400)
+          );
+          controls.target.set(
+            THREE.MathUtils.clamp(tx, -260, 260),
+            0.5,
+            THREE.MathUtils.clamp(tz, -120, 120)
+          );
+          controls.update();
+          setTimeOfDay(hr, false);
         }
       }
     };
