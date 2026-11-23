@@ -501,17 +501,185 @@ function addOutwardCopingRim(poly, innerOff, outerOff, yBot, yTop, posOut) {
 
 export function buildWaterAndFountains(scene, data, textures, extrudePoly, mergeGeometries, isMobile = false) {
   const waterGeoms = [];
+  const poolWaterGeoms = [];
+  const poolTileGeoms = [];
+  const poolDetailGeoms = [];
+  const poolWhiteGeoms = [];
   const rimPositions = [];
+  const poolWallPositions = [];
+  const poolTrimPositions = [];
   const fountains = [];
+  const poolGlows = [];
+
+  const pushVerticalBand = (poly, yBot, yTop, inset = 0, outArr) => {
+    let cx = 0;
+    let cz = 0;
+    for (const [px, pz] of poly) {
+      cx += px;
+      cz += pz;
+    }
+    cx /= poly.length;
+    cz /= poly.length;
+
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i];
+      const b = poly[(i + 1) % poly.length];
+      let ax = a[0];
+      let az = a[1];
+      let bx = b[0];
+      let bz = b[1];
+      if (inset !== 0) {
+        const dx = bx - ax;
+        const dz = bz - az;
+        const len = Math.hypot(dx, dz) || 1;
+        let nx = -dz / len;
+        let nz = dx / len;
+        const mx = (ax + bx) * 0.5;
+        const mz = (az + bz) * 0.5;
+        // Orienter (nx, nz) vers l'intérieur du polygone
+        if ((cx - mx) * nx + (cz - mz) * nz < 0) {
+          nx = -nx;
+          nz = -nz;
+        }
+        ax += nx * inset;
+        az += nz * inset;
+        bx += nx * inset;
+        bz += nz * inset;
+      }
+      outArr.push(
+        ax, yBot, az,
+        bx, yBot, bz,
+        bx, yTop, bz,
+        ax, yBot, az,
+        bx, yTop, bz,
+        ax, yTop, az
+      );
+    }
+  };
 
   for (const z of data.zones) {
     if (z.kind !== "water") continue;
     try {
-      // Eau extrudée strictement sur polygone DXF (top 0.480)
+      const nu = z.name.toUpperCase();
+      const isPool = nu.includes("PISICNE") || nu.includes("PISCINE");
+
+      if (isPool) {
+        const isChild = nu.includes("ENFANT");
+        const yDeck = 0.3; // arasé à la dalle supérieure du parc (parkSlab top = 0.300)
+        const poolDepth = isChild ? 0.5 : 1.5;
+        const yFloor = yDeck - poolDepth; // -1.20 m adulte, -0.20 m enfant
+        const yWater = 0.19;
+
+        // Margelle périphérique en pierre naturelle (déborde de 2 cm sur le bassin, 40 cm sur la plage)
+        addOutwardCopingRim(z.poly, -0.02, 0.4, 0.285, 0.415, rimPositions);
+
+        // Radier carrelé excavé (-1.20 m adulte / -0.20 m enfant)
+        poolTileGeoms.push(extrudePoly(z.poly, 0.14, yFloor - 0.14));
+
+        // Parois verticales carrelées du bassin + liseré blanc à la ligne d'eau
+        pushVerticalBand(z.poly, yFloor, yDeck + 0.01, 0, poolWallPositions);
+        pushVerticalBand(z.poly, yWater - 0.04, yDeck + 0.005, 0.015, poolTrimPositions);
+
+        // Eau cristalline translucide (renderOrder = 3 pour laisser apparaître les marches et le fond)
+        poolWaterGeoms.push(extrudePoly(z.poly, 0.04, yWater - 0.04));
+
+        if (!isChild) {
+          // Piscine Adulte (profondeur 1,50 m) : 5 marches immergées sur la rive Nord droite (z = -10.12 -> -7.62)
+          const stepW = 9.2;
+          const treadD = 0.5;
+          const stepCx = -50.0;
+          const riser = 1.5 / 6; // 0.25 m par marche sur 1.50 m de dénivelé total
+          for (let k = 0; k < 5; k++) {
+            const stepTop = yDeck - (k + 1) * riser; // +0.05, -0.20, -0.45, -0.70, -0.95
+            const h = stepTop - yFloor;
+            const sz = -10.12 + (k + 0.5) * treadD;
+            const sg = new THREE.BoxGeometry(stepW, h, treadD);
+            sg.translate(stepCx, yFloor + h * 0.5, sz);
+            poolTileGeoms.push(sg);
+
+            // Nez de marche antidérapant blanc (très lisible sous l'eau)
+            const ng = new THREE.BoxGeometry(stepW, 0.042, 0.075);
+            ng.translate(stepCx, stepTop - 0.01, sz + treadD * 0.5 - 0.036);
+            poolWhiteGeoms.push(ng);
+          }
+
+          // Lignes de nage sombres au fond du grand bassin
+          for (const lz of [-5.6, -1.8]) {
+            const lg = new THREE.BoxGeometry(27.0, 0.025, 0.22);
+            lg.translate(-50.0, yFloor + 0.012, lz);
+            poolDetailGeoms.push(lg);
+            for (const tx of [-63.2, -36.8]) {
+              const tg = new THREE.BoxGeometry(0.24, 0.025, 1.35);
+              tg.translate(tx, yFloor + 0.012, lz);
+              poolDetailGeoms.push(tg);
+            }
+          }
+
+          // Deux échelles inox sur la paroi Sud (z = +2.61)
+          const ladderGeoms = [];
+          for (const lx of [-58.5, -41.5]) {
+            for (const dx of [-0.26, 0.26]) {
+              const rail = new THREE.CylinderGeometry(0.026, 0.026, 1.65, 8);
+              rail.translate(lx + dx, 0.22, 2.48);
+              ladderGeoms.push(rail);
+              const topBar = new THREE.CylinderGeometry(0.026, 0.026, 0.42, 8);
+              topBar.rotateX(Math.PI / 2);
+              topBar.translate(lx + dx, 1.03, 2.66);
+              ladderGeoms.push(topBar);
+              const deckPost = new THREE.CylinderGeometry(0.026, 0.026, 0.65, 8);
+              deckPost.translate(lx + dx, 0.72, 2.86);
+              ladderGeoms.push(deckPost);
+            }
+            for (let r = 0; r < 4; r++) {
+              const ry = -0.75 + r * 0.26;
+              const rung = new THREE.CylinderGeometry(0.02, 0.02, 0.52, 8);
+              rung.rotateZ(Math.PI / 2);
+              rung.translate(lx, ry, 2.48);
+              ladderGeoms.push(rung);
+            }
+          }
+          const mergedLadder = mergeGeometries(ladderGeoms);
+          if (mergedLadder) {
+            const ladderMesh = new THREE.Mesh(
+              mergedLadder,
+              new THREE.MeshStandardMaterial({ color: 0xe6eef2, roughness: 0.18, metalness: 0.88 })
+            );
+            ladderMesh.castShadow = true;
+            scene.add(ladderMesh);
+          }
+
+          // Spots subaquatiques de nuit le long du grand bassin
+          for (const px of [-63, -56.5, -50, -43.5, -37]) {
+            poolGlows.push([px, -3.7, 13.5, yFloor + 0.06]);
+          }
+        } else {
+          // Piscine Enfant (profondeur 0,50 m) : 2 larges marches peu profondes sur la rive Sud (z = -11.56 -> -12.86)
+          const stepW = 8.4;
+          const treadD = 0.65;
+          const stepCx = -50.0;
+          const riser = 0.5 / 3; // ~0.167 m par marche sur 0.50 m de profondeur totale
+          for (let k = 0; k < 2; k++) {
+            const stepTop = yDeck - (k + 1) * riser; // +0.133, -0.033 (puis fond à -0.20)
+            const h = stepTop - yFloor;
+            const sz = -11.56 - (k + 0.5) * treadD;
+            const sg = new THREE.BoxGeometry(stepW, h, treadD);
+            sg.translate(stepCx, yFloor + h * 0.5, sz);
+            poolTileGeoms.push(sg);
+
+            // Nez de marche antidérapant blanc
+            const ng = new THREE.BoxGeometry(stepW, 0.038, 0.075);
+            ng.translate(stepCx, stepTop - 0.008, sz - treadD * 0.5 + 0.036);
+            poolWhiteGeoms.push(ng);
+          }
+          poolGlows.push([-52.8, -15.3, 8.8, yFloor + 0.06], [-47.2, -15.3, 8.8, yFloor + 0.06]);
+        }
+        continue;
+      }
+
+      // Eau des bassins & fontaines décoratifs (top 0.480)
       waterGeoms.push(extrudePoly(z.poly, 0.12, 0.36));
       // Margelle en pierre décalée vers l'extérieur (+0.02..+0.30 m, y 0.34..0.505) : zéro face coplanaire !
       addOutwardCopingRim(z.poly, 0.02, 0.3, 0.34, 0.505, rimPositions);
-      const nu = z.name.toUpperCase();
       if (nu.includes("BASSIN") || nu.includes("FONTAINE")) {
         fountains.push({
           pos: z.centroid,
@@ -538,6 +706,60 @@ export function buildWaterAndFountains(scene, data, textures, extrudePoly, merge
     scene.add(rimMesh);
   }
 
+  // Maillages carrelés & détails des piscines excavées (avec émissivité subaquatique douce la nuit)
+  if (poolWallPositions.length) {
+    const wallGeo = new THREE.BufferGeometry();
+    wallGeo.setAttribute("position", new THREE.Float32BufferAttribute(poolWallPositions, 3));
+    wallGeo.computeVertexNormals();
+    poolTileGeoms.push(wallGeo);
+  }
+  const poolTileMat = new THREE.MeshStandardMaterial({
+    color: 0x8fd2dc,
+    roughness: 0.32,
+    metalness: 0.05,
+    emissive: new THREE.Color(0x288ca6),
+    emissiveIntensity: 0,
+    side: THREE.DoubleSide,
+  });
+  const mergedPoolTiles = mergeGeometries(poolTileGeoms);
+  if (mergedPoolTiles) {
+    const ptMesh = new THREE.Mesh(mergedPoolTiles, poolTileMat);
+    ptMesh.receiveShadow = true;
+    ptMesh.castShadow = true;
+    scene.add(ptMesh);
+  }
+
+  if (poolTrimPositions.length) {
+    const trimGeo = new THREE.BufferGeometry();
+    trimGeo.setAttribute("position", new THREE.Float32BufferAttribute(poolTrimPositions, 3));
+    trimGeo.computeVertexNormals();
+    poolWhiteGeoms.push(trimGeo);
+  }
+  const poolWhiteMat = new THREE.MeshStandardMaterial({
+    color: 0xf7fbfc,
+    roughness: 0.28,
+    metalness: 0.04,
+    emissive: new THREE.Color(0x70d0e0),
+    emissiveIntensity: 0,
+    side: THREE.DoubleSide,
+  });
+  const mergedPoolWhite = mergeGeometries(poolWhiteGeoms);
+  if (mergedPoolWhite) {
+    const pwMesh = new THREE.Mesh(mergedPoolWhite, poolWhiteMat);
+    pwMesh.receiveShadow = true;
+    scene.add(pwMesh);
+  }
+
+  const mergedPoolDetails = mergeGeometries(poolDetailGeoms);
+  if (mergedPoolDetails) {
+    const pdMesh = new THREE.Mesh(
+      mergedPoolDetails,
+      new THREE.MeshStandardMaterial({ color: 0x246b82, roughness: 0.4 })
+    );
+    pdMesh.receiveShadow = true;
+    scene.add(pdMesh);
+  }
+
   const waterTexA = textures.water;
   const waterTexB = textures.water.clone();
   waterTexB.needsUpdate = true;
@@ -559,11 +781,32 @@ export function buildWaterAndFountains(scene, data, textures, extrudePoly, merge
     scene.add(wMesh);
   }
 
+  const poolWaterMat = new THREE.MeshStandardMaterial({
+    color: 0x5cc7d6,
+    map: waterTexA,
+    bumpMap: waterTexB,
+    bumpScale: 0.09,
+    roughness: 0.1,
+    metalness: 0.1,
+    transparent: true,
+    opacity: 0.48,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+  });
+  const mergedPoolWater = mergeGeometries(poolWaterGeoms);
+  if (mergedPoolWater) {
+    const pwSurf = new THREE.Mesh(mergedPoolWater, poolWaterMat);
+    pwSurf.receiveShadow = true;
+    pwSurf.renderOrder = 3;
+    scene.add(pwSurf);
+  }
+
   // Gouttelettes animées (jets d'eau paraboliques chorégraphiés), buses et éclairages subaquatiques
   const droplets = [];
   const rings = [];
   const nozzles = [];
-  const underGlows = [];
+  const underGlows = [...poolGlows];
   const ringGeo = new THREE.RingGeometry(0.45, 0.7, 24);
   ringGeo.rotateX(-Math.PI / 2);
   const ringMat = new THREE.MeshBasicMaterial({
@@ -709,8 +952,8 @@ export function buildWaterAndFountains(scene, data, textures, extrudePoly, merge
     ugInst = new THREE.InstancedMesh(ugGeo, underGlowMat, underGlows.length);
     ugInst.visible = false;
     const d = new THREE.Object3D();
-    underGlows.forEach(([x, z, sz], idx) => {
-      d.position.set(x, 0.488, z);
+    underGlows.forEach(([x, z, sz, gy], idx) => {
+      d.position.set(x, gy !== undefined ? gy : 0.488, z);
       d.scale.set(sz, 1, sz);
       d.updateMatrix();
       ugInst.setMatrixAt(idx, d.matrix);
@@ -746,6 +989,8 @@ export function buildWaterAndFountains(scene, data, textures, extrudePoly, merge
 
   const dayWaterCol = new THREE.Color(0xcce2e4);
   const nightWaterCol = new THREE.Color(0x244252);
+  const dayPoolCol = new THREE.Color(0x5cc7d6);
+  const nightPoolCol = new THREE.Color(0x1f6c82);
 
   return {
     updateWater(dt, now, nightFactor, camY = 126) {
@@ -756,6 +1001,10 @@ export function buildWaterAndFountains(scene, data, textures, extrudePoly, merge
 
       const tSec = now * 0.001;
       waterMat.color.lerpColors(dayWaterCol, nightWaterCol, nightFactor);
+      poolWaterMat.color.lerpColors(dayPoolCol, nightPoolCol, nightFactor);
+      poolWaterMat.opacity = 0.48 + nightFactor * 0.1;
+      poolTileMat.emissiveIntensity = nightFactor * 0.24;
+      poolWhiteMat.emissiveIntensity = nightFactor * 0.28;
       ptsMat.color.setHex(nightFactor > 0.4 ? 0xffe4b8 : 0xf4fafc);
 
       const showGlow = nightFactor > 0.01;
@@ -942,7 +1191,8 @@ export function buildVegetation(scene, data, textures, windUniforms) {
   }
 
   // 1e. Arbre d'ornement et jardinière monumentale au sommet du gradin triangulaire (entre Basket et Beach)
-  treePositions.push([-146.27, 10.02, 0.86, 1.1]);
+  const heroGradinTreeIdx = treePositions.length;
+  treePositions.push([-146.27, 10.02, 0.92, 1.1]);
   const planterRing = new THREE.Mesh(
     new THREE.CylinderGeometry(1.75, 1.85, 0.36, 20),
     new THREE.MeshStandardMaterial({ color: 0xe6ddd0, roughness: 0.88 })
@@ -958,46 +1208,299 @@ export function buildVegetation(scene, data, textures, windUniforms) {
   scene.add(planterRing, planterSoil);
 
   if (treePositions.length) {
-    const trunkGeo = new THREE.CylinderGeometry(0.18, 0.25, 2.2, 6);
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0xc5b8a4, roughness: 0.94 });
-    const crownGeo = new THREE.IcosahedronGeometry(1.9, 1);
-    const crownMat = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      map: textures.grass,
-      roughness: 0.88,
+    const mergeLocalGeoms = (geoms) => {
+      const nonIdx = geoms.map((g) => (g.index ? g.toNonIndexed() : g));
+      let total = 0;
+      for (const g of nonIdx) total += g.attributes.position.count;
+      const pos = new Float32Array(total * 3);
+      const norm = new Float32Array(total * 3);
+      const uv = new Float32Array(total * 2);
+      let off = 0;
+      for (const g of nonIdx) {
+        if (!g.attributes.normal) g.computeVertexNormals();
+        const cnt = g.attributes.position.count;
+        pos.set(g.attributes.position.array, off * 3);
+        norm.set(g.attributes.normal.array, off * 3);
+        if (g.attributes.uv) uv.set(g.attributes.uv.array, off * 2);
+        off += cnt;
+        g.dispose();
+      }
+      const out = new THREE.BufferGeometry();
+      out.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      out.setAttribute("normal", new THREE.BufferAttribute(norm, 3));
+      out.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+      return out;
+    };
+
+    // --- 4 essences botaniques sculpturales (Palmier, Acacia/Flamboyant parasol, Feuillu multi-houppiers, Cyprès élancé) ---
+    // 1) Palmier : stipe élancé légèrement courbé + 8 palmes arquées + cœur central
+    const buildPalmGeoms = () => {
+      const tParts = [];
+      const segs = [
+        { rT: 0.21, rB: 0.29, h: 1.25, y: 0.62, x: 0.02, rz: -0.04 },
+        { rT: 0.17, rB: 0.21, h: 1.25, y: 1.82, x: 0.08, rz: -0.05 },
+        { rT: 0.14, rB: 0.17, h: 1.2, y: 2.98, x: 0.15, rz: -0.04 },
+        { rT: 0.13, rB: 0.14, h: 1.05, y: 4.02, x: 0.2, rz: -0.02 },
+      ];
+      for (const s of segs) {
+        const c = new THREE.CylinderGeometry(s.rT, s.rB, s.h, 7);
+        c.rotateZ(s.rz);
+        c.translate(s.x, s.y, 0);
+        tParts.push(c);
+      }
+      const heart = new THREE.CylinderGeometry(0.22, 0.14, 0.34, 7);
+      heart.translate(0.22, 4.58, 0);
+      tParts.push(heart);
+
+      const cParts = [];
+      // 3 grappes de dattes/fruits sous le cœur du palmier
+      for (let d = 0; d < 3; d++) {
+        const ang = (d / 3) * Math.PI * 2 + 0.3;
+        const dg = new THREE.SphereGeometry(0.16, 6, 5);
+        dg.scale(0.9, 1.35, 0.9);
+        dg.translate(0.22 + Math.cos(ang) * 0.22, 4.46, Math.sin(ang) * 0.22);
+        tParts.push(dg);
+      }
+
+      const addFrond = (yaw, len1, len2, len3, p1, p2, p3, w, baseY) => {
+        const segsDef = [
+          [len1, p1, w * 0.85, w],
+          [len2, p2, w, w * 0.65],
+          [len3, p3, w * 0.55, 0.03],
+        ];
+        let curR = 0.08;
+        let curY = baseY;
+        for (const [len, pitch, rB, rT] of segsDef) {
+          const g = new THREE.CylinderGeometry(rT, rB, len, 6);
+          g.scale(1.0, 1.0, 0.14);
+          g.translate(0, len * 0.5, 0);
+          g.rotateX(pitch);
+          g.rotateY(yaw);
+          g.translate(0.22 + Math.sin(yaw) * curR, curY, Math.cos(yaw) * curR);
+          cParts.push(g);
+          curR += Math.sin(pitch) * len * 0.94;
+          curY += Math.cos(pitch) * len * 0.94;
+        }
+      };
+      // Couronne externe : 7 grandes palmes retombantes en arc souple
+      for (let k = 0; k < 7; k++) {
+        const yaw = (k / 7) * Math.PI * 2 + (k % 2) * 0.11;
+        const alt = k % 2 === 0;
+        addFrond(
+          yaw,
+          alt ? 0.88 : 0.82,
+          alt ? 0.96 : 0.88,
+          alt ? 0.85 : 0.78,
+          alt ? 0.84 : 0.96,
+          alt ? 1.42 : 1.54,
+          alt ? 1.98 : 2.08,
+          alt ? 0.27 : 0.24,
+          4.62
+        );
+      }
+      // Couronne haute : 4 jeunes palmes dressées
+      for (let k = 0; k < 4; k++) {
+        const yaw = (k / 4) * Math.PI * 2 + 0.42;
+        addFrond(yaw, 0.72, 0.74, 0.62, 0.42, 0.82, 1.24, 0.21, 4.72);
+      }
+      return { trunk: mergeLocalGeoms(tParts), crown: mergeLocalGeoms(cParts) };
+    };
+
+    // 2) Acacia / Flamboyant parasol : tronc ramifié en Y + cime tabulaire en strates larges
+    const buildAcaciaGeoms = () => {
+      const tParts = [];
+      const stem = new THREE.CylinderGeometry(0.18, 0.28, 2.1, 7);
+      stem.translate(0, 1.05, 0);
+      tParts.push(stem);
+      [
+        [0, 1.25, 0.48, 0.52, 0],
+        [(Math.PI * 2) / 3, 1.3, 0.52, 0.48, 0.04],
+        [(Math.PI * 4) / 3, 1.22, 0.5, -0.46, 0.02],
+      ].forEach(([yaw, bLen, tilt]) => {
+        const br = new THREE.CylinderGeometry(0.08, 0.14, bLen, 6);
+        br.translate(0, bLen * 0.5, 0);
+        br.rotateX(tilt);
+        br.rotateY(yaw);
+        br.translate(0, 1.85, 0);
+        tParts.push(br);
+      });
+
+      const cParts = [];
+      const pads = [
+        [0, 3.45, 0, 1.85, 0.58, 1.82],
+        [-0.95, 3.18, 0.55, 1.42, 0.5, 1.35],
+        [1.02, 3.24, -0.42, 1.38, 0.48, 1.42],
+        [0.1, 3.12, -0.92, 1.28, 0.45, 1.22],
+      ];
+      for (const [px, py, pz, sx, sy, sz] of pads) {
+        const g = new THREE.IcosahedronGeometry(1.0, 1);
+        g.scale(sx, sy, sz);
+        g.translate(px, py, pz);
+        cParts.push(g);
+      }
+      return { trunk: mergeLocalGeoms(tParts), crown: mergeLocalGeoms(cParts) };
+    };
+
+    // 3) Feuillu sculpté : tronc fuselé + houppier multi-lobes organique (jamais une simple sphère)
+    const buildShadeGeoms = () => {
+      const tParts = [];
+      const stem = new THREE.CylinderGeometry(0.17, 0.29, 2.55, 7);
+      stem.translate(0, 1.275, 0);
+      tParts.push(stem);
+      const fork = new THREE.CylinderGeometry(0.09, 0.14, 0.95, 6);
+      fork.rotateZ(0.45);
+      fork.translate(-0.24, 2.35, 0.1);
+      tParts.push(fork);
+
+      const cParts = [];
+      const lobes = [
+        [0.0, 3.65, 0.0, 1.38, 1.24, 1.35],
+        [-0.88, 3.05, 0.6, 1.05, 0.92, 1.02],
+        [0.86, 3.18, -0.5, 1.02, 0.94, 0.98],
+        [0.52, 2.95, 0.85, 0.92, 0.84, 0.92],
+        [-0.48, 3.25, -0.8, 0.94, 0.88, 0.96],
+      ];
+      for (const [lx, ly, lz, sx, sy, sz] of lobes) {
+        const g = new THREE.IcosahedronGeometry(1.0, 1);
+        g.scale(sx, sy, sz);
+        g.translate(lx, ly, lz);
+        cParts.push(g);
+      }
+      return { trunk: mergeLocalGeoms(tParts), crown: mergeLocalGeoms(cParts) };
+    };
+
+    // 4) Cyprès / Colonne ornementale : feuillage élancé en grappes organiques effilées (silhouette botanique)
+    const buildCypressGeoms = () => {
+      const stem = new THREE.CylinderGeometry(0.14, 0.21, 1.25, 7);
+      stem.translate(0, 0.625, 0);
+      const cParts = [];
+      const tiers = [
+        [0.0, 1.72, 0.0, 0.82, 0.95, 0.8, 0.2],
+        [0.06, 2.52, -0.05, 0.74, 0.98, 0.72, 0.8],
+        [-0.05, 3.32, 0.04, 0.62, 0.96, 0.6, 1.5],
+        [0.04, 4.1, -0.03, 0.46, 0.9, 0.46, 2.1],
+        [-0.02, 4.82, 0.02, 0.3, 0.82, 0.3, 0.4],
+      ];
+      for (const [cx, cy, cz, sx, sy, sz, ry] of tiers) {
+        const g = new THREE.IcosahedronGeometry(1.0, 1);
+        g.scale(sx, sy, sz);
+        g.rotateY(ry);
+        g.translate(cx, cy, cz);
+        cParts.push(g);
+      }
+      return { trunk: stem, crown: mergeLocalGeoms(cParts) };
+    };
+
+    const speciesSpecs = {
+      palm: {
+        geoms: buildPalmGeoms(),
+        trunkCol: 0xa69680,
+        map: null,
+        wind: 0.26,
+        palette: [0x6f944e, 0x7ea15b, 0x628545, 0x89aa64],
+      },
+      acacia: {
+        geoms: buildAcaciaGeoms(),
+        trunkCol: 0x8d7b66,
+        map: textures.grass,
+        wind: 0.2,
+        palette: [0x7e955f, 0x8ea36c, 0x6f8754, 0x839962, 0xd4623f, 0xde784b],
+      },
+      shade: {
+        geoms: buildShadeGeoms(),
+        trunkCol: 0x978671,
+        map: textures.grass,
+        wind: 0.22,
+        palette: [0x6d8e59, 0x7c9c67, 0x8aa773, 0x5f7e4d, 0x93ae78],
+      },
+      cypress: {
+        geoms: buildCypressGeoms(),
+        trunkCol: 0x847462,
+        map: null,
+        wind: 0.14,
+        palette: [0x4f6f44, 0x5a7b4e, 0x45633c, 0x648356],
+      },
+    };
+
+    const buckets = { palm: [], acacia: [], shade: [], cypress: [] };
+    treePositions.forEach((tp, idx) => {
+      const [tx, tz] = tp;
+      if (idx === heroGradinTreeIdx) {
+        buckets.acacia.push({ tp, forceCol: 0xd4623f }); // Flamboyant parasol sur le gradin central
+        return;
+      }
+      const nearPools = tx > -86 && tx < -18 && tz > -28 && tz < 16;
+      const nearBasin = Math.abs(tx) < 34 && Math.abs(tz) < 28;
+      const onFormalAxis = Math.abs(tx) > 15 && Math.abs(tx) < 52 && Math.abs(tz) > 6 && Math.abs(tz) < 24;
+      const inPark = Math.abs(tx) < 252 && Math.abs(tz) < 30;
+      const rRoll = rng();
+
+      let sp = "shade";
+      if (nearPools || nearBasin) {
+        sp = rRoll < 0.62 ? "palm" : rRoll < 0.85 ? "acacia" : "cypress";
+      } else if (onFormalAxis) {
+        sp = rRoll < 0.45 ? "cypress" : rRoll < 0.78 ? "palm" : "acacia";
+      } else if (inPark) {
+        if (rRoll < 0.2) sp = "palm";
+        else if (rRoll < 0.5) sp = "acacia";
+        else if (rRoll < 0.66) sp = "cypress";
+        else sp = "shade";
+      } else {
+        // Quartiers & avenues extérieures : acacias parasols, feuillus, et quelques palmiers
+        if (rRoll < 0.14) sp = "palm";
+        else if (rRoll < 0.46) sp = "acacia";
+        else if (rRoll < 0.56) sp = "cypress";
+        else sp = "shade";
+      }
+      buckets[sp].push({ tp });
     });
-    applyWindShader(crownMat, windUniforms, 0.24);
-
-    const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, treePositions.length);
-    const crowns = new THREE.InstancedMesh(crownGeo, crownMat, treePositions.length);
-    trunks.castShadow = true;
-    crowns.castShadow = true;
-    crowns.receiveShadow = true;
-
-    const treePalette = [
-      new THREE.Color(0xa6b58f), // sauge claire
-      new THREE.Color(0x93a67a), // olivier
-      new THREE.Color(0xb2bf99), // eucalyptus doré
-      new THREE.Color(0x83966d), // acacia doux
-      new THREE.Color(0x9ead86), // vert jardin
-    ];
 
     const dummy = new THREE.Object3D();
-    treePositions.forEach(([tx, tz, sc, gy], idx) => {
-      dummy.position.set(tx, gy + 1.1 * sc, tz);
-      dummy.scale.set(sc, sc, sc);
-      dummy.rotation.y = rng() * Math.PI * 2;
-      dummy.updateMatrix();
-      trunks.setMatrixAt(idx, dummy.matrix);
+    for (const [spName, list] of Object.entries(buckets)) {
+      if (!list.length) continue;
+      const spec = speciesSpecs[spName];
+      const trunkMat = new THREE.MeshStandardMaterial({ color: spec.trunkCol, roughness: 0.93 });
+      const crownMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        map: spec.map || null,
+        roughness: 0.86,
+      });
+      applyWindShader(crownMat, windUniforms, spec.wind);
 
-      dummy.position.set(tx, gy + 3.1 * sc, tz);
-      dummy.scale.set(sc * 1.06, sc * 0.92, sc * 1.06);
-      dummy.updateMatrix();
-      crowns.setMatrixAt(idx, dummy.matrix);
-      crowns.setColorAt(idx, treePalette[idx % treePalette.length]);
-    });
-    crowns.instanceColor.needsUpdate = true;
-    scene.add(trunks, crowns);
+      const trunks = new THREE.InstancedMesh(spec.geoms.trunk, trunkMat, list.length);
+      const crowns = new THREE.InstancedMesh(spec.geoms.crown, crownMat, list.length);
+      trunks.castShadow = true;
+      crowns.castShadow = true;
+      crowns.receiveShadow = true;
+
+      const tmpCol = new THREE.Color();
+      list.forEach(({ tp, forceCol }, idx) => {
+        const [tx, tz, sc, gy] = tp;
+        const rotY = rng() * Math.PI * 2;
+        const sY = sc * (0.94 + rng() * 0.14);
+        const sXZ = sc * (0.94 + rng() * 0.14);
+        dummy.position.set(tx, gy, tz);
+        dummy.rotation.set(0, rotY, 0);
+        dummy.scale.set(sXZ, sY, sXZ);
+        dummy.updateMatrix();
+        trunks.setMatrixAt(idx, dummy.matrix);
+        crowns.setMatrixAt(idx, dummy.matrix);
+
+        let colHex = forceCol;
+        if (!colHex) {
+          if (spName === "acacia") {
+            // ~18% de flamboyants corail-terre cuite parmi les acacias parasols
+            colHex = rng() < 0.18 ? spec.palette[4 + (idx % 2)] : spec.palette[idx % 4];
+          } else {
+            colHex = spec.palette[idx % spec.palette.length];
+          }
+        }
+        tmpCol.setHex(colHex);
+        crowns.setColorAt(idx, tmpCol);
+      });
+      crowns.instanceColor.needsUpdate = true;
+      scene.add(trunks, crowns);
+    }
   }
 
   // 2. Buissons (~340) dans les jardins, bordures et parterres

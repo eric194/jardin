@@ -405,6 +405,14 @@ function buildScene(data, thiesMapTex) {
     [-152.9, 19.3],
   ];
   const sunkenHoles = [SUNKEN_BOWL_POLY];
+  for (const z of data.zones) {
+    if (z.kind === "water") {
+      const nu = z.name.toUpperCase();
+      if ((nu.includes("PISICNE") || nu.includes("PISCINE")) && z.poly && z.poly.length >= 3) {
+        sunkenHoles.push(z.poly);
+      }
+    }
+  }
 
   // Plan de sol local (découpé sous les 3 arènes/gradins enterrés pour laisser voir les marches en contrebas)
   const groundMat = new THREE.MeshStandardMaterial({

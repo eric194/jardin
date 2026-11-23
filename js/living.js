@@ -886,7 +886,31 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     }
   }
 
-  const poleMat = new THREE.MeshStandardMaterial({ color: 0x5d5a54, roughness: 0.72, metalness: 0.25 });
+  const mergeUnitGeoms = (geoms) => {
+    const nonIdx = geoms.map((g) => (g.index ? g.toNonIndexed() : g));
+    let total = 0;
+    for (const g of nonIdx) total += g.attributes.position.count;
+    const pos = new Float32Array(total * 3);
+    const norm = new Float32Array(total * 3);
+    const uv = new Float32Array(total * 2);
+    let off = 0;
+    for (const g of nonIdx) {
+      if (!g.attributes.normal) g.computeVertexNormals();
+      const cnt = g.attributes.position.count;
+      pos.set(g.attributes.position.array, off * 3);
+      norm.set(g.attributes.normal.array, off * 3);
+      if (g.attributes.uv) uv.set(g.attributes.uv.array, off * 2);
+      off += cnt;
+      g.dispose();
+    }
+    const out = new THREE.BufferGeometry();
+    out.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    out.setAttribute("normal", new THREE.BufferAttribute(norm, 3));
+    out.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+    return out;
+  };
+
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0x4b4f56, roughness: 0.52, metalness: 0.24 });
   const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   const dimBulbMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   const dayBulbCol = new THREE.Color(0xdad2c6);
@@ -897,125 +921,236 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
 
   const lightPools = []; // { x, y, z, size, delay }
   const dimLightPools = []; // { x, y, z, size, delay }
-  const lampHeads = []; // { mesh, idx, x, y, z, delay, isDim }
+  const lampHeads = []; // { mesh, idx, x, y, z, rot, delay, isDim }
   const dummy = new THREE.Object3D();
   const calcWaveDelay = (x, z, extra = 0) =>
     Math.min(0.72, extra + Math.hypot(x, z * 1.4) / 440);
 
-  // Instanced bollards
+  // 1. Bornes architecturales de jardin (socle étagé + fût + cage à colonnettes + chapeau débordant + lanterne)
   if (bollards.length) {
-    const bPost = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.11, 0.13, 1.05, 8), poleMat, bollards.length);
-    const bHead = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.15, 0.15, 0.22, 8), bulbMat, bollards.length);
+    const bParts = [];
+    const plinth = new THREE.CylinderGeometry(0.18, 0.21, 0.1, 10);
+    plinth.translate(0, 0.05, 0);
+    bParts.push(plinth);
+    const shaft = new THREE.CylinderGeometry(0.11, 0.14, 0.86, 10);
+    shaft.translate(0, 0.52, 0);
+    bParts.push(shaft);
+    const midCollar = new THREE.CylinderGeometry(0.165, 0.155, 0.05, 12);
+    midCollar.translate(0, 0.96, 0);
+    bParts.push(midCollar);
+    for (let r = 0; r < 3; r++) {
+      const ang = (r / 3) * Math.PI * 2;
+      const rib = new THREE.CylinderGeometry(0.014, 0.014, 0.24, 5);
+      rib.translate(Math.cos(ang) * 0.155, 1.09, Math.sin(ang) * 0.155);
+      bParts.push(rib);
+    }
+    const cap = new THREE.CylinderGeometry(0.09, 0.27, 0.085, 12);
+    cap.translate(0, 1.24, 0);
+    bParts.push(cap);
+
+    const bPost = new THREE.InstancedMesh(mergeUnitGeoms(bParts), poleMat, bollards.length);
+    const bHead = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.125, 0.125, 0.21, 12), bulbMat, bollards.length);
     bollards.forEach(([x, z], idx) => {
-      dummy.position.set(x, 0.44 + 0.52, z);
+      dummy.position.set(x, 0.44, z);
       dummy.rotation.set(0, 0, 0);
       dummy.scale.set(1, 1, 1);
       dummy.updateMatrix();
       bPost.setMatrixAt(idx, dummy.matrix);
 
-      const hy = 0.44 + 1.08;
+      const hy = 0.44 + 1.09;
       dummy.position.set(x, hy, z);
       dummy.updateMatrix();
       bHead.setMatrixAt(idx, dummy.matrix);
       const delay = calcWaveDelay(x, z, 0.0);
       lightPools.push({ x, y: z < -30 ? 0.34 : 0.525, z, size: 7.5, delay });
-      lampHeads.push({ mesh: bHead, idx, x, y: hy, z, delay, isDim: false });
+      lampHeads.push({ mesh: bHead, idx, x, y: hy, z, rot: 0, delay, isDim: false });
     });
     scene.add(bPost, bHead);
   }
 
-  // Instanced park & parking poles
+  // 2. Lampadaires d'allées de parc & parking (socle mouluré + mât fuselé + crosse galbée + abat-jour disque + globe chaud)
   if (parkPoles.length) {
-    const pPost = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.1, 0.15, 1, 8), poleMat, parkPoles.length);
-    const pHead = new THREE.InstancedMesh(new THREE.BoxGeometry(0.9, 0.22, 0.45), bulbMat, parkPoles.length);
+    const baseParts = [];
+    const bp1 = new THREE.CylinderGeometry(0.21, 0.27, 0.24, 10);
+    bp1.translate(0, 0.12, 0);
+    baseParts.push(bp1);
+    const bp2 = new THREE.CylinderGeometry(0.15, 0.21, 0.28, 10);
+    bp2.translate(0, 0.38, 0);
+    baseParts.push(bp2);
+
+    const armParts = [];
+    const collar = new THREE.CylinderGeometry(0.115, 0.105, 0.16, 10);
+    collar.translate(0, 0.04, 0);
+    armParts.push(collar);
+    // Bras oblique + tirant vers +Z
+    const arm = new THREE.CylinderGeometry(0.045, 0.06, 0.66, 8);
+    arm.rotateX(1.06);
+    arm.translate(0, 0.18, 0.28);
+    armParts.push(arm);
+    const brace = new THREE.CylinderGeometry(0.024, 0.028, 0.42, 6);
+    brace.rotateX(1.42);
+    brace.translate(0, 0.05, 0.22);
+    armParts.push(brace);
+    // Abat-jour architectural en chapeau conique
+    const shade = new THREE.CylinderGeometry(0.14, 0.48, 0.13, 14);
+    shade.translate(0, 0.32, 0.56);
+    armParts.push(shade);
+    const finial = new THREE.CylinderGeometry(0.03, 0.14, 0.07, 10);
+    finial.translate(0, 0.41, 0.56);
+    armParts.push(finial);
+
+    const pBase = new THREE.InstancedMesh(mergeUnitGeoms(baseParts), poleMat, parkPoles.length);
+    const pPost = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.085, 0.145, 1, 10), poleMat, parkPoles.length);
+    const pArm = new THREE.InstancedMesh(mergeUnitGeoms(armParts), poleMat, parkPoles.length);
+    const pGlobeGeo = new THREE.SphereGeometry(0.22, 12, 8);
+    pGlobeGeo.scale(1.0, 0.62, 1.0);
+    const pHead = new THREE.InstancedMesh(pGlobeGeo, bulbMat, parkPoles.length);
+    pPost.castShadow = true;
+
     parkPoles.forEach(([x, z, h, rot], idx) => {
+      dummy.position.set(x, 0.36, z);
+      dummy.scale.set(1, 1, 1);
+      dummy.rotation.set(0, rot, 0);
+      dummy.updateMatrix();
+      pBase.setMatrixAt(idx, dummy.matrix);
+
       dummy.position.set(x, 0.36 + h / 2, z);
       dummy.scale.set(1, h, 1);
-      dummy.rotation.set(0, rot, 0);
       dummy.updateMatrix();
       pPost.setMatrixAt(idx, dummy.matrix);
 
-      const hy = 0.36 + h + 0.08;
-      const hz = z + Math.cos(rot) * 0.35;
-      dummy.position.set(x, hy, hz);
+      dummy.position.set(x, 0.36 + h, z);
       dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      pArm.setMatrixAt(idx, dummy.matrix);
+
+      const hx = x + Math.sin(rot) * 0.56;
+      const hy = 0.36 + h + 0.2;
+      const hz = z + Math.cos(rot) * 0.56;
+      dummy.position.set(hx, hy, hz);
       dummy.updateMatrix();
       pHead.setMatrixAt(idx, dummy.matrix);
       const delay = calcWaveDelay(x, z, 0.05);
       lightPools.push({ x, y: z < -48 ? 0.455 : z < -30 ? 0.34 : 0.525, z, size: h * 2.2, delay });
-      lampHeads.push({ mesh: pHead, idx, x, y: hy, z: hz, rot, delay, isDim: false });
+      lampHeads.push({ mesh: pHead, idx, x: hx, y: hy, z: hz, rot, delay, isDim: false });
     });
-    scene.add(pPost, pHead);
+    scene.add(pBase, pPost, pArm, pHead);
   }
 
-  // Instanced sport floodlights
+  // 3. Mâts sportifs (11 m) avec socle lourd, traverse T contreventée et triple rampe de projecteurs orientée
   if (sportMasts.length) {
-    const sPost = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.14, 0.22, 11.0, 8), poleMat, sportMasts.length);
-    const sHead = new THREE.InstancedMesh(new THREE.BoxGeometry(1.5, 0.42, 0.65), bulbMat, sportMasts.length);
+    const sParts = [];
+    const sBase = new THREE.CylinderGeometry(0.24, 0.34, 0.75, 10);
+    sBase.translate(0, 0.375, 0);
+    sParts.push(sBase);
+    const sCol = new THREE.CylinderGeometry(0.13, 0.22, 11.0, 10);
+    sCol.translate(0, 5.5, 0);
+    sParts.push(sCol);
+    const sBar = new THREE.BoxGeometry(2.5, 0.14, 0.16);
+    sBar.translate(0, 11.02, 0);
+    sParts.push(sBar);
+    for (const bx of [-0.65, 0.65]) {
+      const strut = new THREE.CylinderGeometry(0.035, 0.04, 1.05, 6);
+      strut.rotateZ(bx > 0 ? -0.64 : 0.64);
+      strut.translate(bx * 0.55, 10.6, 0);
+      sParts.push(strut);
+    }
+    const lensParts = [];
+    for (const fx of [-0.95, 0, 0.95]) {
+      const brk = new THREE.BoxGeometry(0.1, 0.22, 0.14);
+      brk.translate(fx, 11.16, 0.06);
+      sParts.push(brk);
+      const hs = new THREE.BoxGeometry(0.5, 0.28, 0.26);
+      hs.rotateX(0.36);
+      hs.translate(fx, 11.32, 0.12);
+      sParts.push(hs);
+
+      const lens = new THREE.BoxGeometry(0.42, 0.22, 0.07);
+      lens.rotateX(0.36);
+      lens.translate(fx, -0.02, 0.13);
+      lensParts.push(lens);
+    }
+
+    const sPost = new THREE.InstancedMesh(mergeUnitGeoms(sParts), poleMat, sportMasts.length);
+    const sHead = new THREE.InstancedMesh(mergeUnitGeoms(lensParts), bulbMat, sportMasts.length);
+    sPost.castShadow = true;
+
     sportMasts.forEach(([x, z], idx) => {
-      dummy.position.set(x, 0.36 + 5.5, z);
-      dummy.rotation.set(0, 0, 0);
+      const rot = z < 0 ? 0 : Math.PI;
+      dummy.position.set(x, 0.36, z);
+      dummy.rotation.set(0, rot, 0);
       dummy.scale.set(1, 1, 1);
       dummy.updateMatrix();
       sPost.setMatrixAt(idx, dummy.matrix);
 
-      const hy = 0.36 + 11.0;
-      dummy.position.set(x, hy, z);
+      const hx = x + Math.sin(rot) * 0.12;
+      const hy = 0.36 + 11.3;
+      const hz = z + Math.cos(rot) * 0.12;
+      dummy.position.set(hx, hy, hz);
       dummy.updateMatrix();
       sHead.setMatrixAt(idx, dummy.matrix);
       const delay = calcWaveDelay(x, z, 0.1);
       lightPools.push({ x, y: 0.525, z, size: 22, delay });
-      lampHeads.push({ mesh: sHead, idx, x, y: hy, z, rot: 0, delay, isDim: false });
+      lampHeads.push({ mesh: sHead, idx, x: hx, y: hy, z: hz, rot, delay, isDim: false });
     });
     scene.add(sPost, sHead);
   }
 
-  // Instanced main road poles
-  if (roadPoles.length) {
-    const rPost = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.12, 0.18, 9.0, 8), poleMat, roadPoles.length);
-    const rHead = new THREE.InstancedMesh(new THREE.BoxGeometry(1.2, 0.24, 0.5), bulbMat, roadPoles.length);
-    roadPoles.forEach(([x, z, rot], idx) => {
-      dummy.position.set(x, 0.08 + 4.5, z);
+  // Helper pour lampadaires urbains à crosse aérodynamique (avenues principales & rues secondaires)
+  const buildUrbanLuminaire = (list, h, armReach, hoodW, hoodL, rTop, rBot, yBase, matBulb, poolArr, poolY, poolSize, delayBase, isDimFlag) => {
+    if (!list.length) return;
+    const uParts = [];
+    const plinth = new THREE.CylinderGeometry(rBot * 1.35, rBot * 1.65, 0.68, 10);
+    plinth.translate(0, 0.34, 0);
+    uParts.push(plinth);
+    const mast = new THREE.CylinderGeometry(rTop, rBot, h, 10);
+    mast.translate(0, h * 0.5, 0);
+    uParts.push(mast);
+    // Crosse inclinée vers +Z
+    const armLen = Math.hypot(armReach, 0.44);
+    const armSlope = new THREE.CylinderGeometry(rTop * 0.72, rTop * 0.92, armLen, 8);
+    armSlope.rotateX(Math.atan2(armReach, 0.44));
+    armSlope.translate(0, h + 0.18, armReach * 0.46);
+    uParts.push(armSlope);
+    // Tête profilée / capot LED sombre au bout de la crosse
+    const hood = new THREE.BoxGeometry(hoodW, 0.12, hoodL);
+    hood.translate(0, h + 0.42, armReach);
+    uParts.push(hood);
+    const hoodNose = new THREE.CylinderGeometry(0.06, 0.06, hoodW * 0.92, 8);
+    hoodNose.rotateZ(Math.PI / 2);
+    hoodNose.translate(0, h + 0.42, armReach + hoodL * 0.48);
+    uParts.push(hoodNose);
+
+    const uPost = new THREE.InstancedMesh(mergeUnitGeoms(uParts), poleMat, list.length);
+    uPost.castShadow = true;
+    const lensGeo = new THREE.BoxGeometry(hoodW * 0.78, 0.08, hoodL * 0.74);
+    const uHead = new THREE.InstancedMesh(lensGeo, matBulb, list.length);
+
+    list.forEach(([x, z, rot], idx) => {
+      dummy.position.set(x, yBase, z);
       dummy.rotation.set(0, rot, 0);
       dummy.scale.set(1, 1, 1);
       dummy.updateMatrix();
-      rPost.setMatrixAt(idx, dummy.matrix);
+      uPost.setMatrixAt(idx, dummy.matrix);
 
-      const hy = 0.08 + 9.0;
-      const hz = z + Math.cos(rot) * 0.45;
-      dummy.position.set(x, hy, hz);
-      dummy.updateMatrix();
-      rHead.setMatrixAt(idx, dummy.matrix);
-      const delay = calcWaveDelay(x, z, 0.14);
-      lightPools.push({ x, y: 0.095, z, size: 17, delay });
-      lampHeads.push({ mesh: rHead, idx, x, y: hy, z: hz, rot, delay, isDim: false });
-    });
-    scene.add(rPost, rHead);
-  }
-
-  // Instanced neighborhood street poles (lampadaires à faible luminosité dans les rues secondaires)
-  if (streetPoles.length) {
-    const stPost = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.09, 0.14, 6.6, 8), poleMat, streetPoles.length);
-    const stHead = new THREE.InstancedMesh(new THREE.BoxGeometry(0.85, 0.2, 0.38), dimBulbMat, streetPoles.length);
-    streetPoles.forEach(([x, z, rot], idx) => {
-      dummy.position.set(x, 0.08 + 3.3, z);
-      dummy.rotation.set(0, rot, 0);
-      dummy.scale.set(1, 1, 1);
-      dummy.updateMatrix();
-      stPost.setMatrixAt(idx, dummy.matrix);
-
-      const hx = x + Math.sin(rot) * 0.3;
-      const hy = 0.08 + 6.6;
-      const hz = z + Math.cos(rot) * 0.3;
+      const hx = x + Math.sin(rot) * armReach;
+      const hy = yBase + h + 0.35;
+      const hz = z + Math.cos(rot) * armReach;
       dummy.position.set(hx, hy, hz);
       dummy.updateMatrix();
-      stHead.setMatrixAt(idx, dummy.matrix);
-      const delay = calcWaveDelay(x, z, 0.22);
-      dimLightPools.push({ x, y: 0.092, z, size: 12.5, delay });
-      lampHeads.push({ mesh: stHead, idx, x: hx, y: hy, z: hz, rot, delay, isDim: true });
+      uHead.setMatrixAt(idx, dummy.matrix);
+      const delay = calcWaveDelay(x, z, delayBase);
+      poolArr.push({ x, y: poolY, z, size: poolSize, delay });
+      lampHeads.push({ mesh: uHead, idx, x: hx, y: hy, z: hz, rot, delay, isDim: isDimFlag });
     });
-    scene.add(stPost, stHead);
-  }
+    scene.add(uPost, uHead);
+  };
+
+  // 4. Lampadaires d'avenues principales (9 m, grande crosse LED)
+  buildUrbanLuminaire(roadPoles, 9.0, 0.96, 0.44, 1.12, 0.1, 0.18, 0.08, bulbMat, lightPools, 0.095, 17, 0.14, false);
+
+  // 4b. Lampadaires de rues secondaires (6,6 m, crosse fine à faible luminosité)
+  buildUrbanLuminaire(streetPoles, 6.6, 0.68, 0.34, 0.84, 0.08, 0.14, 0.08, dimBulbMat, dimLightPools, 0.092, 12.5, 0.22, true);
 
   // Halos lumineux directs sous les auvents des 2 Stations-service et la colonnade de la Banque
   [
@@ -1359,7 +1494,7 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
           const span = Math.max(0.26, 1 - h.delay);
           const lf = THREE.MathUtils.clamp((f - h.delay) / span, 0, 1);
           const sCurve = lf * lf * (3 - 2 * lf);
-          const pop = 1 + Math.sin(lf * Math.PI) * 0.55;
+          const pop = 1 + Math.sin(lf * Math.PI) * 0.26;
           dummy.position.set(h.x, h.y, h.z);
           dummy.rotation.set(0, h.rot || 0, 0);
           dummy.scale.set(pop, pop, pop);
