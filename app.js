@@ -526,7 +526,7 @@ function buildScene(data, thiesMapTex) {
 
   // 3. Socle du parc linéaire (500 x 50 m, top 0.300, évidé au droit des terrains et gradins enterrés)
   const parkMat = new THREE.MeshStandardMaterial({
-    color: 0xf2ebe0,
+    color: 0xcfd4d8,
     roughness: 0.92,
     metalness: 0,
   });
@@ -551,7 +551,7 @@ function buildScene(data, thiesMapTex) {
     parkingZone: { color: 0xebe3d5, map: textures.road, y: 0.06, depth: 0.23 },   // top 0.290
     paving: { color: 0xffffff, map: textures.paving, y: 0.305, depth: 0.045 },   // top 0.350
     track: { color: 0xc67360, map: textures.sport, y: 0.31, depth: 0.07 },       // top 0.380
-    play: { color: 0xeaddcb, map: textures.paving, y: 0.315, depth: 0.085 },     // top 0.400
+    play: { color: 0xf3ece1, map: textures.paving, y: 0.315, depth: 0.085 },     // top 0.400
     sand: { color: 0xf4e4c1, map: textures.sand, y: 0.32, depth: 0.095 },        // top 0.415
     sport: { color: 0xf7efe4, map: textures.sport, y: 0.325, depth: 0.1 },       // top 0.425
     green: { color: 0xffffff, map: textures.grass, y: 0.33, depth: 0.125 },      // top 0.455
@@ -1842,7 +1842,7 @@ const _dayColors = {
   road: new THREE.Color(0xffffff),
   building: new THREE.Color(0xffffff),
   edge: new THREE.Color(0xe3dcd0),
-  park: new THREE.Color(0xf2ebe0),
+  park: new THREE.Color(0xcfd4d8),
   kiosk: new THREE.Color(0xffffff),
   roof: new THREE.Color(0xe6dccd),
   cantine: new THREE.Color(0xffffff),
@@ -1851,7 +1851,7 @@ const _dayColors = {
   sport: new THREE.Color(0xf7efe4),
   sand: new THREE.Color(0xf4e4c1),
   track: new THREE.Color(0xc67360),
-  play: new THREE.Color(0xeaddcb),
+  play: new THREE.Color(0xf3ece1),
   gradin: new THREE.Color(0xe3dad0),
   parkingZone: new THREE.Color(0xebe3d5),
   sun: new THREE.Color(0xfffaf2),
@@ -1866,11 +1866,11 @@ const _nightColors = {
   road: new THREE.Color(0x2a3548),
   building: new THREE.Color(0x253245),
   edge: new THREE.Color(0x3a4962),
-  park: new THREE.Color(0x1f2b3d),
+  park: new THREE.Color(0x1b2434),
   kiosk: new THREE.Color(0x344257),
   roof: new THREE.Color(0x2d3a4e),
   cantine: new THREE.Color(0x3d4859),
-  paving: new THREE.Color(0x2d3748),
+  paving: new THREE.Color(0x3a404f),
   green: new THREE.Color(0x2c4237),
   sport: new THREE.Color(0x343b49),
   sand: new THREE.Color(0x4b4232),

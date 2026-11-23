@@ -114,7 +114,7 @@ export function createGrassTexture(maxAniso = 8) {
 
 export function createStonePavingTexture(maxAniso = 8) {
   const [canvas, ctx] = makeCanvas(256, 256);
-  ctx.fillStyle = "#efe7da";
+  ctx.fillStyle = "#bfa98c";
   ctx.fillRect(0, 0, 256, 256);
 
   const rng = makeSeeded(4412);
@@ -124,8 +124,8 @@ export function createStonePavingTexture(maxAniso = 8) {
     for (let col = -1; col < 9; col++) {
       const x = col * step + offset;
       const y = row * step;
-      const tone = Math.floor((rng() - 0.5) * 10);
-      ctx.fillStyle = `rgb(${238 + tone}, ${230 + tone}, ${217 + tone})`;
+      const tone = Math.floor((rng() - 0.5) * 24);
+      ctx.fillStyle = `rgb(${232 + tone}, ${214 + tone}, ${188 + tone})`;
       ctx.fillRect(x + 1, y + 1, step - 2, step - 2);
     }
   }
