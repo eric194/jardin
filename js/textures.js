@@ -149,16 +149,43 @@ export function createRoadTexture(maxAniso = 8) {
 
 export function createSportTexture(maxAniso = 8) {
   const [canvas, ctx] = makeCanvas(256, 256);
-  ctx.fillStyle = "#e3d6c4";
+  // Granulat fin de résine acrylique / EPDM sportif extérieur
+  ctx.fillStyle = "#e6e2dc";
   ctx.fillRect(0, 0, 256, 256);
 
   const rng = makeSeeded(5519);
-  for (let i = 0; i < 1500; i++) {
-    ctx.fillStyle = rng() > 0.5 ? "rgba(198, 182, 162, 0.28)" : "rgba(248, 243, 236, 0.25)";
+  for (let i = 0; i < 2400; i++) {
+    ctx.fillStyle = rng() > 0.5 ? "rgba(182, 176, 168, 0.28)" : "rgba(255, 255, 255, 0.26)";
     ctx.fillRect(rng() * 256, rng() * 256, 2, 2);
   }
+  // Micro-trame antidérapante de résine sportive
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+  ctx.lineWidth = 1;
+  for (let p = 0; p < 256; p += 16) {
+    ctx.beginPath();
+    ctx.moveTo(p, 0);
+    ctx.lineTo(p, 256);
+    ctx.moveTo(0, p);
+    ctx.lineTo(256, p);
+    ctx.stroke();
+  }
 
-  return configureRepeatingTexture(new THREE.CanvasTexture(canvas), 0.14, 0.14, maxAniso);
+  return configureRepeatingTexture(new THREE.CanvasTexture(canvas), 0.16, 0.16, maxAniso);
+}
+
+export function createTurfTexture(maxAniso = 8) {
+  const [canvas, ctx] = makeCanvas(256, 256);
+  // Gazon synthétique sportif pro à bandes de tonte alternées
+  for (let band = 0; band < 8; band++) {
+    ctx.fillStyle = band % 2 === 0 ? "#3f7d44" : "#4b8e50";
+    ctx.fillRect(band * 32, 0, 32, 256);
+  }
+  const rng = makeSeeded(6183);
+  for (let i = 0; i < 2600; i++) {
+    ctx.fillStyle = rng() > 0.5 ? "rgba(42, 88, 45, 0.26)" : "rgba(128, 192, 118, 0.22)";
+    ctx.fillRect(rng() * 256, rng() * 256, 2, 2);
+  }
+  return configureRepeatingTexture(new THREE.CanvasTexture(canvas), 0.1, 0.1, maxAniso);
 }
 
 export function createCantineTexture(maxAniso = 8) {

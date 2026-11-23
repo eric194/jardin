@@ -302,6 +302,44 @@ export function buildSportCourts(scene, data) {
     const b = makeLocalBasisFromQuad(basketZone.poly);
     const hl = b.longLen * 0.44;
     const hw = b.shortLen * 0.44;
+    const courtAngle = Math.atan2(-b.uz, b.ux);
+
+    // Dalle centrale bicolore en résine acrylique pro (parquet/ocre intérieur + raquettes terracotta + cercle central)
+    const courtFloorMat = new THREE.MeshStandardMaterial({
+      color: 0xd29554,
+      roughness: 0.78,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    });
+    const keyPaintMat = new THREE.MeshStandardMaterial({
+      color: 0xb84734,
+      roughness: 0.76,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    });
+    const innerFloor = new THREE.Mesh(new THREE.PlaneGeometry(hl * 2, hw * 2), courtFloorMat);
+    innerFloor.rotation.x = -Math.PI / 2;
+    innerFloor.rotation.z = courtAngle;
+    innerFloor.position.set(b.cx, sunkenY + 0.005, b.cz);
+    innerFloor.receiveShadow = true;
+
+    const centerCirclePaint = new THREE.Mesh(new THREE.CircleGeometry(1.78, 28), keyPaintMat);
+    centerCirclePaint.rotation.x = -Math.PI / 2;
+    centerCirclePaint.position.set(b.cx, sunkenY + 0.008, b.cz);
+    scene.add(innerFloor, centerCirclePaint);
+
+    for (const dir of [-1, 1]) {
+      const kCenter = b.pt(dir * (hl - 2.55), 0);
+      const keyMesh = new THREE.Mesh(new THREE.PlaneGeometry(5.1, 4.5), keyPaintMat);
+      keyMesh.rotation.x = -Math.PI / 2;
+      keyMesh.rotation.z = courtAngle;
+      keyMesh.position.set(kCenter[0], sunkenY + 0.008, kCenter[1]);
+      keyMesh.receiveShadow = true;
+      scene.add(keyMesh);
+    }
+
     const p1 = b.pt(-hl, -hw);
     const p2 = b.pt(hl, -hw);
     const p3 = b.pt(hl, hw);
@@ -346,6 +384,22 @@ export function buildSportCourts(scene, data) {
     const hw = c.shortLen * 0.43;
     const shortAngle = Math.atan2(-c.vz, c.vx);
     const longAngle = Math.atan2(-c.uz, c.ux);
+
+    // Aire de jeu centrale bicolore en résine acrylique pro (bleu US Open sur dégagement vert pour Tennis, bleu/terracotta pour Padel)
+    const inCourtMat = new THREE.MeshStandardMaterial({
+      color: isPadel ? 0x1e5685 : 0x2b6592,
+      roughness: 0.78,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1,
+    });
+    const inCourtMesh = new THREE.Mesh(new THREE.PlaneGeometry(hl * 2, hw * 2), inCourtMat);
+    inCourtMesh.rotation.x = -Math.PI / 2;
+    inCourtMesh.rotation.z = longAngle;
+    inCourtMesh.position.set(c.cx, 0.428, c.cz);
+    inCourtMesh.receiveShadow = true;
+    scene.add(inCourtMesh);
+
     const corners = [c.pt(-hl, -hw), c.pt(hl, -hw), c.pt(hl, hw), c.pt(-hl, hw)];
     for (let i = 0; i < 4; i++) {
       const a = corners[i];
@@ -1406,7 +1460,7 @@ export function buildVegetation(scene, data, textures, windUniforms) {
     return true;
   };
 
-  // 1a. Jardins & pelouses intérieurs
+  // 1a. Jardins d'arbustes (JARDIN PLANTÉ — densité d'arbres renforcée) & pelouses intérieures
   const treeZones = data.zones.filter((z) => {
     const n = z.name.toUpperCase();
     return z.area > 35 && (n.includes("JARDIN PLANT") || n.includes("PELOUSE"));
@@ -1419,14 +1473,18 @@ export function buildVegetation(scene, data, textures, windUniforms) {
       if (z < minZ) minZ = z;
       if (z > maxZ) maxZ = z;
     }
-    const targetCount = Math.min(18, Math.max(2, Math.round(gz.area / 80)));
+    const isJardinPlante = gz.name.toUpperCase().includes("JARDIN PLANT");
+    const targetCount = isJardinPlante
+      ? Math.min(28, Math.max(4, Math.round(gz.area / 28)))
+      : Math.min(18, Math.max(2, Math.round(gz.area / 72)));
+    const minSep = isJardinPlante ? 3.5 : 4.6;
     let added = 0;
-    for (let tries = 0; tries < targetCount * 8 && added < targetCount; tries++) {
+    for (let tries = 0; tries < targetCount * 14 && added < targetCount; tries++) {
       const px = minX + rng() * (maxX - minX);
       const pz = minZ + rng() * (maxZ - minZ);
       if (!pointInPoly2D([px, pz], gz.poly)) continue;
       if (!isClearInner(px, pz)) continue;
-      if (addTreeIfClear(px, pz, 0.8 + rng() * 0.55, 0.42, 4.8)) added++;
+      if (addTreeIfClear(px, pz, 0.78 + rng() * 0.58, 0.42, minSep)) added++;
     }
   }
 

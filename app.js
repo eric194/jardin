@@ -6,6 +6,7 @@ import {
   createStonePavingTexture,
   createRoadTexture,
   createSportTexture,
+  createTurfTexture,
   createCantineTexture,
   createWaterNormalTexture,
   createSandTexture,
@@ -303,6 +304,7 @@ let trafficCtrl;
 let pedestrianCtrl;
 let lightingCtrl;
 let pavilionCtrl;
+let activityCtrl;
 let atmosphereCtrl;
 let contextCtrl;
 let dossierCtrl;
@@ -345,6 +347,7 @@ function buildScene(data, thiesMapTex) {
     paving: createStonePavingTexture(maxAniso),
     road: createRoadTexture(maxAniso),
     sport: createSportTexture(maxAniso),
+    turf: createTurfTexture(maxAniso),
     cantine: createCantineTexture(maxAniso),
     water: createWaterNormalTexture(maxAniso),
     sand: createSandTexture(maxAniso),
@@ -550,10 +553,14 @@ function buildScene(data, thiesMapTex) {
   const kindStyle = {
     parkingZone: { color: 0xebe3d5, map: textures.road, y: 0.06, depth: 0.23 },   // top 0.290
     paving: { color: 0xffffff, map: textures.paving, y: 0.305, depth: 0.045 },   // top 0.350
-    track: { color: 0xc67360, map: textures.sport, y: 0.31, depth: 0.07 },       // top 0.380
+    track: { color: 0xc85a42, map: textures.sport, y: 0.31, depth: 0.07 },       // top 0.380 (Tartan athlétisme)
     play: { color: 0xf3ece1, map: textures.paving, y: 0.315, depth: 0.085 },     // top 0.400
     sand: { color: 0xf4e4c1, map: textures.sand, y: 0.32, depth: 0.095 },        // top 0.415
-    sport: { color: 0xf7efe4, map: textures.sport, y: 0.325, depth: 0.1 },       // top 0.425
+    sport: { color: 0x728394, map: textures.sport, y: 0.325, depth: 0.1 },       // top 0.425 (Résine EPDM ardoise bleutée)
+    turfPitch: { color: 0xffffff, map: textures.turf, y: 0.325, depth: 0.1 },    // top 0.425 (Gazon synthétique Football)
+    courtTennis: { color: 0x457c58, map: textures.sport, y: 0.325, depth: 0.1 }, // top 0.425 (Dégagement vert Tennis US Open)
+    courtPadel: { color: 0x2f6999, map: textures.sport, y: 0.325, depth: 0.1 },  // top 0.425 (Résine bleue Padel pro)
+    courtBasket: { color: 0x385e82, map: textures.sport, y: -0.43, depth: 0.08 },// top -0.350 (Résine bleue Basket pro)
     green: { color: 0xffffff, map: textures.grass, y: 0.33, depth: 0.125 },      // top 0.455
     gradin: { color: 0xe3dad0, map: null, y: 0.335, depth: 0.92 },               // top 1.255
   };
@@ -771,9 +778,9 @@ function buildScene(data, thiesMapTex) {
         continue;
       }
 
-      // B. Terrain de Basket enterré (-0.35 m) ouvert directement sur le gradin central (aucun mur de séparation)
+      // B. Terrain de Basket enterré (-0.35 m) en résine acrylique pro bleue
       if (zu === "BASKET") {
-        pushKindGeom("sport", extrudePoly(z.poly, 0.08, -0.43)); // top -0.35 m
+        pushKindGeom("courtBasket", extrudePoly(z.poly, 0.08, -0.43)); // top -0.35 m
         continue;
       }
 
@@ -783,7 +790,10 @@ function buildScene(data, thiesMapTex) {
         continue;
       }
 
-      const effectiveKind = zu.includes("SABLE") ? "sand" : z.kind;
+      let effectiveKind = zu.includes("SABLE") ? "sand" : z.kind;
+      if (zu === "FOOT") effectiveKind = "turfPitch";
+      else if (zu === "TENNIS") effectiveKind = "courtTennis";
+      else if (zu === "PADEL") effectiveKind = "courtPadel";
       const st = kindStyle[effectiveKind] || kindStyle.paving;
       const g = extrudePoly(z.poly, st.depth, st.y, z.holes || []);
       pushKindGeom(effectiveKind, g);
@@ -1043,7 +1053,7 @@ function buildScene(data, thiesMapTex) {
 
   // 8. Tracés sportifs 3D visibles, agrès fitness/jeux sol dur, Eau + Jets animés, Arbres périphériques & intérieurs avec vent
   buildSportCourts(scene, data);
-  buildActivityZones(scene, data);
+  activityCtrl = buildActivityZones(scene, data);
   waterCtrl = buildWaterAndFountains(scene, data, textures, extrudePoly, mergeGeometries, isMobile);
   const vegStats = buildVegetation(scene, data, textures, windUniforms);
   state.stats.trees = vegStats?.treeCount || 0;
@@ -1071,7 +1081,12 @@ function buildScene(data, thiesMapTex) {
     data,
     textures,
     isMobile,
-    [...(pavilionCtrl?.footprints || []), ...(gardenAssets?.footprints || [])]
+    [...(pavilionCtrl?.footprints || []), ...(gardenAssets?.footprints || [])],
+    [
+      ...(pavilionCtrl?.placed || []).map((p) => ({ ...p, isPavilion: true })),
+      ...(gardenAssets?.placed || []).map((p) => ({ ...p, isPavilion: false })),
+    ],
+    benchStats?.spots || []
   );
 
   // 10. Zones cliquables + 23 repères terracotta granulaires
@@ -1125,15 +1140,15 @@ function buildScene(data, thiesMapTex) {
 }
 
 function buildSpaceMarkers(spaces, isMobile = false) {
-  const discGeo = new THREE.CylinderGeometry(0.78, 0.78, 0.22, 24);
+  const discGeo = new THREE.CylinderGeometry(0.84, 0.84, 0.22, 24);
   discGeo.rotateX(Math.PI / 2);
-  const ringGeo = new THREE.TorusGeometry(0.83, 0.06, 8, 24);
-  const stemGeo = new THREE.CylinderGeometry(0.036, 0.036, 3.1, 6);
-  const baseDotGeo = new THREE.CircleGeometry(0.3, 16);
+  const ringGeo = new THREE.TorusGeometry(0.89, 0.065, 8, 24);
+  const stemGeo = new THREE.CylinderGeometry(0.04, 0.04, 5.5, 6);
+  const baseDotGeo = new THREE.CircleGeometry(0.32, 16);
   baseDotGeo.rotateX(-Math.PI / 2);
   const pulseGeo = new THREE.RingGeometry(0.45, 0.64, 24);
   pulseGeo.rotateX(-Math.PI / 2);
-  const hitGeo = new THREE.SphereGeometry(isMobile ? 5.6 : 4.8, 10, 10);
+  const hitGeo = new THREE.SphereGeometry(isMobile ? 5.8 : 5.0, 10, 10);
   const hitMat = new THREE.MeshBasicMaterial({ visible: false });
 
   spaces.forEach((sp, idx) => {
@@ -1151,7 +1166,7 @@ function buildSpaceMarkers(spaces, isMobile = false) {
       opacity: 1,
     });
     const disc = new THREE.Mesh(discGeo, discMat);
-    disc.position.y = 3.55;
+    disc.position.y = 5.95;
 
     const ringMat = new THREE.MeshBasicMaterial({
       color: 0xffffff,
@@ -1164,11 +1179,11 @@ function buildSpaceMarkers(spaces, isMobile = false) {
     const stemMat = new THREE.MeshBasicMaterial({
       color: 0x8f887d,
       transparent: true,
-      opacity: 0.48,
+      opacity: 0.54,
       depthWrite: false,
     });
     const stem = new THREE.Mesh(stemGeo, stemMat);
-    stem.position.y = 1.65;
+    stem.position.y = 2.85;
 
     const dotMat = new THREE.MeshBasicMaterial({
       color: 0xa64234,
@@ -1190,7 +1205,7 @@ function buildSpaceMarkers(spaces, isMobile = false) {
     pulseRing.position.y = 0.1;
 
     const hitProxy = new THREE.Mesh(hitGeo, hitMat);
-    hitProxy.position.y = 3.4;
+    hitProxy.position.y = 5.8;
     hitProxy.userData = { spaceId: sp.id, markerGroup: group };
 
     group.add(disc, stem, baseDot, pulseRing, hitProxy);
@@ -1848,9 +1863,13 @@ const _dayColors = {
   cantine: new THREE.Color(0xffffff),
   paving: new THREE.Color(0xffffff),
   green: new THREE.Color(0xffffff),
-  sport: new THREE.Color(0xf7efe4),
+  sport: new THREE.Color(0x728394),
+  turfPitch: new THREE.Color(0xffffff),
+  courtTennis: new THREE.Color(0x457c58),
+  courtPadel: new THREE.Color(0x2f6999),
+  courtBasket: new THREE.Color(0x385e82),
   sand: new THREE.Color(0xf4e4c1),
-  track: new THREE.Color(0xc67360),
+  track: new THREE.Color(0xc85a42),
   play: new THREE.Color(0xf3ece1),
   gradin: new THREE.Color(0xe3dad0),
   parkingZone: new THREE.Color(0xebe3d5),
@@ -1872,9 +1891,13 @@ const _nightColors = {
   cantine: new THREE.Color(0x3d4859),
   paving: new THREE.Color(0x3a404f),
   green: new THREE.Color(0x2c4237),
-  sport: new THREE.Color(0x343b49),
+  sport: new THREE.Color(0x293442),
+  turfPitch: new THREE.Color(0x324c3a),
+  courtTennis: new THREE.Color(0x1f3a2c),
+  courtPadel: new THREE.Color(0x18344e),
+  courtBasket: new THREE.Color(0x1b3047),
   sand: new THREE.Color(0x4b4232),
-  track: new THREE.Color(0x462d2c),
+  track: new THREE.Color(0x4a2620),
   play: new THREE.Color(0x333c4b),
   gradin: new THREE.Color(0x2a3547),
   parkingZone: new THREE.Color(0x232d3d),
@@ -1961,6 +1984,9 @@ function applyThemeLerp(f, hour = state.timeOfDay) {
   }
   if (pavilionCtrl) {
     pavilionCtrl.applyNightFactor(f);
+  }
+  if (activityCtrl) {
+    activityCtrl.applyNightFactor(f);
   }
   if (contextCtrl) {
     contextCtrl.updateNight(f);
@@ -2658,7 +2684,7 @@ function animate(now) {
     );
     const sway = state.reducedMotion ? 0 : Math.sin(now * 0.0014 + g.userData.phase) * 0.24;
     g.userData.disc.rotation.y = faceAngle + sway;
-    const baseY = isSel ? 3.2 : 3.55;
+    const baseY = isSel ? 5.6 : 5.95;
     const bob = state.reducedMotion ? 0 : Math.sin(now * 0.0022 + g.userData.phase) * 0.26;
     g.userData.disc.position.y = baseY + bob;
 

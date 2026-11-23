@@ -836,7 +836,15 @@ function pointNearPoly2D(pt, poly, margin) {
   return pointNearPolyEdge2D(pt, poly, margin);
 }
 
-export function buildLightingNetwork(scene, data, textures, isMobile = false, excludeDisks = []) {
+export function buildLightingNetwork(
+  scene,
+  data,
+  textures,
+  isMobile = false,
+  excludeDisks = [],
+  furniturePlaced = [],
+  benchSpots = []
+) {
   const bollards = [];
   const parkPoles = [];
   const sportMasts = [];
@@ -844,6 +852,14 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false, ex
 
   const nearExcludeDisk = (x, z, extra = 0.75) =>
     excludeDisks.some(([dx, dz, dr]) => Math.hypot(dx - x, dz - z) < dr + extra);
+
+  const greenZonesList = data.zones.filter((z) => z.kind === "green");
+  const isNearGreenZone = (x, z, margin = 0.65) =>
+    greenZonesList.some(
+      (gz) =>
+        inZone2D([x, z], gz) ||
+        pointNearPolyEdge2D([x, z], gz.poly, margin)
+    );
 
   const forbiddenZones = data.zones.filter(
     (z) =>
@@ -935,7 +951,7 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false, ex
     placedTallPoles.push([x, z]);
   };
   for (let x = -272; x <= 272; x += 34) {
-    addRoadPole(x, -29.0, 0);
+    if (Math.abs(x) >= 12) addRoadPole(x, -29.0, 0);
     addRoadPole(x, -42.4, Math.PI);
     addRoadPole(x, 28.8, Math.PI);
   }
@@ -945,7 +961,7 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false, ex
     addRoadPole(258, z, -Math.PI / 2);
   }
 
-  // 3. Lampadaires d'allées de parc & parking (espacés et décalés en quinconce par rapport aux avenues)
+  // 3. Lampadaires de parking & équipements périphériques (aucun lampadaire sur les allées intérieures du parc)
   const addParkPole = (x, z, h, rot, checkZones = true, minSep = 13.5) => {
     if (isInArchCorridor(x, z) || nearExcludeDisk(x, z, 0.9)) return;
     if (checkZones && !isClearOfPoolsAndCourts(x, z, 1.8)) return;
@@ -953,15 +969,6 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false, ex
     parkPoles.push([x, z, h, rot]);
     placedTallPoles.push([x, z]);
   };
-  for (let x = -222; x <= 222; x += 34) {
-    // Pas d'alignement redondant à 5 m devant les candélabres d'avenue ; uniquement là où l'espacement est libre et décalé
-    if (Math.abs(x) < 16) continue;
-    addParkPole(x, -23.4, 5.8, 0, true, 13.5);
-    addParkPole(x, 23.4, 5.8, Math.PI, true, 13.5);
-  }
-  for (let x = 28; x <= 185; x += 34) {
-    addParkPole(x, 0, 5.4, 0, true, 14.0);
-  }
   for (let x = -50; x <= 316; x += 28) {
     addParkPole(x, -53.5, 8.0, 0, false, 16.0); // mâts centraux parking nord (sans double rangée devant cantines)
   }
@@ -969,13 +976,13 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false, ex
   [
     [-133.2, -64.2, 6.2, 0],
     [-108.0, -64.2, 6.2, 0],
-    [-251.5, -52.5, 6.4, 0],
+    [-251.5, -52.5, 5.4, 0],
     [-220.5, -52.5, 6.4, 0],
     [-277.5, -1.2, 6.0, 0],
     [-298.5, -1.2, 6.0, 0],
   ].forEach(([px, pz, ph, prot]) => addParkPole(px, pz, ph, prot, false, 10.0));
 
-  // 4. Petits postes / bornes architecturales de jardin & abords des pelouses
+  // 4. Petits postes / bornes architecturales de jardin & abords des pelouses (aucune borne sur les allées de circulation)
   const addBollard = (x, z, checkZones = true, minPoleDist = 6.5, minBollardDist = 8.5) => {
     if (isInArchCorridor(x, z) || nearExcludeDisk(x, z, 0.75)) return;
     if (checkZones && !isClearOfPoolsAndCourts(x, z, 1.1)) return;
@@ -985,17 +992,11 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false, ex
     placedBollards.push([x, z]);
   };
   for (const [lx, lz] of data.lights || []) {
+    // Exclure tout point lumineux du DXF qui tomberait sur une allée intérieure hors jardin/pelouse
+    if (Math.abs(lx) < 248 && Math.abs(lz) < 25 && !isNearGreenZone(lx, lz, 0.8)) continue;
     addBollard(lx, lz, true, 6.5, 8.0);
   }
-  for (let x = -232; x <= 232; x += 18) {
-    addBollard(x, -4.5, true, 7.2, 9.5);
-    addBollard(x, 4.5, true, 7.2, 9.5);
-  }
-  // Pourtour du bassin central et de la fontaine Est
-  for (let a = 0; a < 12; a++) {
-    const ang = (a / 12) * Math.PI * 2;
-    addBollard(Math.cos(ang) * 20, -1.6 + Math.sin(ang) * 14.5, true, 6.5, 8.2);
-  }
+  // Pourtour de la fontaine Est (hors allées du bassin central)
   for (let a = 0; a < 6; a++) {
     const ang = (a / 6) * Math.PI * 2;
     addBollard(213.2 + Math.cos(ang) * 10.5, 1.9 + Math.sin(ang) * 9.0, true, 6.5, 8.2);
@@ -1671,7 +1672,96 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false, ex
     lightPools.push({ x, y, z, size, delay: calcWaveDelay(x, z, 0.08) });
   });
 
-  // Lueur chaude rasante sous les bancs-jardinières en bois à travers le parc
+  // Points lumineux architecturaux directement intégrés sur tous les mobiliers du parc (bancs-jardinières, pavillons & bancs)
+  const furnitureLightPts = []; // { x, y, z, poolY, poolSize }
+  for (const item of furniturePlaced) {
+    const { x: fx, z: fz, r: fr = 2.0, baseY: fby = 0.35, rotY: frot = 0, isPavilion = false } = item;
+    // 4 points lumineux d'assise / plinthe autour du mobilier
+    const ringCount = isPavilion ? 6 : 4;
+    const seatRad = fr * (isPavilion ? 0.74 : 0.78);
+    const seatY = fby + (isPavilion ? 0.44 : 0.41);
+    for (let k = 0; k < ringCount; k++) {
+      const ang = frot + (k / ringCount) * Math.PI * 2 + Math.PI / ringCount;
+      const lx = fx + Math.cos(ang) * seatRad;
+      const lz = fz + Math.sin(ang) * seatRad;
+      furnitureLightPts.push({
+        x: lx,
+        y: seatY,
+        z: lz,
+        poolY: fby + 0.025,
+        poolSize: 2.2,
+      });
+    }
+    if (isPavilion) {
+      // 4 points lumineux hauts sous la pergola / toiture du pavillon
+      const roofRad = fr * 0.56;
+      const roofY = fby + 2.48;
+      for (let k = 0; k < 4; k++) {
+        const ang = frot + (k / 4) * Math.PI * 2 + Math.PI / 4;
+        furnitureLightPts.push({
+          x: fx + Math.cos(ang) * roofRad,
+          y: roofY,
+          z: fz + Math.sin(ang) * roofRad,
+          poolY: fby + 0.028,
+          poolSize: 2.8,
+        });
+      }
+    }
+  }
+  for (const [bx, bz, brot = 0] of benchSpots) {
+    const cosR = Math.cos(brot);
+    const sinR = Math.sin(brot);
+    for (const side of [-0.88, 0.88]) {
+      furnitureLightPts.push({
+        x: bx + cosR * side,
+        y: 0.35 + 0.41,
+        z: bz - sinR * side,
+        poolY: 0.372,
+        poolSize: 1.9,
+      });
+    }
+  }
+
+  if (furnitureLightPts.length) {
+    const fCollarGeo = new THREE.CylinderGeometry(0.11, 0.13, 0.04, 12);
+    const fBulbGeo = new THREE.SphereGeometry(0.085, 10, 8);
+    fBulbGeo.scale(1.0, 0.62, 1.0);
+    const fCollarInst = new THREE.InstancedMesh(fCollarGeo, poleMat, furnitureLightPts.length);
+    const fBulbInst = new THREE.InstancedMesh(fBulbGeo, bulbMat, furnitureLightPts.length);
+    furnitureLightPts.forEach((fp, idx) => {
+      dummy.position.set(fp.x, fp.y - 0.015, fp.z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      fCollarInst.setMatrixAt(idx, dummy.matrix);
+
+      dummy.position.set(fp.x, fp.y + 0.01, fp.z);
+      dummy.updateMatrix();
+      fBulbInst.setMatrixAt(idx, dummy.matrix);
+
+      const delay = calcWaveDelay(fp.x, fp.z, 0.03);
+      lightPools.push({
+        x: fp.x,
+        y: fp.poolY,
+        z: fp.z,
+        size: fp.poolSize,
+        delay,
+      });
+      lampHeads.push({
+        mesh: fBulbInst,
+        idx,
+        x: fp.x,
+        y: fp.y + 0.01,
+        z: fp.z,
+        rot: 0,
+        delay,
+        isDim: false,
+      });
+    });
+    scene.add(fCollarInst, fBulbInst);
+  }
+
+  // Lueur chaude rasante centrale sous les bancs-jardinières et pavillons en bois à travers le parc
   for (const [dx, dz, dr, dBaseY = 0.35] of excludeDisks) {
     lightPools.push({
       x: dx,
