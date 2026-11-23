@@ -2990,25 +2990,66 @@ async function init() {
         controls.update();
       },
       getViewSnapshot(twoPointEye = false) {
-        let focusX = controls ? controls.target.x : 0;
-        let focusZ = controls ? controls.target.z : 0;
-        if (camera && twoPointEye) {
-          const fwd = new THREE.Vector3();
+        const camPos = camera ? camera.position.clone() : new THREE.Vector3(0, 30, 50);
+        const fwd = new THREE.Vector3(0, 0, -1);
+        if (camera) {
           camera.getWorldDirection(fwd);
-          fwd.y = 0;
-          if (fwd.lengthSq() > 1e-5) {
-            fwd.normalize();
-            focusX = camera.position.x + fwd.x * 18;
-            focusZ = camera.position.z + fwd.z * 18;
-          }
         }
+        if (twoPointEye) {
+          fwd.y = 0;
+          if (fwd.lengthSq() < 1e-5) fwd.set(0, 0, -1);
+          else fwd.normalize();
+          camPos.y = 2.05;
+        }
+        const focusX = twoPointEye ? camPos.x + fwd.x * 18 : controls ? controls.target.x : 0;
+        const focusZ = twoPointEye ? camPos.z + fwd.z * 18 : controls ? controls.target.z : 0;
+
+        // Analyser réellement quels espaces sont visibles dans le champ de vision (gauche/centre/droite + distance)
+        const visibleSpaces = [];
+        if (camera && state.data?.spaces?.length) {
+          const tempCam = camera.clone();
+          tempCam.aspect = 16 / 9;
+          if (twoPointEye) {
+            tempCam.position.copy(camPos);
+            tempCam.up.set(0, 1, 0);
+            tempCam.lookAt(camPos.x + fwd.x * 20, camPos.y, camPos.z + fwd.z * 20);
+          }
+          tempCam.updateMatrixWorld(true);
+          tempCam.updateProjectionMatrix();
+
+          for (const sp of state.data.spaces) {
+            const sx = sp.pos?.[0] ?? 0;
+            const sz = sp.pos?.[1] ?? 0;
+            const p = new THREE.Vector3(sx, 1.2, sz);
+            const dist = p.distanceTo(tempCam.position);
+            if (dist > 260) continue;
+            p.project(tempCam);
+            if (p.z > -1 && p.z < 1 && Math.abs(p.x) <= 1.08 && Math.abs(p.y) <= 1.08) {
+              const horiz = p.x < -0.28 ? "left" : p.x > 0.28 ? "right" : "center";
+              const depth = dist < 35 ? "foreground" : dist < 95 ? "midground" : "background";
+              visibleSpaces.push({
+                id: sp.id,
+                title: sp.title,
+                category: sp.category,
+                horiz,
+                depth,
+                dist: Math.round(dist),
+              });
+            }
+          }
+          visibleSpaces.sort((a, b) => a.dist - b.dist);
+        }
+
+        // Direction cardinale du regard (X+ = Est, X- = Ouest, Z- = Nord, Z+ = Sud)
+        const yawDeg = (Math.atan2(fwd.x, -fwd.z) * 180) / Math.PI;
+        const dirs = ["North", "Northeast", "East", "Southeast", "South", "Southwest", "West", "Northwest"];
+        const facing = dirs[Math.round(((yawDeg % 360) + 360) % 360 / 45) % 8];
+
         return {
-          camPos: twoPointEye
-            ? [camera ? camera.position.x : 0, 2.05, camera ? camera.position.z : 24]
-            : camera
-            ? camera.position.toArray()
-            : [0, 30, 50],
-          targetPos: [focusX, focusZ],
+          camPos: [Number(camPos.x.toFixed(1)), Number(camPos.y.toFixed(1)), Number(camPos.z.toFixed(1))],
+          targetPos: [Number(focusX.toFixed(1)), Number(focusZ.toFixed(1))],
+          facing,
+          visibleSpaces,
           hour: state.timeOfDay,
           spaces: state.data?.spaces || [],
           twoPointEye,

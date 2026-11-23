@@ -32,6 +32,55 @@ function describeTimeFromHour(hour) {
   return AMBIENCE_PRESETS.day.prompt;
 }
 
+const SPACE_VISUAL_GLOSSARY = {
+  "entree-principale":
+    "semicircular white travertine Entrance Arcade crowned by the dark navy-blue and gold portal sign reading EXACTLY 'JARDIN GRAND STANDING' (no subtitle), with a semicircular welcome fountain on the warm sandstone plaza",
+  "bassin-central":
+    "large turquoise Central Fountain Basin with foaming vertical water jets, flanked on its NW and NE diagonal walkways by black sculptural twisted geometric portal arches with warm-white inner LED strips, plus curved twin water channels with 12 glowing electric-cyan laminar arching water jets",
+  "theatre-verdure":
+    "curved amphitheater lawn steps and modern white architectural kiosks/pavilion buildings",
+  "piscine-adulte":
+    "open-air turquoise adult lap swimming pool with lane lines, submerged steps, stainless steel ladders, and warm sandstone sun decks",
+  "piscine-enfant":
+    "shallow turquoise children's paddling pool with wide safe steps beside the main pool",
+  "arts-martiaux":
+    "outdoor martial arts wooden-framed tatami mat with white competition circle on slate-grey EPDM surface",
+  "fitness-musculation":
+    "outdoor street-workout and calisthenics fitness park on colorful EPDM pads (blue, terracotta, green, ochre) with pull-up rig, monkey bars, dip bars, abs benches, and jump boxes",
+  "fitness-senior":
+    "gentle senior outdoor fitness plaza on sage-green, ochre, and turquoise EPDM circles with Tai-Chi shoulder wheels, pedal stations, and stretching bars",
+  "jeux-enfants-ouest":
+    "hard-surface children's playground on bright EPDM circles with climbing dome, play tower and slide, swings, carousel, seesaw, and hopscotch",
+  "jeux-enfants-est":
+    "hard-surface children's playground on bright EPDM circles with geodesic climbing dome, twin swings, carousel, seesaw, and hopscotch",
+  "jeux-enfants-sable":
+    "large golden-sand children's adventure playground featuring a twin-tower wooden castle fort (red and ochre pyramid roofs, suspension bridge, twin slides), a wooden pirate ship with sail, a rope climbing pyramid, and wooden swings",
+  "petanque-dames":
+    "senior leisure area on slate-grey surface with 2 timber-framed compacted gravel pétanque courts (boules, scoreboards) and 5 checkerboard checkers/chess tables with stools",
+  football:
+    "professional striped green synthetic-turf football pitch (50×30m) with crisp white pitch markings and full netted goals",
+  sprint:
+    "6-lane terracotta-red athletic Tartan sprint track with white lane lines",
+  basketball:
+    "sunken outdoor pro acrylic basketball court (-0.35m) with steel-blue perimeter, warm ochre court floor, terracotta painted keys and center circle, and 2 hoops",
+  "beach-sports":
+    "sunken golden-sand beach soccer, beach handball, and beach volleyball arena (-0.35m) with goals and central net, linked to the basketball court by a stepped light-stone central grandstand",
+  tennis:
+    "diagonal US Open-style acrylic tennis court (blue playing area, green outer surround, crisp white lines and net)",
+  padel:
+    "diagonal blue acrylic padel court enclosed by transparent panoramic glass walls and net",
+  "jardins-arbustes":
+    "lush Senegalese tropical landscaped gardens (coconut palms, flamboyant trees, cypresses, flowering shrubs, ferns) with sculptural slatted-timber shade pavilions (oculus pergola, tensile white sail deck, wave-arch timber canopy, umbrella kiosks) and organic slatted-wood planter-benches",
+  "fontaine-est":
+    "circular East ornamental water fountain surrounded by sandstone plazas and shaded timber pavilions",
+  "pique-nique":
+    "shaded outdoor family picnic hall and landscaped rest area",
+  "piste-cyclable":
+    "perimeter terracotta-red Tartan running and cycling track with white center dashes and low white-and-anthracite fence",
+  "cantines-parking":
+    "North commercial boulevard with 47 modern container cantines (striped terracotta/ochre/teal awnings, timber counters, café umbrellas, rooftop solar panels) and a 192-space tree-shaded parking lot with solar pergolas and access gates",
+};
+
 function buildSpatialContext(
   camPos,
   targetPos,
@@ -40,148 +89,104 @@ function buildSpatialContext(
   ambienceKey,
   extraNotes,
   lang = "en",
-  twoPointEye = false
+  twoPointEye = false,
+  facing = "North",
+  visibleSpaces = []
 ) {
-  const tx = targetPos[0];
-  const tz = targetPos[1];
   const camY = camPos[1];
 
-  const ranked = (spaces || [])
-    .map((sp) => ({
-      sp,
-      d: Math.hypot((sp.pos?.[0] || 0) - tx, (sp.pos?.[1] || 0) - tz),
-    }))
-    .sort((a, b) => a.d - b.d)
-    .slice(0, 4);
+  // Si on a les espaces réellement visibles dans le frustum, on les utilise en priorité !
+  const inFrame = (visibleSpaces || []).slice(0, 7);
+  let nearbySummary = inFrame.slice(0, 4).map((v) => v.title).join(", ");
 
-  const nearbySpaces = ranked.filter((r) => r.d < 95).map((r) => r.sp);
-  const nearbyNames = nearbySpaces.map((s) => `${s.title} (${s.category})`).join(", ");
+  if (!inFrame.length) {
+    const tx = targetPos[0];
+    const tz = targetPos[1];
+    const fallback = (spaces || [])
+      .map((sp) => ({
+        id: sp.id,
+        title: sp.title,
+        category: sp.category,
+        horiz: "center",
+        depth: "midground",
+        dist: Math.round(Math.hypot((sp.pos?.[0] || 0) - tx, (sp.pos?.[1] || 0) - tz)),
+      }))
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, 4);
+    inFrame.push(...fallback);
+    nearbySummary = fallback.map((v) => v.title).join(", ");
+  }
 
-  const featuresEn = [];
-  const featuresFr = [];
+  // Construire l'inventaire visuel exact de ce qui est dans CETTE image (position dans le cadre + description réelle)
+  const frameInventory = inFrame.map((v) => {
+    const detail = SPACE_VISUAL_GLOSSARY[v.id];
+    const loc = `${v.depth}, ${v.horiz}`;
+    return detail
+      ? `- [${loc}] ${v.title}: ${detail}.`
+      : `- [${loc}] ${v.title} (${v.category}).`;
+  });
 
-  if (tx > -48 && tx < 48 && tz > -34 && tz < 26) {
-    featuresEn.push(
-      "the semicircular white travertine Entrance Arcade crowned by the dark navy-bronze portal sign spanning between its two front wings with warm backlit gold-trimmed letters reading EXACTLY 'JARDIN GRAND STANDING' (no subtitle)",
-      "the semicircular welcome fountain on the warm golden sandstone tiled entrance esplanade",
-      "the large reflective turquoise Central Fountain Basin (Bassin Central) with foaming vertical water jets",
-      "the two diagonal walkways lined with sculptural black twisted geometric portal arches with warm-white LED strips inside their frames",
-      "the curved twin water channels with 12 glowing electric-cyan laminar arching water jets jumping cleanly from one channel to the other"
-    );
-    featuresFr.push(
-      "l'arcade d'entrée semi-circulaire en travertin blanc surmontée du grand portique lumineux bleu nuit et or affichant exactement « JARDIN GRAND STANDING » (sans sous-titre)",
-      "la fontaine d'accueil semi-circulaire sur le parvis dallé en pierre dorée",
-      "le grand Bassin Central turquoise animé de jets d'eau verticaux",
-      "les deux allées diagonales bordées d'arches géométriques noires torsadées à éclairage LED blanc chaud intégré",
-      "les deux canaux courbes reliés par 12 jets d'eau laminaires en arc bleu cyan lumineux"
-    );
-  }
-  if (tx <= -88) {
-    featuresEn.push(
-      "the West Sports Complex featuring the striped synthetic-turf football pitch with crisp white lines, the terracotta-red athletic Tartan sprint track, the sunken two-tone outdoor acrylic basketball court with terracotta keys, the US Open-style blue/green acrylic tennis court, the glass-walled blue padel court, and the sunken golden-sand beach soccer/volleyball arena"
-    );
-    featuresFr.push(
-      "le Pôle Sportif Ouest : terrain de football en gazon synthétique rayé, piste de sprint en Tartan rouge-terracotta, terrain de basket enterré en résine bicolore (bleu/ocre/raquettes terracotta), court de tennis bleu/vert, terrain de padel vitré et arène de beach soccer/volley en sable doré"
-    );
-  }
-  if (tx > -100 && tx < -22) {
-    featuresEn.push(
-      "the open-air adult lap pool and children's swimming pool with crystal turquoise water, outdoor martial arts tatami platform, and the street-workout calisthenics fitness zone on EPDM pads"
-    );
-    featuresFr.push(
-      "les piscines adulte et enfant à eau turquoise cristalline, le tatami extérieur d'arts martiaux et l'aire de fitness & street-workout sur dalles EPDM"
-    );
-  }
-  if (tx >= 22) {
-    featuresEn.push(
-      "the East landscaped gardens (Jardin Planté) lush with Senegalese tropical trees, coconut palms, cypresses, sculptural slatted-timber shade pavilions (oculus tree-pergola, tensile sail deck, wave-arch timber canopy, umbrella kiosks), modular timber planter-benches with tropical ferns, golden-sand children's playground with twin-tower wooden castle fort and pirate ship, senior gentle-fitness station, and framed gravel pétanque & checkers courts"
-    );
-    featuresFr.push(
-      "les jardins paysagers Est (Jardin Planté) densément arborés de palmiers et d'essences tropicales, les pavillons d'ombrage en bois sculpté (pergola oculus, voile tendue, arche ondulante, kiosques parapluie), les bancs-jardinières bois avec fougères, l'aire de jeux enfants sur sable (château en bois à double tour, galion pirate, pyramide de cordes), le fitness 3e âge et les terrains de pétanque & tables de dames"
-    );
-  }
-  if (tz < -28) {
-    featuresEn.push(
-      "the North public parking boulevard lined with 47 modern container commercial cantines featuring striped terracotta/ochre/teal awnings, timber service counters, café umbrellas, solar parking pergolas, EV charging bollards, and access gates"
-    );
-    featuresFr.push(
-      "le parking public Nord et ses 47 cantines commerciales en conteneurs aménagés avec auvents rayés (terracotta, ocre, turquoise), comptoirs bois, terrasses à parasols, pergolas solaires, bornes de recharge et guérites d'accès"
-    );
-  }
+  // Décrire automatiquement ce qu'on voit à l'arrière-plan selon la direction du regard
+  const backdropByDir = {
+    North:
+      "Beyond the park fence to the North: the main urban avenue of Thiès with natural West African traffic, the row of 47 container commercial cantines with colorful awnings, the tree-shaded public parking lot, and the sunlit sand-colored buildings of Thiès city stretching to the horizon.",
+    Northeast:
+      "Beyond the park to the Northeast: the North avenue, container commercial cantines, shaded parking lot, and low-rise urban neighborhoods of Thiès, Senegal.",
+    Northwest:
+      "Beyond the park to the Northwest: the North urban avenue, commercial cantines, parking lot, and sunlit urban architecture of Thiès, Senegal.",
+    South:
+      "Beyond the park fence to the South: a quiet residential street lined with tropical trees and low-rise sand-colored Senegalese buildings of Thiès under the open sky.",
+    Southeast:
+      "Beyond the park to the Southeast: lush park gardens continuing East and residential buildings of Thiès in the distance.",
+    Southwest:
+      "Beyond the park to the Southwest: the West sports complex, palm trees, and sunlit residential buildings of Thiès in the distance.",
+    East:
+      "Looking East along the 500-meter linear park: continuous landscaped tropical gardens, sculptural timber shade pavilions, stone plazas, and the city of Thiès on the horizon.",
+    West:
+      "Looking West along the 500-meter linear park: pools, central fountain basin, sports courts, and the city of Thiès on the horizon.",
+  };
 
   const camDescEn = twoPointEye
-    ? "strict 2-point architectural perspective photograph taken at human eye level (1.70m standing height, perfectly level horizon, strictly parallel vertical lines)"
+    ? "strict 2-point architectural perspective photograph taken at human eye level (1.70m standing height, perfectly level horizon, strictly parallel vertical lines, 24mm tilt-shift lens)"
     : camY < 4.5
-    ? "eye-level pedestrian architectural photograph"
+    ? "eye-level pedestrian architectural photograph (1.70m height, 24mm lens)"
     : camY < 32
-    ? "elevated architectural perspective photograph (drone / terrace height)"
+    ? "elevated architectural drone photograph (low-altitude perspective)"
     : "high-altitude aerial masterplan architectural photograph";
-
-  const camDescFr = twoPointEye
-    ? "photographie architecturale en perspective stricte à 2 points de fuite prise à hauteur d'yeux d'une personne debout (1,70 m, horizon parfaitement horizontal, verticales 100 % parallèles)"
-    : camY < 4.5
-    ? "photographie architecturale à hauteur d'homme"
-    : camY < 32
-    ? "photographie architecturale en perspective surélevée (vue drone basse altitude)"
-    : "photographie aérienne architecturale d'ensemble";
 
   const lightingEn =
     ambienceKey === "auto"
       ? describeTimeFromHour(hour)
       : AMBIENCE_PRESETS[ambienceKey]?.prompt || describeTimeFromHour(hour);
 
-  if (lang === "fr") {
-    const promptFr = [
-      `Transforme cette capture 3D du « Jardin Grand Standing de Thiès » (parc urbain et de loisirs de 500 m × 50 m au cœur de Thiès, Sénégal) en une ${camDescFr} ultra-réaliste de qualité concours d'architecture.`,
-      "",
-      "FIDÉLITÉ GÉOMÉTRIQUE STRICTE À LA CAPTURE :",
-      "- Conserve EXACTEMENT le même angle de caméra, la ligne d'horizon, le cadrage, les proportions et l'emplacement de chaque bâtiment, toiture, allée, bassin, arbre, pavillon, terrain de sport et mobilier présents sur l'image de référence.",
-      "- N'invente aucun nouveau bâtiment, ne déplace aucun élément et respecte strictement les textes : si l'enseigne d'entrée est visible, elle doit afficher exactement « JARDIN GRAND STANDING ».",
-      "",
-      "CONTEXTE DU SITE ET MATÉRIAUX (THIÈS, SÉNÉGAL) :",
-      nearbyNames ? `- Espaces principaux dans le cadre : ${nearbyNames}.` : "- Vue d'ensemble du Jardin Grand Standing de Thiès.",
-      featuresFr.length ? `- Éléments architecturaux à sublimer de manière photoréaliste : ${featuresFr.join(" ; ")}.` : "",
-      "- Sols réels : allées de circulation en béton minéral gris clair bien distinctes des placettes dallées en pierre dorée/grès chaud, piste périphérique en Tartan rouge-terracotta, sable fin doré sur les zones plage/jeux, pelouses tropicales denses.",
-      "- Vie et atmosphère : végétation tropicale sénégalaise réaliste (palmiers cocotiers, flamboyants, arbustes, fougères), eau réelle avec reflets, caustiques et brume fine sur les jets, quelques visiteurs et familles sénégalaises à l'échelle naturelle profitant du parc.",
-      "",
-      `AMBIANCE LUMINEUSE : ${lightingEn}`,
-      extraNotes?.trim() ? `\nINSTRUCTIONS COMPLÉMENTAIRES : ${extraNotes.trim()}` : "",
-      "",
-      "STYLE PHOTO : Prise de vue réelle au boîtier plein format objectif 24mm tilt-shift, textures micro-détaillées (lames de bois, travertin, acier brossé, reflets naturels), aucun aspect plastique 3D/CGI.",
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    return {
-      prompt: promptFr,
-      nearbySummary: nearbyNames || "Vue d'ensemble · Jardin Grand Standing de Thiès",
-    };
-  }
-
   const promptEn = [
-    `Transform this 3D architectural model capture of "Jardin Grand Standing de Thiès" (a flagship 500m × 50m urban leisure park in Thiès, Senegal) into an ultra-realistic, award-winning ${camDescEn}.`,
+    `Convert this exact 3D architectural model capture of "Jardin Grand Standing de Thiès" (a modern 500m × 50m flagship urban leisure park in Thiès, Senegal) into a breathtaking, ultra-realistic ${camDescEn}.`,
     "",
-    "STRICT GEOMETRIC & PERSPECTIVE FIDELITY:",
-    "- Preserve the EXACT camera angle, horizon line, composition, proportions, and spatial placement of every single building, canopy, walkway, basin, tree, pavilion, sport court, and piece of furniture shown in the reference 3D capture.",
-    "- Do NOT invent extra buildings, do NOT relocate structures, and do NOT alter any signage text. If the entrance sign is visible, it MUST read exactly 'JARDIN GRAND STANDING'.",
+    "1. ABSOLUTE GEOMETRIC & CAMERA FIDELITY (DO NOT ALTER LAYOUT):",
+    "- Keep the EXACT same camera viewpoint, framing, horizon line, proportions, and spatial position of EVERY single structure, path, basin, pavilion, playground, sport court, tree, and bench visible in the attached 3D reference capture.",
+    "- Do NOT invent extra buildings inside the park, do NOT move objects, and preserve exact spelling on any visible signage: the entrance portal sign MUST read EXACTLY 'JARDIN GRAND STANDING' (never misspelled, no subtitle).",
     "",
-    "SITE & ARCHITECTURAL CONTEXT (THIÈS, SENEGAL):",
-    nearbyNames ? `- Primary spaces in view: ${nearbyNames}.` : "- Primary view: Jardin Grand Standing de Thiès urban park.",
-    featuresEn.length ? `- Key architectural elements to render photorealistically: ${featuresEn.join("; ")}.` : "",
-    "- Ground materials: cool mineral-grey concrete walkways distinctly contrasted with warm golden-sandstone tiled plazas, realistic terracotta-red athletic Tartan perimeter running track, natural fine golden sand in beach/playground zones, lush manicured tropical lawns.",
-    "- Atmosphere & Life: realistic West African tropical flora (coconut palms, flamboyant trees, lush shrubs, ferns), natural water ripples, caustics and fine fountain mist, realistic shadows and global illumination, and a few naturally scaled Senegalese visitors and families strolling or relaxing.",
+    `2. EXACT ELEMENTS VISIBLE IN THIS CAPTURE (camera facing ${facing}, altitude ${camPos[1]}m):`,
+    ...frameInventory,
+    `- [distant background] ${backdropByDir[facing] || backdropByDir.North}`,
     "",
-    `LIGHTING & MOOD: ${lightingEn}`,
-    extraNotes?.trim() ? `\nADDITIONAL DIRECTION: ${extraNotes.trim()}` : "",
+    "3. PHOTOREALISTIC MATERIALS & ARCHITECTURAL DETAILS (ZERO CGI / ZERO TOY LOOK):",
+    "- Clearly distinct ground surfaces: smooth cool mineral-grey concrete walkways vs. warm golden-sandstone tiled plazas with natural stone joints, terracotta-red athletic Tartan running track, fine golden beach sand, lush dense tropical grass lawns.",
+    "- Realistic natural materials: grained cedar/iroko wood slats on pavilions and planter-benches, matte white travertine architectural concrete, brushed anthracite steel, crystal-clear turquoise water with natural ripples, caustics, and fine water mist from the fountains.",
+    "- Lighting & furniture details: NO tall streetlamps on interior park walkways; warm recessed LED spots in lawns, low garden bollards at lawn edges, and tiny warm light points flush on benches and pavilions.",
+    "- Authentic Senegalese life & flora: realistic tropical coconut palms, flamboyant trees, lush ferns and shrubs, and naturally scaled Senegalese visitors and families (1.70m scale) strolling, relaxing, and playing.",
     "",
-    "OUTPUT STYLE: Real architectural photography shot on a 24mm tilt-shift full-frame lens, natural colors, crisp material micro-textures (wood slats, travertine stone, brushed steel, water reflections), zero CGI plastic look.",
+    `4. LIGHTING & ATMOSPHERE: ${lightingEn}`,
+    extraNotes?.trim() ? `\n5. EXTRA DIRECTION: ${extraNotes.trim()}` : "",
+    "",
+    "PHOTOGRAPHY STYLE: Real architectural photograph shot on a full-frame camera, natural West African daylight/twilight dynamic range, rich micro-textures, crisp depth, completely indistinguishable from a real photograph taken in Thiès, Senegal.",
   ]
     .filter(Boolean)
     .join("\n");
 
   return {
     prompt: promptEn,
-    nearbySummary: nearbyNames || "Vue d'ensemble · Jardin Grand Standing de Thiès",
+    nearbySummary: nearbySummary || "Jardin Grand Standing de Thiès",
   };
 }
 
@@ -511,16 +516,17 @@ export function createAiStudioController({
   function updatePromptPreview() {
     const isTwoPoint = currentPerspective === "two-point";
     const snap = getViewSnapshot(isTwoPoint);
-    const notes = modal.querySelector("#ai-extra-notes")?.value || "";
     const { prompt, nearbySummary } = buildSpatialContext(
       snap.camPos,
       snap.targetPos,
       snap.hour,
       snap.spaces,
       currentAmbience,
-      notes,
+      "",
       currentLang,
-      isTwoPoint
+      isTwoPoint,
+      snap.facing,
+      snap.visibleSpaces
     );
     const preview = modal.querySelector("#ai-prompt-preview");
     const chip = modal.querySelector("#ai-context-chip");
