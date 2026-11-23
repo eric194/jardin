@@ -1672,40 +1672,112 @@ export function buildLightingNetwork(
     lightPools.push({ x, y, z, size, delay: calcWaveDelay(x, z, 0.08) });
   });
 
-  // Points lumineux architecturaux directement intégrés sur tous les mobiliers du parc (bancs-jardinières, pavillons & bancs)
+  // Points lumineux architecturaux encastrés exactement sur les surfaces réelles des mobiliers (zéro lampe flottante)
   const furnitureLightPts = []; // { x, y, z, poolY, poolSize }
+  const PAVILION_LIGHT_LOCAL = {
+    slattedPergola: [
+      [-1.12, 0.565, -0.78],
+      [1.12, 0.565, -0.78],
+      [-2.12, 0.145, 1.22],
+      [2.12, 0.145, 1.22],
+    ],
+    oculusTreePergola: [
+      [0.0, 0.545, -1.72],
+      [-1.48, 0.545, -0.88],
+      [1.48, 0.545, -0.88],
+      [0.0, 0.525, 0.84],
+    ],
+    tensileSailDeck: [
+      [-0.88, 0.525, -0.78],
+      [0.78, 0.525, -1.06],
+      [-1.06, 0.525, 0.72],
+      [0.22, 0.465, 0.35],
+    ],
+    amphitheaterCanopy: [
+      [-1.18, 0.485, 0.78],
+      [1.18, 0.485, 0.78],
+      [-1.18, 0.845, 0.0],
+      [1.18, 0.845, 0.0],
+    ],
+    waveArchPavilion: [
+      [-1.05, 0.545, -1.05],
+      [1.05, 0.545, -1.05],
+      [-1.05, 0.545, 1.05],
+      [1.05, 0.545, 1.05],
+    ],
+    umbrellaKiosk: [
+      [0.84, 0.525, 0.0],
+      [-0.84, 0.525, 0.0],
+      [0.0, 0.525, 0.84],
+      [0.0, 0.525, -0.84],
+    ],
+  };
+
+  const PLANTER_LIGHT_LOCAL = {
+    oval: [
+      [-1.08, 0.465, 0.84],
+      [1.08, 0.465, 0.84],
+      [-1.08, 0.465, -0.84],
+      [1.08, 0.465, -0.84],
+    ],
+    serpentine: [
+      [-2.5, 0.475, -0.88],
+      [-0.84, 0.475, 0.92],
+      [0.84, 0.475, -0.92],
+      [2.5, 0.475, 0.88],
+    ],
+    xcross: [
+      [0.9, 0.465, 0.9],
+      [-0.9, 0.465, 0.9],
+      [-0.9, 0.465, -0.9],
+      [0.9, 0.465, -0.9],
+    ],
+    square: [
+      [1.05, 0.465, 1.05],
+      [-1.05, 0.465, 1.05],
+      [-1.05, 0.465, -1.05],
+      [1.05, 0.465, -1.05],
+    ],
+    curvedC: [
+      [0.0, 0.475, -1.56],
+      [1.1, 0.475, -1.1],
+      [1.56, 0.475, 0.0],
+      [1.1, 0.475, 1.1],
+    ],
+    hex: [
+      [-1.25, 0.445, 0.0],
+      [1.25, 0.485, 0.0],
+      [0.62, 0.455, -1.08],
+      [-0.62, 0.445, 1.08],
+    ],
+    linear: [
+      [-1.85, 0.465, -0.45],
+      [-1.85, 0.465, 0.45],
+      [1.85, 0.465, -0.45],
+      [1.85, 0.465, 0.45],
+    ],
+  };
+
   for (const item of furniturePlaced) {
-    const { x: fx, z: fz, r: fr = 2.0, baseY: fby = 0.35, rotY: frot = 0, isPavilion = false } = item;
-    // 4 points lumineux d'assise / plinthe autour du mobilier
-    const ringCount = isPavilion ? 6 : 4;
-    const seatRad = fr * (isPavilion ? 0.74 : 0.78);
-    const seatY = fby + (isPavilion ? 0.44 : 0.41);
-    for (let k = 0; k < ringCount; k++) {
-      const ang = frot + (k / ringCount) * Math.PI * 2 + Math.PI / ringCount;
-      const lx = fx + Math.cos(ang) * seatRad;
-      const lz = fz + Math.sin(ang) * seatRad;
+    const { kind, x: fx, z: fz, baseY: fby = 0.35, rotY: frot = 0, isPavilion = false } = item;
+    const scaleXZ = isPavilion ? 0.92 : 1.0;
+    const localAnchors = isPavilion
+      ? PAVILION_LIGHT_LOCAL[kind] || PAVILION_LIGHT_LOCAL.slattedPergola
+      : PLANTER_LIGHT_LOCAL[kind] || PLANTER_LIGHT_LOCAL.square;
+    const c = Math.cos(frot);
+    const s = Math.sin(frot);
+    for (const [lx0, ly, lz0] of localAnchors) {
+      const lx = lx0 * scaleXZ;
+      const lz = lz0 * scaleXZ;
+      const wx = fx + lx * c + lz * s;
+      const wz = fz - lx * s + lz * c;
       furnitureLightPts.push({
-        x: lx,
-        y: seatY,
-        z: lz,
+        x: wx,
+        y: fby + ly,
+        z: wz,
         poolY: fby + 0.025,
-        poolSize: 2.2,
+        poolSize: 2.1,
       });
-    }
-    if (isPavilion) {
-      // 4 points lumineux hauts sous la pergola / toiture du pavillon
-      const roofRad = fr * 0.56;
-      const roofY = fby + 2.48;
-      for (let k = 0; k < 4; k++) {
-        const ang = frot + (k / 4) * Math.PI * 2 + Math.PI / 4;
-        furnitureLightPts.push({
-          x: fx + Math.cos(ang) * roofRad,
-          y: roofY,
-          z: fz + Math.sin(ang) * roofRad,
-          poolY: fby + 0.028,
-          poolSize: 2.8,
-        });
-      }
     }
   }
   for (const [bx, bz, brot = 0] of benchSpots) {
@@ -1714,28 +1786,28 @@ export function buildLightingNetwork(
     for (const side of [-0.88, 0.88]) {
       furnitureLightPts.push({
         x: bx + cosR * side,
-        y: 0.35 + 0.41,
+        y: 0.35 + 0.445,
         z: bz - sinR * side,
         poolY: 0.372,
-        poolSize: 1.9,
+        poolSize: 1.85,
       });
     }
   }
 
   if (furnitureLightPts.length) {
-    const fCollarGeo = new THREE.CylinderGeometry(0.11, 0.13, 0.04, 12);
-    const fBulbGeo = new THREE.SphereGeometry(0.085, 10, 8);
-    fBulbGeo.scale(1.0, 0.62, 1.0);
+    const fCollarGeo = new THREE.CylinderGeometry(0.085, 0.1, 0.026, 12);
+    const fBulbGeo = new THREE.SphereGeometry(0.062, 10, 8);
+    fBulbGeo.scale(1.0, 0.55, 1.0);
     const fCollarInst = new THREE.InstancedMesh(fCollarGeo, poleMat, furnitureLightPts.length);
     const fBulbInst = new THREE.InstancedMesh(fBulbGeo, bulbMat, furnitureLightPts.length);
     furnitureLightPts.forEach((fp, idx) => {
-      dummy.position.set(fp.x, fp.y - 0.015, fp.z);
+      dummy.position.set(fp.x, fp.y + 0.008, fp.z);
       dummy.rotation.set(0, 0, 0);
       dummy.scale.set(1, 1, 1);
       dummy.updateMatrix();
       fCollarInst.setMatrixAt(idx, dummy.matrix);
 
-      dummy.position.set(fp.x, fp.y + 0.01, fp.z);
+      dummy.position.set(fp.x, fp.y + 0.022, fp.z);
       dummy.updateMatrix();
       fBulbInst.setMatrixAt(idx, dummy.matrix);
 
@@ -1751,7 +1823,7 @@ export function buildLightingNetwork(
         mesh: fBulbInst,
         idx,
         x: fp.x,
-        y: fp.y + 0.01,
+        y: fp.y + 0.022,
         z: fp.z,
         rot: 0,
         delay,

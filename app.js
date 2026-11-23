@@ -333,11 +333,12 @@ function detectDeviceTier() {
   const coarse = window.matchMedia("(pointer: coarse)").matches;
   const isPhone = maxDim <= 860 && (minDim <= 520 || coarse);
   const isTablet = !isPhone && (coarse || (w >= 600 && w <= 1180));
-  const cores = navigator.hardwareConcurrency || 4;
-  const mem = navigator.deviceMemory || 4;
-  const isLowEndDevice = cores <= 4 || mem <= 3;
+  const cores = navigator.hardwareConcurrency || 6;
+  const mem = navigator.deviceMemory || 6;
+  const isLowEndDevice = cores <= 2 || mem <= 2;
   const dpr = window.devicePixelRatio || 1;
-  const maxCap = isLowEndDevice ? 1.15 : isPhone ? 1.25 : isTablet ? 1.5 : 1.75;
+  // Résolution Retina nette sur téléphone (jusqu'à 2.0x DPR) et tablette/PC (jusqu'à 2.25x DPR)
+  const maxCap = isLowEndDevice ? 1.65 : isPhone ? 2.0 : isTablet ? 2.15 : 2.25;
   return {
     isMobile: isPhone || isTablet,
     isPhone,
@@ -359,8 +360,8 @@ function buildScene(data, thiesMapTex) {
 
   renderer = new THREE.WebGLRenderer({
     canvas: dom.canvas,
-    antialias: !tier.isLowEndDevice,
-    powerPreference: isMobile ? "default" : "high-performance",
+    antialias: true,
+    powerPreference: "high-performance",
   });
   renderer.setPixelRatio(tier.pixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -372,7 +373,7 @@ function buildScene(data, thiesMapTex) {
   renderer.shadowMap.autoUpdate = false;
   renderer.shadowMap.needsUpdate = true;
 
-  const maxAniso = Math.min(isMobile ? 4 : 8, renderer.capabilities.getMaxAnisotropy() || 4);
+  const maxAniso = Math.min(isMobile ? 6 : 8, renderer.capabilities.getMaxAnisotropy() || 4);
 
   const textures = {
     senegal: thiesMapTex || createThiesMapTexture(),
@@ -426,7 +427,7 @@ function buildScene(data, thiesMapTex) {
   const hemi = new THREE.HemisphereLight(0xfffdf9, 0xe6ddd0, 1.1);
   scene.add(hemi);
 
-  const shadowSize = state.isLowEndDevice ? 1024 : state.isTablet ? 1536 : isMobile ? 1280 : 2048;
+  const shadowSize = state.isLowEndDevice ? 1536 : isMobile ? 2048 : 2048;
   const sun = new THREE.DirectionalLight(0xfff9ef, 1.18);
   sun.position.set(160, 250, 130);
   sun.castShadow = true;
@@ -2474,11 +2475,11 @@ function animate(now) {
     state.fpsSampleStart = now;
     if (inTransition || now - state.lastActiveTime < 1500) {
       let nextPR = state.currentPixelRatio;
-      const minPR = state.isMobile ? 0.85 : 1.0;
-      if (avgFps < 34 && state.currentPixelRatio > minPR + 0.05) {
-        nextPR = Math.max(minPR, Number((state.currentPixelRatio - 0.15).toFixed(2)));
-      } else if (avgFps > 54 && state.currentPixelRatio < state.targetPixelRatio - 0.05) {
-        nextPR = Math.min(state.targetPixelRatio, Number((state.currentPixelRatio + 0.1).toFixed(2)));
+      const minPR = state.isMobile ? Math.min(state.targetPixelRatio, 1.5) : 1.25;
+      if (avgFps < 26 && state.currentPixelRatio > minPR + 0.05) {
+        nextPR = Math.max(minPR, Number((state.currentPixelRatio - 0.1).toFixed(2)));
+      } else if (avgFps > 45 && state.currentPixelRatio < state.targetPixelRatio - 0.05) {
+        nextPR = Math.min(state.targetPixelRatio, Number((state.currentPixelRatio + 0.15).toFixed(2)));
       }
       if (nextPR !== state.currentPixelRatio) {
         state.currentPixelRatio = nextPR;
