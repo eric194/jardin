@@ -368,6 +368,11 @@ export function buildBenches(scene, data) {
 export function buildMovingTraffic(scene, textures) {
   // Voies de circulation strictement séparées à droite (code de la route Sénégal), hors piste rouge et hors bordures
   const routes = [
+    // Parking Nord : deux voies parallèles à sens opposés (Sud z=-53.05 vers Est +1, Nord z=-56.95 vers Ouest -1)
+    { axis: "x", fixed: -53.05, min: -56, max: 315, dir: 1, speed: 4.4 },
+    { axis: "x", fixed: -53.05, min: -56, max: 315, dir: 1, speed: 4.8 },
+    { axis: "x", fixed: -56.95, min: -56, max: 315, dir: -1, speed: 4.5 },
+    { axis: "x", fixed: -56.95, min: -56, max: 315, dir: -1, speed: 4.9 },
     // Avenue Nord (chaussée large z in [-40..-29]) : Est->Ouest au Nord (-37.2), Ouest->Est au Sud (-32.2)
     { axis: "x", fixed: -32.2, min: -350, max: 350, dir: 1, speed: 9.8 },
     { axis: "x", fixed: -32.2, min: -350, max: 350, dir: 1, speed: 11.2 },

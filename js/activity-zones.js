@@ -846,22 +846,40 @@ export function buildActivityZones(scene, data) {
       }
     });
 
-    // Portiques d'entrée/sortie du Parking Nord avec guérite de contrôle et barrières levantes (placés dans les couloirs d'accès hors stalles)
+    // 8e. Marquage directionnel au sol sur les 2 voies opposées du Parking Nord :
+    //     - Voie Sud (z = -53.05 m, côté cantines) : flèches blanches vers l'Est (+X)
+    //     - Voie Nord (z = -56.95 m, côté stalles Nord) : flèches blanches vers l'Ouest (-X)
+    const addLaneArrow = (ax, az, dir) => {
+      const yMark = 0.308;
+      // Corps de la flèche
+      addBox(buckets.white, ax, yMark, az, 2.2, 0.012, 0.24);
+      // Pointe de la flèche (2 branches obliques à ±38°)
+      const tipX = ax + dir * 1.15;
+      addBox(buckets.white, tipX - dir * 0.42, yMark, az - 0.32, 1.05, 0.012, 0.22, 0, dir > 0 ? 0.65 : -0.65, 0);
+      addBox(buckets.white, tipX - dir * 0.42, yMark, az + 0.32, 1.05, 0.012, 0.22, 0, dir > 0 ? -0.65 : 0.65, 0);
+    };
+    for (let ax = -45; ax <= 305; ax += 25) {
+      addLaneArrow(ax, -53.05, 1);  // Sens Est (+X)
+      addLaneArrow(ax, -56.95, -1); // Sens Ouest (-X)
+    }
+
+    // Portiques d'entrée/sortie aux 2 extrémités du Parking Nord (dégageant entièrement les 2 voies de circulation)
     for (const [gx, gz] of [
-      [-68.5, -53.2],
-      [130.0, -54.8],
-      [327.8, -53.2],
+      [-68.5, -54.9],
+      [327.8, -54.9],
     ]) {
       const gy = 0.3;
-      // Guérite vitrée
-      addBox(buckets.white, gx - 2.1, gy + 1.18, gz, 1.7, 2.35, 1.7);
-      addBox(buckets.ochre, gx - 2.1, gy + 2.42, gz, 2.05, 0.16, 2.05);
-      addBox(buckets.steel, gx - 2.1, gy + 1.32, gz + 0.87, 1.15, 0.95, 0.05);
-      // Socle + barrière levante rouge/blanche
-      addBox(buckets.terracotta, gx - 0.85, gy + 0.52, gz, 0.36, 1.04, 0.36);
-      addBox(buckets.white, gx + 1.15, gy + 0.88, gz, 3.8, 0.09, 0.09, 0, 0, 0.06);
-      addBox(buckets.terracotta, gx + 0.45, gy + 0.86, gz, 1.2, 0.1, 0.1, 0, 0, 0.06);
-      addBox(buckets.terracotta, gx + 2.15, gy + 0.94, gz, 1.2, 0.1, 0.1, 0, 0, 0.06);
+      // Guérite vitrée centrée sur l'axe médian
+      addBox(buckets.white, gx, gy + 1.18, gz, 1.7, 2.35, 1.7);
+      addBox(buckets.ochre, gx, gy + 2.42, gz, 2.05, 0.16, 2.05);
+      addBox(buckets.steel, gx, gy + 1.32, gz + 0.87, 1.15, 0.95, 0.05);
+      // Barrière levante sur chaque voie (Nord et Sud de la guérite)
+      for (const side of [-1, 1]) {
+        const bz = gz + side * 1.85;
+        addBox(buckets.terracotta, gx, gy + 0.52, gz + side * 1.05, 0.32, 1.04, 0.32);
+        addBox(buckets.white, gx, gy + 0.88, bz, 0.09, 0.09, 2.1, side * 0.06, 0, 0);
+        addBox(buckets.terracotta, gx, gy + 0.88, bz, 0.1, 0.1, 0.65, side * 0.06, 0, 0);
+      }
     }
   }
 
