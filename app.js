@@ -29,6 +29,7 @@ import {
   buildLightingNetwork,
 } from "./js/living.js";
 import { buildGardenPlanterBenches } from "./js/garden-assets.js";
+import { buildGardenPavilions } from "./js/garden-pavilions.js";
 import { createDossierController } from "./js/dossier.js";
 import { createParkAudioController } from "./js/audio.js";
 import { renderSpaceHeroSvg, renderActivityCardsHtml } from "./js/activity-cards.js";
@@ -300,6 +301,7 @@ let waterCtrl;
 let trafficCtrl;
 let pedestrianCtrl;
 let lightingCtrl;
+let pavilionCtrl;
 let atmosphereCtrl;
 let contextCtrl;
 let dossierCtrl;
@@ -1044,15 +1046,22 @@ function buildScene(data, thiesMapTex) {
   const vegStats = buildVegetation(scene, data, textures, windUniforms);
   state.stats.trees = vegStats?.treeCount || 0;
 
-  // 9. Vie du jardin : voitures garées, bancs alignés, mobilier jardinières bois, trafic, piétons, éclairage & fenêtres nuit
+  // 9. Vie du jardin : voitures garées, bancs alignés, pavillons ombrage bois, mobilier jardinières bois, trafic, piétons, éclairage & fenêtres nuit
   buildParkedCars(scene, data);
   const benchStats = buildBenches(scene, data);
-  const gardenAssets = buildGardenPlanterBenches(scene, data, {
+  pavilionCtrl = buildGardenPavilions(scene, data, {
     trees: vegStats?.trees || [],
     bushes: vegStats?.bushes || [],
     benches: benchStats?.spots || [],
   });
-  state.stats.benches = (benchStats?.benchCount || 0) + (gardenAssets?.count || 0);
+  const gardenAssets = buildGardenPlanterBenches(scene, data, {
+    trees: vegStats?.trees || [],
+    bushes: vegStats?.bushes || [],
+    benches: benchStats?.spots || [],
+    planters: pavilionCtrl?.footprints || [],
+  });
+  state.stats.benches =
+    (benchStats?.benchCount || 0) + (gardenAssets?.count || 0) + (pavilionCtrl?.count || 0);
   trafficCtrl = buildMovingTraffic(scene, textures);
   pedestrianCtrl = buildPedestrians(scene);
   lightingCtrl = buildLightingNetwork(
@@ -1060,7 +1069,7 @@ function buildScene(data, thiesMapTex) {
     data,
     textures,
     isMobile,
-    gardenAssets?.footprints || []
+    [...(pavilionCtrl?.footprints || []), ...(gardenAssets?.footprints || [])]
   );
 
   // 10. Zones cliquables + 23 repères terracotta granulaires
@@ -1948,6 +1957,9 @@ function applyThemeLerp(f, hour = state.timeOfDay) {
   if (lightingCtrl) {
     lightingCtrl.applyNightFactor(f, performance.now());
   }
+  if (pavilionCtrl) {
+    pavilionCtrl.applyNightFactor(f);
+  }
   if (contextCtrl) {
     contextCtrl.updateNight(f);
   }
@@ -2412,6 +2424,7 @@ function animate(now) {
     }
   } else if (state.nightFactor > 0.01 && lightingCtrl && !state.reducedMotion) {
     lightingCtrl.applyNightFactor(state.nightFactor, now);
+    if (pavilionCtrl) pavilionCtrl.applyNightFactor(state.nightFactor);
   }
 
   // Zoom cartographique carte de Thiès (thies40.svg) -> arrivée amortie et fondue dans l'orbite du jardin

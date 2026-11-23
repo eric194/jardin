@@ -678,106 +678,8 @@ export function buildGardenPlanterBenches(scene, data, obstacles = {}) {
   };
 
   // --- Collision & Clearance Checks ---
-  const forbiddenZones = data.zones.filter((z) => {
-    const u = z.name.toUpperCase();
-    return (
-      z.kind === "water" ||
-      z.kind === "sport" ||
-      z.kind === "play" ||
-      z.kind === "track" ||
-      z.kind === "gradin" ||
-      z.kind === "building" ||
-      u.includes("BEACH") ||
-      u.includes("SABLE")
-    );
-  });
-  const greenZones = data.zones.filter((z) => z.kind === "green");
-  const roofs = data.roofs || [];
-
-  const ARCH_CORRIDORS = [
-    [-11.68, -13.5, -23.38, -1.8],
-    [11.69, -13.5, 23.39, -1.8],
-  ];
-
-  // Match walkway centerlines in js/living.js buildPedestrians
-  const WALK_SEGMENTS = [
-    [-168, -21.8, -104, -21.8],
-    [-166, 21.8, -102, 21.8],
-    [-68, 4.0, -26, 4.0],
-    [-18, -19.5, 18, -19.5],
-    [-22, 6.2, 22, 6.2],
-    [24, 9.8, 46, 19.6],
-    [72, 5.0, 134, 2.5],
-    [136, 2.2, 200, 2.2],
-  ];
-
-  const trees = obstacles.trees || [];
-  const bushes = obstacles.bushes || [];
-  const existingBenches = obstacles.benches || [];
   const placed = []; // { kind, x, z, r, baseY, rotY }
-
-  const isZonePerimeterClear = (x, z, r, targetZone, requireNoGreen) => {
-    if (!inZone2D([x, z], targetZone)) return false;
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2;
-      const sx = x + Math.cos(a) * r;
-      const sz = z + Math.sin(a) * r;
-      if (!inZone2D([sx, sz], targetZone)) return false;
-      if (requireNoGreen && greenZones.some((gz) => inZone2D([sx, sz], gz))) return false;
-    }
-    if (requireNoGreen && greenZones.some((gz) => inZone2D([x, z], gz))) return false;
-    if (forbiddenZones.some((fz) => isNearZone2D([x, z], fz, r + 0.55))) return false;
-    if (roofs.some((rf) => pointInPoly2D([x, z], rf.poly) || pointNearPolyEdge2D([x, z], rf.poly, r + 0.6))) {
-      return false;
-    }
-    if (ARCH_CORRIDORS.some(([ax, az, bx, bz]) => distToSegment2D(x, z, ax, az, bx, bz) < r + 1.5)) {
-      return false;
-    }
-    if (WALK_SEGMENTS.some(([ax, az, bx, bz]) => distToSegment2D(x, z, ax, az, bx, bz) < r + 1.15)) {
-      return false;
-    }
-    if (trees.some(([tx, tz]) => Math.hypot(tx - x, tz - z) < r + 1.5)) return false;
-    if (bushes.some(([bx, bz]) => Math.hypot(bx - x, bz - z) < r + 0.9)) return false;
-    if (existingBenches.some(([bx, bz]) => Math.hypot(bx - x, bz - z) < r + 1.45)) return false;
-    if (placed.some((p) => Math.hypot(p.x - x, p.z - z) < r + p.r + 2.0)) return false;
-    return true;
-  };
-
-  const dominantEdgeYaw = (poly) => {
-    let bestLen = 0;
-    let yaw = 0;
-    for (let i = 0; i < poly.length; i++) {
-      const a = poly[i];
-      const b = poly[(i + 1) % poly.length];
-      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-      if (len > bestLen) {
-        bestLen = len;
-        yaw = -Math.atan2(b[1] - a[1], b[0] - a[0]);
-      }
-    }
-    return yaw;
-  };
-
-  const sampleCandidatesInZone = (zone, countX = 5, countZ = 4) => {
-    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-    for (const [px, pz] of zone.poly) {
-      if (px < minX) minX = px;
-      if (px > maxX) maxX = px;
-      if (pz < minZ) minZ = pz;
-      if (pz > maxZ) maxZ = pz;
-    }
-    const pts = [];
-    if (zone.centroid) pts.push([zone.centroid[0], zone.centroid[1]]);
-    for (let ix = 1; ix <= countX; ix++) {
-      for (let iz = 1; iz <= countZ; iz++) {
-        pts.push([
-          minX + ((ix - 0.35 + rng() * 0.3) / (countX + 0.3)) * (maxX - minX),
-          minZ + ((iz - 0.35 + rng() * 0.3) / (countZ + 0.3)) * (maxZ - minZ),
-        ]);
-      }
-    }
-    return pts;
-  };
+  const isZonePerimeterClear = createClearanceChecker(data, obstacles, placed);
 
   // --- Tier 1: Paved Plazas (AIR DE REPOS & BUVETTE / KIOSQUES) ---
   const plazaZones = data.zones
@@ -795,7 +697,7 @@ export function buildGardenPlanterBenches(scene, data, obstacles = {}) {
   for (const pz of plazaZones) {
     const target = pz.area > 280 ? 3 : pz.area > 120 ? 2 : 1;
     const alignYaw = dominantEdgeYaw(pz.poly);
-    const cands = sampleCandidatesInZone(pz, 6, 5);
+    const cands = sampleCandidatesInZone(pz, 6, 5, rng);
     let added = 0;
 
     for (const [cx, cz] of cands) {
@@ -808,7 +710,7 @@ export function buildGardenPlanterBenches(scene, data, obstacles = {}) {
 
       for (const tk of tryList) {
         const spec = BUILDERS[tk];
-        if (isZonePerimeterClear(cx, cz, spec.r, pz, true)) {
+        if (isZonePerimeterClear(cx, cz, spec.r, pz, { requireNoGreen: true })) {
           const rotY = alignYaw + (rng() - 0.5) * 0.28;
           spec.fn(cx, 0.35, cz, rotY);
           placed.push({ kind: tk, x: cx, z: cz, r: spec.r, baseY: 0.35, rotY });
@@ -832,11 +734,11 @@ export function buildGardenPlanterBenches(scene, data, obstacles = {}) {
   let lawnCursor = 0;
   for (const lz of lawnZones) {
     const alignYaw = dominantEdgeYaw(lz.poly);
-    const cands = sampleCandidatesInZone(lz, 5, 5);
+    const cands = sampleCandidatesInZone(lz, 5, 5, rng);
     for (const [cx, cz] of cands) {
       const tk = lawnCycle[lawnCursor % lawnCycle.length];
       const spec = BUILDERS[tk];
-      if (isZonePerimeterClear(cx, cz, spec.r, lz, false)) {
+      if (isZonePerimeterClear(cx, cz, spec.r, lz, { requireNoGreen: false })) {
         const rotY = alignYaw + (rng() - 0.5) * 0.35;
         spec.fn(cx, 0.455, cz, rotY);
         placed.push({ kind: tk, x: cx, z: cz, r: spec.r, baseY: 0.455, rotY });
@@ -900,7 +802,133 @@ export function buildGardenPlanterBenches(scene, data, obstacles = {}) {
     scene.add(soilMesh);
   }
 
-  // --- Botanical Plant InstancedMeshes ---
+  createBotanicalInstancedMeshes(scene, plantPlacements);
+  createSitterInstancedMeshes(scene, sitters);
+
+  return {
+    count: placed.length,
+    placed,
+    footprints: placed.map((p) => [p.x, p.z, p.r, p.baseY]),
+  };
+}
+
+/** Build shared collision/clearance checker against forbidden zones, paths, trees, bushes, benches, and placed structures. */
+function createClearanceChecker(data, obstacles = {}, placed = []) {
+  const forbiddenZones = data.zones.filter((z) => {
+    const u = z.name.toUpperCase();
+    return (
+      z.kind === "water" ||
+      z.kind === "sport" ||
+      z.kind === "play" ||
+      z.kind === "track" ||
+      z.kind === "gradin" ||
+      z.kind === "building" ||
+      u.includes("BEACH") ||
+      u.includes("SABLE")
+    );
+  });
+  const greenZones = data.zones.filter((z) => z.kind === "green");
+  const roofs = data.roofs || [];
+
+  const ARCH_CORRIDORS = [
+    [-11.68, -13.5, -23.38, -1.8],
+    [11.69, -13.5, 23.39, -1.8],
+  ];
+
+  // Match walkway centerlines in js/living.js buildPedestrians
+  const WALK_SEGMENTS = [
+    [-168, -21.8, -104, -21.8],
+    [-166, 21.8, -102, 21.8],
+    [-68, 4.0, -26, 4.0],
+    [-18, -19.5, 18, -19.5],
+    [-22, 6.2, 22, 6.2],
+    [24, 9.8, 46, 19.6],
+    [72, 5.0, 134, 2.5],
+    [136, 2.2, 200, 2.2],
+  ];
+
+  const trees = obstacles.trees || [];
+  const bushes = obstacles.bushes || [];
+  const existingBenches = obstacles.benches || [];
+  const planters = obstacles.planters || [];
+
+  return (x, z, r, targetZone, opts = {}) => {
+    const {
+      requireNoGreen = true,
+      roofPad = 0.6,
+      archPad = 1.5,
+      walkPad = 1.15,
+      treePad = 1.5,
+      bushPad = 0.9,
+      benchPad = 1.45,
+      planterPad = 2.0,
+      selfGap = 2.0,
+    } = opts;
+    if (!inZone2D([x, z], targetZone)) return false;
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const sx = x + Math.cos(a) * r;
+      const sz = z + Math.sin(a) * r;
+      if (!inZone2D([sx, sz], targetZone)) return false;
+      if (requireNoGreen && greenZones.some((gz) => inZone2D([sx, sz], gz))) return false;
+    }
+    if (requireNoGreen && greenZones.some((gz) => inZone2D([x, z], gz))) return false;
+    if (forbiddenZones.some((fz) => isNearZone2D([x, z], fz, r + 0.55))) return false;
+    if (roofs.some((rf) => pointInPoly2D([x, z], rf.poly) || pointNearPolyEdge2D([x, z], rf.poly, r + roofPad))) {
+      return false;
+    }
+    if (ARCH_CORRIDORS.some(([ax, az, bx, bz]) => distToSegment2D(x, z, ax, az, bx, bz) < r + archPad)) {
+      return false;
+    }
+    if (WALK_SEGMENTS.some(([ax, az, bx, bz]) => distToSegment2D(x, z, ax, az, bx, bz) < r + walkPad)) {
+      return false;
+    }
+    if (trees.some(([tx, tz]) => Math.hypot(tx - x, tz - z) < r + treePad)) return false;
+    if (bushes.some(([bx, bz]) => Math.hypot(bx - x, bz - z) < r + bushPad)) return false;
+    if (existingBenches.some(([bx, bz]) => Math.hypot(bx - x, bz - z) < r + benchPad)) return false;
+    if (planters.some(([px, pz, pr]) => Math.hypot(px - x, pz - z) < r + pr + planterPad)) return false;
+    if (placed.some((p) => Math.hypot(p.x - x, p.z - z) < r + p.r + selfGap)) return false;
+    return true;
+  };
+}
+
+function dominantEdgeYaw(poly) {
+  let bestLen = 0;
+  let yaw = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % poly.length];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (len > bestLen) {
+      bestLen = len;
+      yaw = -Math.atan2(b[1] - a[1], b[0] - a[0]);
+    }
+  }
+  return yaw;
+}
+
+function sampleCandidatesInZone(zone, countX = 5, countZ = 4, rng = Math.random) {
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (const [px, pz] of zone.poly) {
+    if (px < minX) minX = px;
+    if (px > maxX) maxX = px;
+    if (pz < minZ) minZ = pz;
+    if (pz > maxZ) maxZ = pz;
+  }
+  const pts = [];
+  if (zone.centroid) pts.push([zone.centroid[0], zone.centroid[1]]);
+  for (let ix = 1; ix <= countX; ix++) {
+    for (let iz = 1; iz <= countZ; iz++) {
+      pts.push([
+        minX + ((ix - 0.35 + rng() * 0.3) / (countX + 0.3)) * (maxX - minX),
+        minZ + ((iz - 0.35 + rng() * 0.3) / (countZ + 0.3)) * (maxZ - minZ),
+      ]);
+    }
+  }
+  return pts;
+}
+
+function createBotanicalInstancedMeshes(scene, plantPlacements) {
   const greenPalette = [
     new THREE.Color(0x466638),
     new THREE.Color(0x5f8048),
@@ -938,64 +966,88 @@ export function buildGardenPlanterBenches(scene, data, obstacles = {}) {
     inst.instanceColor.needsUpdate = true;
     scene.add(inst);
   }
-
-  // --- Stylized Seated Visitors on Benches ---
-  if (sitters.length) {
-    const outfitPalette = [
-      new THREE.Color(0x283848),
-      new THREE.Color(0x8c5142),
-      new THREE.Color(0x3a645a),
-      new THREE.Color(0xc29252),
-      new THREE.Color(0xdcd3c3),
-    ];
-    const torsoMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 });
-    const legMat = new THREE.MeshStandardMaterial({ color: 0x313842, roughness: 0.88 });
-    const headMat = new THREE.MeshStandardMaterial({ color: 0x4b3d33, roughness: 0.8 });
-
-    const torsos = new THREE.InstancedMesh(
-      new THREE.CylinderGeometry(0.15, 0.19, 0.56, 8),
-      torsoMat,
-      sitters.length
-    );
-    const legs = new THREE.InstancedMesh(
-      new THREE.BoxGeometry(0.3, 0.34, 0.36),
-      legMat,
-      sitters.length
-    );
-    const heads = new THREE.InstancedMesh(
-      new THREE.SphereGeometry(0.155, 8, 8),
-      headMat,
-      sitters.length
-    );
-    torsos.castShadow = true;
-    heads.castShadow = true;
-
-    sitters.forEach((s, idx) => {
-      const fx = Math.sin(s.rotY);
-      const fz = Math.cos(s.rotY);
-
-      dummy.position.set(s.x, s.y + 0.28, s.z);
-      dummy.rotation.set(0, s.rotY, 0);
-      dummy.scale.set(1, 1, 1);
-      dummy.updateMatrix();
-      torsos.setMatrixAt(idx, dummy.matrix);
-      torsos.setColorAt(idx, outfitPalette[s.colorIdx]);
-
-      dummy.position.set(s.x + fx * 0.16, s.y - 0.14, s.z + fz * 0.16);
-      dummy.updateMatrix();
-      legs.setMatrixAt(idx, dummy.matrix);
-
-      dummy.position.set(s.x, s.y + 0.68, s.z);
-      dummy.updateMatrix();
-      heads.setMatrixAt(idx, dummy.matrix);
-    });
-    torsos.instanceColor.needsUpdate = true;
-    scene.add(legs, torsos, heads);
-  }
-
-  return {
-    count: placed.length,
-    placed,
-    footprints: placed.map((p) => [p.x, p.z, p.r, p.baseY]),
-  };
 }
+
+function createSitterInstancedMeshes(scene, sitters) {
+  if (!sitters.length) return;
+  const outfitPalette = [
+    new THREE.Color(0x283848),
+    new THREE.Color(0x8c5142),
+    new THREE.Color(0x3a645a),
+    new THREE.Color(0xc29252),
+    new THREE.Color(0xdcd3c3),
+  ];
+  const torsoMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85 });
+  const legMat = new THREE.MeshStandardMaterial({ color: 0x313842, roughness: 0.88 });
+  const headMat = new THREE.MeshStandardMaterial({ color: 0x4b3d33, roughness: 0.8 });
+
+  const torsos = new THREE.InstancedMesh(
+    new THREE.CylinderGeometry(0.15, 0.19, 0.56, 8),
+    torsoMat,
+    sitters.length
+  );
+  const legs = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(0.3, 0.34, 0.36),
+    legMat,
+    sitters.length
+  );
+  const heads = new THREE.InstancedMesh(
+    new THREE.SphereGeometry(0.155, 8, 8),
+    headMat,
+    sitters.length
+  );
+  torsos.castShadow = true;
+  heads.castShadow = true;
+
+  const dummy = new THREE.Object3D();
+  sitters.forEach((s, idx) => {
+    const fx = Math.sin(s.rotY);
+    const fz = Math.cos(s.rotY);
+
+    dummy.position.set(s.x, s.y + 0.28, s.z);
+    dummy.rotation.set(0, s.rotY, 0);
+    dummy.scale.set(1, 1, 1);
+    dummy.updateMatrix();
+    torsos.setMatrixAt(idx, dummy.matrix);
+    torsos.setColorAt(idx, outfitPalette[s.colorIdx]);
+
+    dummy.position.set(s.x + fx * 0.16, s.y - 0.14, s.z + fz * 0.16);
+    dummy.updateMatrix();
+    legs.setMatrixAt(idx, dummy.matrix);
+
+    dummy.position.set(s.x, s.y + 0.68, s.z);
+    dummy.updateMatrix();
+    heads.setMatrixAt(idx, dummy.matrix);
+  });
+  torsos.instanceColor.needsUpdate = true;
+  scene.add(legs, torsos, heads);
+}
+
+export {
+  makeSeeded,
+  pointInPoly2D,
+  inZone2D,
+  distToSegment2D,
+  pointNearPolyEdge2D,
+  isNearZone2D,
+  makeWoodSlatsTexture,
+  mergeNormalizedGeoms,
+  makeTransformedPosUvBuf,
+  makeTransform,
+  pushTri,
+  pushQuad,
+  appendConvexPrism,
+  appendRibbonStrip,
+  addLocalBox,
+  regularPoly2D,
+  stadiumPoly2D,
+  roundedRectPoly2D,
+  buildFernStarGeo,
+  buildBroadLeafGeo,
+  buildShrubTuftGeo,
+  createClearanceChecker,
+  dominantEdgeYaw,
+  sampleCandidatesInZone,
+  createBotanicalInstancedMeshes,
+  createSitterInstancedMeshes,
+};
