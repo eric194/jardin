@@ -185,8 +185,80 @@ function buildSpatialContext(
   };
 }
 
+const STORAGE_KEY_PRESETS = "jgs_thies_camera_presets_v1";
+
+const DEFAULT_PRESETS = [
+  {
+    id: "entree-eye",
+    name: "1. Entrée (1,70 m · 2 pts)",
+    pos: [-11.5, 2.05, -36.5],
+    target: [0, 2.05, -18.0],
+    hour: 18.2,
+    twoPoint: true,
+  },
+  {
+    id: "arches-nuit",
+    name: "2. Arches LED & Bassin (Nuit)",
+    pos: [10.5, 2.05, -13.2],
+    target: [22.0, 2.05, -1.6],
+    hour: 21.5,
+    twoPoint: true,
+  },
+  {
+    id: "drone-centre",
+    name: "3. Drone Centre & Piscines",
+    pos: [18.0, 22.0, 38.0],
+    target: [-6.0, 0.5, -4.0],
+    hour: 15.0,
+    twoPoint: false,
+  },
+  {
+    id: "pole-sportif",
+    name: "4. Pôle Sportif Ouest",
+    pos: [-182.0, 34.0, 44.0],
+    target: [-182.0, 0.5, -1.0],
+    hour: 14.5,
+    twoPoint: false,
+  },
+  {
+    id: "jardins-est",
+    name: "5. Jardins Est & Jeux Sable",
+    pos: [64.0, 24.0, 36.0],
+    target: [56.0, 0.5, 4.0],
+    hour: 16.5,
+    twoPoint: false,
+  },
+  {
+    id: "cantines-parking",
+    name: "6. Cantines & Parking Nord",
+    pos: [72.0, 18.0, -28.0],
+    target: [76.0, 0.5, -52.0],
+    hour: 14.5,
+    twoPoint: false,
+  },
+];
+
+function loadPresets() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_PRESETS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length) return parsed;
+    }
+  } catch (_) {}
+  return DEFAULT_PRESETS.map((p) => ({ ...p, pos: [...p.pos], target: [...p.target] }));
+}
+
+function savePresets(list) {
+  try {
+    localStorage.setItem(STORAGE_KEY_PRESETS, JSON.stringify(list));
+  } catch (_) {}
+}
+
 export function createAiStudioController({
   captureClean3D,
+  applyCameraPreset,
+  getCurrentCameraState,
   applyEyeLevelView,
   getViewSnapshot,
   onOpenChange,
@@ -198,7 +270,9 @@ export function createAiStudioController({
   let lastCaptureUrl = "";
   let currentAmbience = "auto";
   let currentLang = "en";
-  let currentPerspective = "two-point"; // "two-point" (vue personne normale 2 pts de fuite) ou "current" (angle libre actuel)
+  let currentPerspective = "two-point";
+  let presets = loadPresets();
+  let activePresetId = null;
 
   function renderModalSkeleton() {
     modal.innerHTML = `
@@ -219,6 +293,20 @@ export function createAiStudioController({
             </button>
           </div>
         </header>
+
+        <div class="ai-presets-bar">
+          <div class="ai-presets-head">
+            <span class="ai-label">Angles photo (16:9 HD · 1920×1080) — cliquer pour cadrer</span>
+            <div class="ai-presets-tools">
+              <button type="button" id="ai-preset-add" class="ai-mini-btn" title="Enregistrer votre angle actuel comme nouveau point de vue">+ Enregistrer cet angle</button>
+              <button type="button" id="ai-preset-update" class="ai-mini-btn" title="Remplacer l'angle sélectionné par votre cadrage actuel" hidden>Mettre à jour</button>
+              <button type="button" id="ai-preset-rename" class="ai-mini-btn" title="Renommer l'angle sélectionné" hidden>Renommer</button>
+              <button type="button" id="ai-preset-delete" class="ai-mini-btn ai-mini-btn--danger" title="Supprimer l'angle sélectionné" hidden>Supprimer</button>
+              <button type="button" id="ai-preset-reset" class="ai-mini-btn" title="Restaurer les 6 angles par défaut">Réinitialiser</button>
+            </div>
+          </div>
+          <div id="ai-presets-list" class="ai-pills"></div>
+        </div>
 
         <div class="ai-studio-grid">
           <div class="ai-stage-col">
@@ -319,6 +407,76 @@ export function createAiStudioController({
       });
     });
 
+    // Gestion complète des angles prédéfinis (ajouter, modifier, renommer, supprimer, réinitialiser)
+    modal.querySelector("#ai-preset-add")?.addEventListener("click", () => {
+      const cam = getCurrentCameraState?.();
+      if (!cam) return;
+      const defaultName = `Angle ${presets.length + 1}`;
+      const name = window.prompt("Nom du nouvel angle photo :", defaultName);
+      if (!name || !name.trim()) return;
+      const newPreset = {
+        id: `custom-${Date.now()}`,
+        name: name.trim(),
+        pos: cam.pos,
+        target: cam.target,
+        hour: cam.hour,
+        twoPoint: currentPerspective === "two-point",
+      };
+      presets.push(newPreset);
+      activePresetId = newPreset.id;
+      savePresets(presets);
+      renderPresetsList();
+      setStatus(`Angle « ${newPreset.name} » enregistré dans vos favoris.`);
+    });
+
+    modal.querySelector("#ai-preset-update")?.addEventListener("click", () => {
+      const idx = presets.findIndex((p) => p.id === activePresetId);
+      const cam = getCurrentCameraState?.();
+      if (idx < 0 || !cam) return;
+      presets[idx] = {
+        ...presets[idx],
+        pos: cam.pos,
+        target: cam.target,
+        hour: cam.hour,
+        twoPoint: currentPerspective === "two-point",
+      };
+      savePresets(presets);
+      renderPresetsList();
+      setStatus(`Angle « ${presets[idx].name} » mis à jour avec votre cadrage actuel.`);
+    });
+
+    modal.querySelector("#ai-preset-rename")?.addEventListener("click", () => {
+      const idx = presets.findIndex((p) => p.id === activePresetId);
+      if (idx < 0) return;
+      const name = window.prompt("Nouveau nom de cet angle :", presets[idx].name);
+      if (!name || !name.trim()) return;
+      presets[idx].name = name.trim();
+      savePresets(presets);
+      renderPresetsList();
+      setStatus(`Angle renommé en « ${presets[idx].name} ».`);
+    });
+
+    modal.querySelector("#ai-preset-delete")?.addEventListener("click", () => {
+      const idx = presets.findIndex((p) => p.id === activePresetId);
+      if (idx < 0) return;
+      const removed = presets[idx].name;
+      presets.splice(idx, 1);
+      activePresetId = null;
+      savePresets(presets);
+      renderPresetsList();
+      setStatus(`Angle « ${removed} » supprimé.`);
+    });
+
+    modal.querySelector("#ai-preset-reset")?.addEventListener("click", () => {
+      presets = DEFAULT_PRESETS.map((p) => ({ ...p, pos: [...p.pos], target: [...p.target] }));
+      activePresetId = null;
+      savePresets(presets);
+      renderPresetsList();
+      setStatus("Les 6 angles par défaut ont été restaurés.");
+    });
+
+    renderPresetsList();
+
     modal.querySelectorAll("#ai-ambience-pills .ai-pill").forEach((btn) => {
       btn.addEventListener("click", () => {
         currentAmbience = btn.dataset.amb;
@@ -367,6 +525,37 @@ export function createAiStudioController({
     });
   }
 
+  function renderPresetsList() {
+    const listEl = modal.querySelector("#ai-presets-list");
+    if (!listEl) return;
+    listEl.innerHTML = "";
+    presets.forEach((p) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `ai-pill${p.id === activePresetId ? " is-active" : ""}`;
+      btn.textContent = p.name;
+      btn.addEventListener("click", () => {
+        activePresetId = p.id;
+        currentPerspective = p.twoPoint ? "two-point" : "current";
+        modal.querySelectorAll("#ai-persp-pills .ai-pill").forEach((b) =>
+          b.classList.toggle("is-active", b.dataset.persp === currentPerspective)
+        );
+        applyCameraPreset?.(p);
+        renderPresetsList();
+        refreshCapture();
+        setStatus(`Angle « ${p.name} » capturé en 1920×1080 (16:9 HD).`);
+      });
+      listEl.appendChild(btn);
+    });
+    const hasSel = Boolean(activePresetId && presets.some((p) => p.id === activePresetId));
+    const updBtn = modal.querySelector("#ai-preset-update");
+    const renBtn = modal.querySelector("#ai-preset-rename");
+    const delBtn = modal.querySelector("#ai-preset-delete");
+    if (updBtn) updBtn.hidden = !hasSel;
+    if (renBtn) renBtn.hidden = !hasSel;
+    if (delBtn) delBtn.hidden = !hasSel;
+  }
+
   function updatePromptPreview() {
     const isTwoPoint = currentPerspective === "two-point";
     const snap = getViewSnapshot(isTwoPoint);
@@ -388,8 +577,8 @@ export function createAiStudioController({
     if (chip) chip.textContent = `Zone cadrée : ${nearbySummary}`;
     if (badge) {
       badge.textContent = isTwoPoint
-        ? "Vue personne (1,70 m) · 2 points de fuite"
-        : "Angle actuel exact (sans repères)";
+        ? "1920×1080 (16:9) · Vue personne 1,70 m (2 pts de fuite)"
+        : "1920×1080 (16:9) · Angle actuel exact";
     }
   }
 
@@ -402,7 +591,7 @@ export function createAiStudioController({
 
   function refreshCapture() {
     const isTwoPoint = currentPerspective === "two-point";
-    const dataUrl = captureClean3D({ twoPointEye: isTwoPoint, eyeHeight: 2.05 });
+    const dataUrl = captureClean3D({ twoPointEye: isTwoPoint, eyeHeight: 2.05, fixed16x9: true });
     if (!dataUrl) {
       setStatus("Impossible de capturer la scène 3D.", true);
       return;

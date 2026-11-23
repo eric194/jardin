@@ -2865,17 +2865,29 @@ async function init() {
     aiStudioCtrl = createAiStudioController({
       captureClean3D(opts = {}) {
         if (!renderer || !scene || !camera) return null;
-        const { twoPointEye = false, eyeHeight = 2.05 } = opts;
+        const { twoPointEye = false, eyeHeight = 2.05, fixed16x9 = true } = opts;
 
         const prevPos = camera.position.clone();
         const prevQuat = camera.quaternion.clone();
         const prevFov = camera.fov;
         const prevNear = camera.near;
+        const prevAspect = camera.aspect;
+        const prevPR = renderer.getPixelRatio();
+        const prevSize = new THREE.Vector2();
+        renderer.getSize(prevSize);
         const prevVis = markerGroups.map((g) => g.visible);
 
         markerGroups.forEach((g) => {
           g.visible = false;
         });
+
+        // Forcer un rendu 16:9 HD exact (1920 x 1080) quel que soit l'écran (PC, tablette, smartphone)
+        if (fixed16x9) {
+          renderer.setPixelRatio(1);
+          renderer.setSize(1920, 1080, false);
+          camera.aspect = 1920 / 1080;
+          camera.updateProjectionMatrix();
+        }
 
         if (twoPointEye) {
           // Conserver EXACTEMENT la position (x, z) et la direction horizontale de regard de l'utilisateur !
@@ -2891,7 +2903,6 @@ async function init() {
 
           let camX = prevPos.x;
           let camZ = prevPos.z;
-          // Si l'utilisateur était très haut en vue drone/aérienne (> 18 m), on se rapproche légèrement sur l'axe de vue
           if (prevPos.y > 18 && controls) {
             const dx = prevPos.x - controls.target.x;
             const dz = prevPos.z - controls.target.z;
@@ -2916,19 +2927,45 @@ async function init() {
           dataUrl = null;
         }
 
-        // Restaurer la caméra et les repères immédiatement
+        // Restaurer la taille du renderer, la caméra et les repères immédiatement
+        if (fixed16x9) {
+          renderer.setPixelRatio(prevPR);
+          renderer.setSize(prevSize.x, prevSize.y, false);
+          camera.aspect = prevAspect;
+        }
         if (twoPointEye) {
           camera.position.copy(prevPos);
           camera.quaternion.copy(prevQuat);
           camera.fov = prevFov;
           camera.near = prevNear;
-          camera.updateProjectionMatrix();
         }
+        camera.updateProjectionMatrix();
         markerGroups.forEach((g, i) => {
           g.visible = prevVis[i];
         });
         renderer.render(scene, camera);
         return dataUrl;
+      },
+      applyCameraPreset(preset) {
+        if (!camera || !controls || !preset) return;
+        state.fly = null;
+        stopAutoFly(false);
+        stopWalkTour(true);
+        camera.position.set(preset.pos[0], preset.pos[1], preset.pos[2]);
+        controls.target.set(preset.target[0], preset.target[1], preset.target[2]);
+        camera.near = preset.pos[1] < 5 ? 0.25 : 1;
+        camera.updateProjectionMatrix();
+        controls.update();
+        if (typeof preset.hour === "number") {
+          setTimeOfDay(preset.hour, false);
+        }
+      },
+      getCurrentCameraState() {
+        return {
+          pos: camera ? camera.position.toArray().map((n) => Number(n.toFixed(2))) : [0, 30, 50],
+          target: controls ? controls.target.toArray().map((n) => Number(n.toFixed(2))) : [0, 0.5, 0],
+          hour: Number(state.timeOfDay.toFixed(2)),
+        };
       },
       applyEyeLevelView() {
         if (!camera || !controls) return;

@@ -2439,6 +2439,59 @@ body.is-card-open .fly-banner {
   gap: 8px;
 }
 
+.ai-presets-bar {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-presets-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ai-presets-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ai-mini-btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ai-mini-btn:hover {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.ai-mini-btn--danger {
+  color: var(--accent);
+  border-color: rgba(166, 66, 52, 0.35);
+}
+
+.ai-mini-btn--danger:hover {
+  background: var(--accent);
+  color: #fffaf4;
+}
+
 .ai-studio-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.32fr) minmax(300px, 0.92fr);
