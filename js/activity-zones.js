@@ -7,7 +7,7 @@ import { mergeNormalizedGeoms } from "./garden-assets.js";
  * - z[45] (x=-26.5, z=-15.5) & z[70] (x=26.5, z=-15.5): Loisirs Enfants Sol Dur (play tower + slide, spring rockers,
  *   stepping stones, geodesic climbing dome, twin swings, inclusive carousel, seesaw, hopscotch & scooter track)
  */
-export function buildActivityZones(scene, _data) {
+export function buildActivityZones(scene, data) {
   const baseY = 0.4;
 
   const buckets = {
@@ -643,66 +643,64 @@ export function buildActivityZones(scene, _data) {
   }
 
   // =========================================================================
-  // 7. ENSEIGNE LUMINEUSE D'ENTRÉE « JARDIN GRAND STANDING » (Arcade Nord, x = 0, z = -17.6, y = 3.74 m)
+  // 7. ENSEIGNE LUMINEUSE D'ENTRÉE « JARDIN GRAND STANDING » (Portique en façade Nord entre les 2 ailes de l'Arcade, z = -24.65 m)
   // =========================================================================
   let signFaceMat = null;
   let signHaloMat = null;
   const signDayFaceCol = new THREE.Color(0xffffff);
-  const signNightFaceCol = new THREE.Color(0xfff6dc);
+  const signNightFaceCol = new THREE.Color(0xfff7e2);
   const signDayHaloCol = new THREE.Color(0xf6d89e);
-  const signNightHaloCol = new THREE.Color(0xffdf94);
+  const signNightHaloCol = new THREE.Color(0xffe19c);
   {
     const roofY = 3.74;
-    const sz = -21.2;
-    const signW = 13.8;
-    const signH = 1.75;
-    const signCenterY = roofY + 0.85 + signH * 0.5;
+    const sz = -24.65;
+    const signW = 22.8;
+    const signH = 1.62;
+    const legH = 1.25;
+    const signCenterY = roofY + legH + signH * 0.5;
 
-    // 4 architectural bronze support pillars anchoring the sign to the Entrance Arcade roof
-    for (const px of [-5.6, -1.9, 1.9, 5.6]) {
-      addCyl(buckets.steel, px, roofY + 0.44, sz, 0.095, 0.13, 0.88, 10);
-      addCyl(buckets.ochre, px, roofY + 0.06, sz, 0.19, 0.23, 0.12, 10);
+    // 2 jambages latéraux posés sur les extrémités Nord-Ouest (-11.15) et Nord-Est (+11.15) de la toiture d'entrée (exactement comme sur le croquis)
+    for (const side of [-1, 1]) {
+      const px = side * 10.85;
+      for (const dz of [-0.14, 0.14]) {
+        addBox(buckets.steel, px, roofY + legH * 0.5, sz + dz, 0.22, legH + 0.1, 0.14);
+      }
+      // Platine d'ancrage et entretoises sur le toit
+      addBox(buckets.ochre, px, roofY + 0.06, sz, 0.56, 0.12, 0.56);
+      addBox(buckets.steel, px, roofY + legH * 0.55, sz, 0.18, 0.14, 0.4);
     }
-    // Outer architectural frame & gold crown trim
-    addBox(buckets.steel, 0, signCenterY, sz, signW + 0.36, signH + 0.28, 0.34);
-    addBox(buckets.ochre, 0, signCenterY + signH * 0.5 + 0.16, sz, signW + 0.52, 0.09, 0.44);
-    addBox(buckets.ochre, 0, signCenterY - signH * 0.5 - 0.14, sz, signW + 0.46, 0.08, 0.42);
 
-    // High-resolution double-sided illuminated canvas sign texture
+    // Cadre architectural du bandeau portique & corniches dorées
+    addBox(buckets.steel, 0, signCenterY, sz, signW + 0.44, signH + 0.28, 0.36);
+    addBox(buckets.ochre, 0, signCenterY + signH * 0.5 + 0.16, sz, signW + 0.64, 0.1, 0.48);
+    addBox(buckets.ochre, 0, signCenterY - signH * 0.5 - 0.14, sz, signW + 0.56, 0.09, 0.44);
+
+    // Texture haute résolution double-face : uniquement « JARDIN GRAND STANDING » centré en grand
     const canvas = document.createElement("canvas");
-    canvas.width = 1024;
-    canvas.height = 160;
+    canvas.width = 1536;
+    canvas.height = 192;
     const ctx = canvas.getContext("2d");
 
-    // Deep architectural slate-navy backlit background with warm golden inner border
-    const bgGrad = ctx.createLinearGradient(0, 0, 1024, 160);
-    bgGrad.addColorStop(0, "#151d2a");
-    bgGrad.addColorStop(0.5, "#1f2b3d");
-    bgGrad.addColorStop(1, "#151d2a");
+    const bgGrad = ctx.createLinearGradient(0, 0, 1536, 192);
+    bgGrad.addColorStop(0, "#141c28");
+    bgGrad.addColorStop(0.5, "#1f2b3e");
+    bgGrad.addColorStop(1, "#141c28");
     ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, 1024, 160);
+    ctx.fillRect(0, 0, 1536, 192);
 
     ctx.strokeStyle = "#f2c678";
-    ctx.lineWidth = 5;
-    ctx.strokeRect(10, 10, 1004, 140);
+    ctx.lineWidth = 6;
+    ctx.strokeRect(12, 12, 1512, 168);
 
-    // Warm luminous headline: JARDIN GRAND STANDING
     ctx.save();
-    ctx.shadowColor = "rgba(255, 214, 128, 0.95)";
-    ctx.shadowBlur = 18;
-    ctx.fillStyle = "#fff6e0";
-    ctx.font = "800 56px 'Plus Jakarta Sans', 'Segoe UI', Arial, sans-serif";
+    ctx.shadowColor = "rgba(255, 216, 132, 0.96)";
+    ctx.shadowBlur = 22;
+    ctx.fillStyle = "#fff7e4";
+    ctx.font = "800 84px 'Manrope', 'Plus Jakarta Sans', 'Segoe UI', Arial, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("JARDIN GRAND STANDING", 512, 68);
+    ctx.fillText("JARDIN GRAND STANDING", 768, 98);
     ctx.restore();
-
-    // Subtitle
-    ctx.fillStyle = "#f2c97d";
-    ctx.font = "600 22px 'Plus Jakarta Sans', 'Segoe UI', Arial, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("★   THIÈS  ·  PARC URBAIN & LOISIRS   ★", 512, 124);
 
     const signTex = new THREE.CanvasTexture(canvas);
     signTex.colorSpace = THREE.SRGBColorSpace;
@@ -714,27 +712,147 @@ export function buildActivityZones(scene, _data) {
     });
     const faceGeo = new THREE.PlaneGeometry(signW, signH);
     const northFace = new THREE.Mesh(faceGeo, signFaceMat);
-    northFace.position.set(0, signCenterY, sz - 0.185);
-    northFace.rotation.y = Math.PI; // Faces North avenue & main park entrance
+    northFace.position.set(0, signCenterY, sz - 0.195);
+    northFace.rotation.y = Math.PI; // Face Nord (boulevard & arrivée visiteurs)
     const southFace = new THREE.Mesh(faceGeo, signFaceMat);
-    southFace.position.set(0, signCenterY, sz + 0.185); // Faces South central fountain plaza
+    southFace.position.set(0, signCenterY, sz + 0.195); // Face Sud (parvis & bassin central)
     scene.add(northFace, southFace);
 
-    // Continuous glowing LED halo strip framing the sign + 8 warm spotlight pucks along the top cornice
+    // Bandeaux LED continus haut/bas + points lumineux en corniche
     signHaloMat = new THREE.MeshBasicMaterial({ color: signDayHaloCol.clone() });
-    const topStrip = new THREE.Mesh(new THREE.BoxGeometry(signW + 0.22, 0.06, 0.42), signHaloMat);
+    const topStrip = new THREE.Mesh(new THREE.BoxGeometry(signW + 0.28, 0.06, 0.44), signHaloMat);
     topStrip.position.set(0, signCenterY + signH * 0.5 + 0.05, sz);
-    const botStrip = new THREE.Mesh(new THREE.BoxGeometry(signW + 0.22, 0.06, 0.42), signHaloMat);
+    const botStrip = new THREE.Mesh(new THREE.BoxGeometry(signW + 0.28, 0.06, 0.44), signHaloMat);
     botStrip.position.set(0, signCenterY - signH * 0.5 - 0.05, sz);
     scene.add(topStrip, botStrip);
 
-    const puckGeo = new THREE.SphereGeometry(0.09, 10, 8);
-    for (let px = -6.0; px <= 6.0; px += 1.5) {
+    const puckGeo = new THREE.SphereGeometry(0.095, 10, 8);
+    for (let px = -10.0; px <= 10.0; px += 2.0) {
       const pN = new THREE.Mesh(puckGeo, signHaloMat);
-      pN.position.set(px, signCenterY + signH * 0.5 + 0.16, sz - 0.23);
+      pN.position.set(px, signCenterY + signH * 0.5 + 0.16, sz - 0.24);
       const pS = new THREE.Mesh(puckGeo, signHaloMat);
-      pS.position.set(px, signCenterY + signH * 0.5 + 0.16, sz + 0.23);
+      pS.position.set(px, signCenterY + signH * 0.5 + 0.16, sz + 0.24);
       scene.add(pN, pS);
+    }
+  }
+
+  // =========================================================================
+  // 8. DÉCORATION DES 43 CANTINES COMMERCIALES & DU PARKING NORD (Auvents, enseignes, terrasses, pergolas & bornes)
+  // =========================================================================
+  if (data?.parkingDetails) {
+    const cantines = data.parkingDetails.cantines || [];
+    const medians = data.parkingDetails.medians || [];
+    const cBaseY = 0.305;
+    const cTopY = 3.045;
+    const awningPalette = [buckets.terracotta, buckets.ochre, buckets.teal];
+
+    cantines.forEach((poly, idx) => {
+      if (!poly || poly.length < 3) return;
+      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+      for (const [px, pz] of poly) {
+        if (px < minX) minX = px;
+        if (px > maxX) maxX = px;
+        if (pz < minZ) minZ = pz;
+        if (pz > maxZ) maxZ = pz;
+      }
+      const cx = (minX + maxX) * 0.5;
+      const cz = (minZ + maxZ) * 0.5;
+      const w = maxX - minX;
+      const d = maxZ - minZ;
+      if (w < 3.2) return;
+
+      const accentBucket = awningPalette[idx % awningPalette.length];
+
+      // 8a. Acrotère bois & groupe climatisation / panneau solaire en toiture de chaque cantine
+      addBox(buckets.wood, cx, cTopY + 0.12, minZ + 0.16, w - 0.3, 0.22, 0.18);
+      addBox(buckets.wood, cx, cTopY + 0.12, maxZ - 0.16, w - 0.3, 0.22, 0.18);
+      addBox(buckets.steel, cx - w * 0.22, cTopY + 0.14, cz, Math.min(2.2, w * 0.38), 0.08, Math.min(1.6, d * 0.32), 0.12, 0, 0);
+      addBox(buckets.white, cx + w * 0.25, cTopY + 0.22, cz - 0.3, 0.75, 0.42, 0.55);
+
+      // 8b. Façade Nord (côté promenade parking z = minZ ~ -51.33) : Auvent bicolore, comptoir bois & enseigne
+      const spanW = Math.min(w - 0.55, 6.2);
+      addBox(accentBucket, cx, cBaseY + 2.38, minZ - 0.58, spanW, 0.09, 1.18, 0.18, 0, 0);
+      addBox(buckets.white, cx, cBaseY + 2.41, minZ - 0.58, spanW * 0.55, 0.095, 1.19, 0.18, 0, 0);
+      // Enseigne frontale en corniche Nord
+      addBox(buckets.steel, cx, cTopY - 0.22, minZ - 0.08, spanW * 0.72, 0.36, 0.1);
+      addBox(buckets.ochre, cx, cTopY - 0.22, minZ - 0.13, spanW * 0.62, 0.16, 0.04);
+      // Comptoir de service extérieur en bois + vitrine
+      addBox(buckets.wood, cx, cBaseY + 0.52, minZ - 0.24, spanW * 0.68, 0.98, 0.44);
+      addBox(buckets.white, cx, cBaseY + 1.04, minZ - 0.26, spanW * 0.72, 0.06, 0.52);
+
+      // 8c. Façade Sud (côté parc / avenue Nord z = maxZ ~ -46.33) : Auvent + terrasse café (tables, parasols & jardinières)
+      addBox(accentBucket, cx, cBaseY + 2.38, maxZ + 0.55, spanW, 0.09, 1.12, -0.18, 0, 0);
+      // Bacs à plantes encadrant la cantine
+      for (const side of [-1, 1]) {
+        const px = cx + side * (w * 0.5 - 0.42);
+        addBox(buckets.wood, px, cBaseY + 0.24, minZ - 0.38, 0.62, 0.46, 0.52);
+        addSphere(buckets.teal, px, cBaseY + 0.62, minZ - 0.38, 0.32, 8);
+      }
+
+      // 1 cantine sur 2 reçoit un mange-debout ou une table à parasol sur le parvis Sud (z = maxZ + 1.15)
+      if (idx % 2 === 0 && maxZ > -47.0) {
+        const tz = maxZ + 1.12;
+        addCyl(buckets.steel, cx, cBaseY + 0.38, tz, 0.06, 0.18, 0.74, 8);
+        addCyl(buckets.wood, cx, cBaseY + 0.76, tz, 0.56, 0.56, 0.06, 12);
+        // Parasol de terrasse
+        addCyl(buckets.steel, cx, cBaseY + 1.45, tz, 0.035, 0.04, 2.15, 8);
+        const umb = new THREE.ConeGeometry(1.18, 0.48, 8);
+        umb.translate(cx, cBaseY + 2.48, tz);
+        accentBucket.push(umb);
+        for (const sx of [-0.68, 0.68]) {
+          addCyl(buckets.steel, cx + sx, cBaseY + 0.24, tz, 0.16, 0.18, 0.46, 8);
+        }
+      }
+    });
+
+    // 8d. Aménagement du Parking Nord : pergolas d'ombrage photovoltaïques, bornes de recharge VE, guérite d'accès & portiques
+    medians.forEach((med, mIdx) => {
+      if (!med || med.length < 3) return;
+      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+      for (const [px, pz] of med) {
+        if (px < minX) minX = px;
+        if (px > maxX) maxX = px;
+        if (pz < minZ) minZ = pz;
+        if (pz > maxZ) maxZ = pz;
+      }
+      const mx = (minX + maxX) * 0.5;
+      const mz = (minZ + maxZ) * 0.5;
+      const mBaseY = 0.44;
+
+      // Bornes de recharge électrique / horodateurs et arceaux aux extrémités des îlots plantés
+      for (const side of [-1, 1]) {
+        const ex = side < 0 ? minX + 1.1 : maxX - 1.1;
+        addBox(buckets.steel, ex, mBaseY + 0.58, mz, 0.36, 1.15, 0.26);
+        addBox(mIdx % 2 === 0 ? buckets.teal : buckets.ochre, ex, mBaseY + 0.86, mz, 0.26, 0.34, 0.3);
+      }
+
+      // Pergola bois/solaire d'ombrage piéton sur un îlot sur deux
+      if (mIdx % 2 === 1) {
+        const pw = Math.min(8.4, (maxX - minX) * 0.58);
+        for (const px of [-pw * 0.42, pw * 0.42]) {
+          addCyl(buckets.steel, mx + px, mBaseY + 1.35, mz, 0.08, 0.1, 2.7, 8);
+        }
+        addBox(buckets.wood, mx, mBaseY + 2.72, mz, pw + 0.6, 0.12, 1.55);
+        addBox(buckets.teal, mx, mBaseY + 2.8, mz, pw, 0.05, 1.25);
+      }
+    });
+
+    // Portiques d'entrée/sortie du Parking Nord avec guérite de contrôle et barrières levantes (placés dans les couloirs d'accès hors stalles)
+    for (const [gx, gz] of [
+      [-68.5, -53.2],
+      [130.0, -54.8],
+      [327.8, -53.2],
+    ]) {
+      const gy = 0.3;
+      // Guérite vitrée
+      addBox(buckets.white, gx - 2.1, gy + 1.18, gz, 1.7, 2.35, 1.7);
+      addBox(buckets.ochre, gx - 2.1, gy + 2.42, gz, 2.05, 0.16, 2.05);
+      addBox(buckets.steel, gx - 2.1, gy + 1.32, gz + 0.87, 1.15, 0.95, 0.05);
+      // Socle + barrière levante rouge/blanche
+      addBox(buckets.terracotta, gx - 0.85, gy + 0.52, gz, 0.36, 1.04, 0.36);
+      addBox(buckets.white, gx + 1.15, gy + 0.88, gz, 3.8, 0.09, 0.09, 0, 0, 0.06);
+      addBox(buckets.terracotta, gx + 0.45, gy + 0.86, gz, 1.2, 0.1, 0.1, 0, 0, 0.06);
+      addBox(buckets.terracotta, gx + 2.15, gy + 0.94, gz, 1.2, 0.1, 0.1, 0, 0, 0.06);
     }
   }
 

@@ -111,6 +111,13 @@ const state = {
   keysDown: new Set(),
   navVel: new THREE.Vector2(),
   isMobile: false,
+  isTablet: false,
+  isLowEndDevice: false,
+  targetPixelRatio: 1,
+  currentPixelRatio: 1,
+  fpsSampleFrames: 0,
+  fpsSampleStart: 0,
+  lastHoverPickTime: 0,
   lastActiveTime: 0,
   frameCount: 0,
   stats: { trees: 0, benches: 0 },
@@ -318,18 +325,44 @@ const labelButtons = new Map();
 const themeTargets = {};
 let groundMesh;
 
+function detectDeviceTier() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const minDim = Math.min(w, h);
+  const maxDim = Math.max(w, h);
+  const coarse = window.matchMedia("(pointer: coarse)").matches;
+  const isPhone = maxDim <= 860 && (minDim <= 520 || coarse);
+  const isTablet = !isPhone && (coarse || (w >= 600 && w <= 1180));
+  const cores = navigator.hardwareConcurrency || 4;
+  const mem = navigator.deviceMemory || 4;
+  const isLowEndDevice = cores <= 4 || mem <= 3;
+  const dpr = window.devicePixelRatio || 1;
+  const maxCap = isLowEndDevice ? 1.15 : isPhone ? 1.25 : isTablet ? 1.5 : 1.75;
+  return {
+    isMobile: isPhone || isTablet,
+    isPhone,
+    isTablet,
+    isLowEndDevice,
+    pixelRatio: Math.min(dpr, maxCap),
+  };
+}
+
 function buildScene(data, thiesMapTex) {
-  const isMobile =
-    window.innerWidth <= 768 || window.matchMedia("(pointer: coarse)").matches;
+  const tier = detectDeviceTier();
+  const isMobile = tier.isMobile;
   state.isMobile = isMobile;
+  state.isTablet = tier.isTablet;
+  state.isLowEndDevice = tier.isLowEndDevice;
+  state.targetPixelRatio = tier.pixelRatio;
+  state.currentPixelRatio = tier.pixelRatio;
   state.lastActiveTime = performance.now();
 
   renderer = new THREE.WebGLRenderer({
     canvas: dom.canvas,
-    antialias: true,
+    antialias: !tier.isLowEndDevice,
     powerPreference: isMobile ? "default" : "high-performance",
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.25 : 1.75));
+  renderer.setPixelRatio(tier.pixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.04;
@@ -393,7 +426,7 @@ function buildScene(data, thiesMapTex) {
   const hemi = new THREE.HemisphereLight(0xfffdf9, 0xe6ddd0, 1.1);
   scene.add(hemi);
 
-  const shadowSize = isMobile ? 1536 : 2048;
+  const shadowSize = state.isLowEndDevice ? 1024 : state.isTablet ? 1536 : isMobile ? 1280 : 2048;
   const sun = new THREE.DirectionalLight(0xfff9ef, 1.18);
   sun.position.set(160, 250, 130);
   sun.castShadow = true;
@@ -2213,6 +2246,9 @@ function bindEvents() {
     }
 
     if (state.isIntro || state.pointerDownPos || e.pointerType !== "mouse") return;
+    const nowPick = performance.now();
+    if (nowPick - state.lastHoverPickTime < 28) return;
+    state.lastHoverPickTime = nowPick;
     const hitId = pickMarkerAtClientXY(e.clientX, e.clientY);
     state.hoveredSpaceId = hitId;
 
@@ -2334,12 +2370,21 @@ function bindEvents() {
 
   window.addEventListener("blur", () => state.keysDown.clear());
 
-  window.addEventListener("resize", () => {
+  const onViewportChange = () => {
     if (!camera || !renderer) return;
-    camera.aspect = window.innerWidth / window.innerHeight;
+    const tier = detectDeviceTier();
+    state.isMobile = tier.isMobile;
+    state.isTablet = tier.isTablet;
+    state.targetPixelRatio = tier.pixelRatio;
+    state.currentPixelRatio = tier.pixelRatio;
+    camera.aspect = window.innerWidth / Math.max(1, window.innerHeight);
     camera.updateProjectionMatrix();
+    renderer.setPixelRatio(tier.pixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
-  });
+    state.lastActiveTime = performance.now();
+  };
+  window.addEventListener("resize", onViewportChange, { passive: true });
+  window.addEventListener("orientationchange", () => setTimeout(onViewportChange, 90), { passive: true });
 
   window.__JARDIN_3D__ = {
     getSpaceScreenPos(spaceId) {
@@ -2418,6 +2463,29 @@ function animate(now) {
   const dt = Math.min(0.05, Math.max(0.001, rawElapsed * 0.001));
   lastFrameTime = now;
   state.frameCount++;
+
+  // Adaptation dynamique de la résolution GPU (DRS) sur tous les supports pour garantir une fluidité constante
+  if (!state.fpsSampleStart) state.fpsSampleStart = now;
+  state.fpsSampleFrames++;
+  const sampleElapsed = now - state.fpsSampleStart;
+  if (sampleElapsed >= 1200 && renderer) {
+    const avgFps = (state.fpsSampleFrames * 1000) / sampleElapsed;
+    state.fpsSampleFrames = 0;
+    state.fpsSampleStart = now;
+    if (inTransition || now - state.lastActiveTime < 1500) {
+      let nextPR = state.currentPixelRatio;
+      const minPR = state.isMobile ? 0.85 : 1.0;
+      if (avgFps < 34 && state.currentPixelRatio > minPR + 0.05) {
+        nextPR = Math.max(minPR, Number((state.currentPixelRatio - 0.15).toFixed(2)));
+      } else if (avgFps > 54 && state.currentPixelRatio < state.targetPixelRatio - 0.05) {
+        nextPR = Math.min(state.targetPixelRatio, Number((state.currentPixelRatio + 0.1).toFixed(2)));
+      }
+      if (nextPR !== state.currentPixelRatio) {
+        state.currentPixelRatio = nextPR;
+        renderer.setPixelRatio(nextPR);
+      }
+    }
+  }
 
   // Vent GPU
   if (!state.reducedMotion) {
