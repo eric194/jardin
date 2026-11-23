@@ -162,9 +162,9 @@ function buildSpatialContext(
   const promptEn = [
     `Convert this exact 3D architectural model capture of "Jardin Grand Standing de Thiès" (a modern 500m × 50m flagship urban leisure park in Thiès, Senegal) into a breathtaking, ultra-realistic ${camDescEn}.`,
     "",
-    "1. ABSOLUTE GEOMETRIC & CAMERA FIDELITY (DO NOT ALTER LAYOUT):",
-    "- Keep the EXACT same camera viewpoint, framing, horizon line, proportions, and spatial position of EVERY single structure, path, basin, pavilion, playground, sport court, tree, and bench visible in the attached 3D reference capture.",
-    "- Do NOT invent extra buildings inside the park, do NOT move objects, and preserve exact spelling on any visible signage: the entrance portal sign MUST read EXACTLY 'JARDIN GRAND STANDING' (never misspelled, no subtitle).",
+    "1. STRICT FIDELITY INSIDE THE PARK vs. REALISTIC REINTERPRETATION OUTSIDE:",
+    "- INSIDE THE FENCED PARK (500m × 50m): Strictly preserve the EXACT camera viewpoint, framing, horizon line, proportions, and layout of EVERY court, basin, canopy, pavilion, playground, walkway, and tree shown in the reference capture. If the entrance sign is visible, it MUST read EXACTLY 'JARDIN GRAND STANDING' (never misspelled, no subtitle).",
+    "- OUTSIDE THE PARK FENCE (SURROUNDING CITY OF THIÈS): The plain white/beige boxes outside the park in the 3D capture are ONLY rough massing placeholders — do NOT copy their simplistic boxy look literally! Replace and richly reinterpret all exterior buildings into authentic, detailed modern Senegalese urban architecture of Thiès (multi-story residential & commercial buildings with realistic balconies, recessed windows, shutters, textured ochre/sand/terracotta/cream plaster facades, ground-floor shops, rooftop terraces, paved asphalt avenues with curbs, cars, and mature street trees).",
     "",
     `2. EXACT ELEMENTS VISIBLE IN THIS CAPTURE (camera facing ${facing}, altitude ${camPos[1]}m):`,
     ...frameInventory,
