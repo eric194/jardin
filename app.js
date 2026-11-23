@@ -900,13 +900,24 @@ function buildScene(data, thiesMapTex) {
     scene.add(col);
   }
 
-  // 6. Parking Nord : stalles (192), îlots plantés (16), cantines en conteneurs (47)
+  // 6. Parking Nord : stalles (192), îlots plantés (16), cantines en conteneurs (dédupliquées pour zéro Z-fighting)
   let cantineMat;
   if (data.parkingDetails) {
     const { stalls, cantines, medians } = data.parkingDetails;
     const cantineGeoms = [];
+    const seenCantines = new Set();
     for (const c of cantines) {
       try {
+        let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+        for (const [px, pz] of c) {
+          if (px < minX) minX = px;
+          if (px > maxX) maxX = px;
+          if (pz < minZ) minZ = pz;
+          if (pz > maxZ) maxZ = pz;
+        }
+        const key = `${minX.toFixed(1)}_${maxX.toFixed(1)}_${minZ.toFixed(1)}_${maxZ.toFixed(1)}`;
+        if (seenCantines.has(key)) continue;
+        seenCantines.add(key);
         cantineGeoms.push(extrudePoly(c, 2.75, 0.295));
       } catch (_) {}
     }
@@ -980,7 +991,7 @@ function buildScene(data, thiesMapTex) {
     const sepInst = new THREE.InstancedMesh(sepPostGeo, sepPostMat, sepPostXs.length);
     const sepDummy = new THREE.Object3D();
     sepPostXs.forEach((sx, i) => {
-      sepDummy.position.set(sx, 0.35 + 0.36, -51.85);
+      sepDummy.position.set(sx, 0.35 + 0.36, -52.18);
       sepDummy.updateMatrix();
       sepInst.setMatrixAt(i, sepDummy.matrix);
     });

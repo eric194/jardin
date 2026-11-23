@@ -1540,8 +1540,8 @@ export function buildVegetation(scene, data, textures, windUniforms) {
     }
   }
 
-  // 1b. Îlots du parking Nord
-  for (const med of data.parkingDetails?.medians || []) {
+  // 1b. Îlots du parking Nord (arbres décalés à ±5,6 m sur les îlots équipés d'une pergola centrale pour zéro collision)
+  (data.parkingDetails?.medians || []).forEach((med, mIdx) => {
     let sx = 0, sz = 0;
     for (const [x, z] of med) {
       sx += x;
@@ -1549,9 +1549,10 @@ export function buildVegetation(scene, data, textures, windUniforms) {
     }
     const cx = sx / med.length;
     const cz = sz / med.length;
-    addTreeIfClear(cx - 4.2, cz, 0.84, 0.42, 4.0);
-    addTreeIfClear(cx + 4.2, cz, 0.84, 0.42, 4.0);
-  }
+    const offset = mIdx % 2 === 1 ? 5.6 : 4.2;
+    addTreeIfClear(cx - offset, cz, 0.84, 0.42, 4.0);
+    addTreeIfClear(cx + offset, cz, 0.84, 0.42, 4.0);
+  });
 
   // 1c. Ceinture périphérique tout autour du jardin (Nord, Sud, Est, Ouest & avenues riveraines)
   for (let x = -246; x <= 246; x += 13.5) {

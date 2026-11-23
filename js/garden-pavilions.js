@@ -581,11 +581,11 @@ export function buildGardenPavilions(scene, data, obstacles = {}) {
       if (
         isClear(cx, cz, spec.r, z, {
           requireNoGreen: isPaving,
-          roofPad: 0.5,
-          archPad: 1.5,
-          walkPad: 0.85,
-          treePad: 1.05,
-          bushPad: 0.45,
+          roofPad: 0.55,
+          archPad: 1.6,
+          walkPad: 0.9,
+          treePad: 2.15,
+          bushPad: 0.75,
           benchPad: 0.95,
           planterPad: 1.2,
           selfGap: 4.8,

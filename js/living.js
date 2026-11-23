@@ -2033,9 +2033,35 @@ export function buildLightingNetwork(
       pushFacadeWindows(b.poly, yBot, yTop, 1.28, 2.7, true, lv === 0 ? doorExclude : null);
     }
   }
+  // Vitrines des cantines : façade Sud (côté parc) pour toutes ; façade arrière Nord UNIQUEMENT pour les grands restaurants (>= 7,4 m)
+  const seenCantineWins = new Set();
   for (const c of data.parkingDetails?.cantines || []) {
-    if (rng() > 0.68) continue;
-    pushFacadeWindows(c, 1.35, 2.05, 1.4, 2.2, false);
+    if (!c || c.length < 3) continue;
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const [px, pz] of c) {
+      if (px < minX) minX = px;
+      if (px > maxX) maxX = px;
+      if (pz < minZ) minZ = pz;
+      if (pz > maxZ) maxZ = pz;
+    }
+    const key = `${minX.toFixed(1)}_${maxX.toFixed(1)}_${minZ.toFixed(1)}_${maxZ.toFixed(1)}`;
+    if (seenCantineWins.has(key)) continue;
+    seenCantineWins.add(key);
+
+    const w = maxX - minX;
+    const d = maxZ - minZ;
+    const isResto = w >= 7.4 || d >= 10.0;
+    const padX = Math.min(0.65, w * 0.16);
+    const x0 = minX + padX;
+    const x1 = maxX - padX;
+    if (x1 - x0 < 1.2) continue;
+
+    // Vitrine façade Sud (côté avenue / parc)
+    pushQuad(x0, maxZ + 0.08, x1, maxZ + 0.08, 1.15, 2.15);
+    // Vitrine façade arrière Nord : uniquement sur les restaurants !
+    if (isResto) {
+      pushQuad(x1, minZ - 0.08, x0, minZ - 0.08, 1.15, 2.15);
+    }
   }
   for (const z of data.zones) {
     if (z.kind !== "building") continue;

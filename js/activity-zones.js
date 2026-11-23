@@ -737,7 +737,9 @@ export function buildActivityZones(scene, data) {
   }
 
   // =========================================================================
-  // 8. DÉCORATION DES 43 CANTINES COMMERCIALES & DU PARKING NORD (Auvents, enseignes, terrasses, pergolas & bornes)
+  // 8. DÉCORATION DES CANTINES COMMERCIALES & DU PARKING NORD
+  //    - Boutiques standard (5x5 m) : façade Sud ouverte (auvent, enseigne, comptoir) et ARRIÈRE NORD FERMÉ
+  //    - Restaurants (grands modules >= 7,4 m de large ou 12 m de long) : façade Sud + ouverture/terrasse arrière Nord
   // =========================================================================
   if (data?.parkingDetails) {
     const cantines = data.parkingDetails.cantines || [];
@@ -745,6 +747,7 @@ export function buildActivityZones(scene, data) {
     const cBaseY = 0.305;
     const cTopY = 3.045;
     const awningPalette = [buckets.terracotta, buckets.ochre, buckets.teal];
+    const seenCantines = new Set();
 
     cantines.forEach((poly, idx) => {
       if (!poly || poly.length < 3) return;
@@ -755,12 +758,17 @@ export function buildActivityZones(scene, data) {
         if (pz < minZ) minZ = pz;
         if (pz > maxZ) maxZ = pz;
       }
+      const key = `${minX.toFixed(1)}_${maxX.toFixed(1)}_${minZ.toFixed(1)}_${maxZ.toFixed(1)}`;
+      if (seenCantines.has(key)) return;
+      seenCantines.add(key);
+
       const cx = (minX + maxX) * 0.5;
       const cz = (minZ + maxZ) * 0.5;
       const w = maxX - minX;
       const d = maxZ - minZ;
       if (w < 3.2) return;
 
+      const isResto = w >= 7.4 || d >= 10.0;
       const accentBucket = awningPalette[idx % awningPalette.length];
 
       // 8a. Acrotère bois & groupe climatisation / panneau solaire en toiture de chaque cantine
@@ -769,43 +777,44 @@ export function buildActivityZones(scene, data) {
       addBox(buckets.steel, cx - w * 0.22, cTopY + 0.14, cz, Math.min(2.2, w * 0.38), 0.08, Math.min(1.6, d * 0.32), 0.12, 0, 0);
       addBox(buckets.white, cx + w * 0.25, cTopY + 0.22, cz - 0.3, 0.75, 0.42, 0.55);
 
-      // 8b. Façade Nord (côté promenade parking z = minZ ~ -51.33) : Auvent bicolore, comptoir bois & enseigne
       const spanW = Math.min(w - 0.55, 6.2);
-      addBox(accentBucket, cx, cBaseY + 2.38, minZ - 0.58, spanW, 0.09, 1.18, 0.18, 0, 0);
-      addBox(buckets.white, cx, cBaseY + 2.41, minZ - 0.58, spanW * 0.55, 0.095, 1.19, 0.18, 0, 0);
-      // Enseigne frontale en corniche Nord
-      addBox(buckets.steel, cx, cTopY - 0.22, minZ - 0.08, spanW * 0.72, 0.36, 0.1);
-      addBox(buckets.ochre, cx, cTopY - 0.22, minZ - 0.13, spanW * 0.62, 0.16, 0.04);
-      // Comptoir de service extérieur en bois + vitrine
-      addBox(buckets.wood, cx, cBaseY + 0.52, minZ - 0.24, spanW * 0.68, 0.98, 0.44);
-      addBox(buckets.white, cx, cBaseY + 1.04, minZ - 0.26, spanW * 0.72, 0.06, 0.52);
 
-      // 8c. Façade Sud (côté parc / avenue Nord z = maxZ ~ -46.33) : Auvent + terrasse café (tables, parasols & jardinières)
+      // 8b. Façade principale SUD (côté parc / avenue Nord z = maxZ ~ -46.33) : Auvent, enseigne & comptoir pour toutes les cantines
       addBox(accentBucket, cx, cBaseY + 2.38, maxZ + 0.55, spanW, 0.09, 1.12, -0.18, 0, 0);
-      // Bacs à plantes encadrant la cantine
+      addBox(buckets.white, cx, cBaseY + 2.41, maxZ + 0.55, spanW * 0.52, 0.095, 1.13, -0.18, 0, 0);
+      addBox(buckets.steel, cx, cTopY - 0.22, maxZ + 0.08, spanW * 0.72, 0.34, 0.1);
+      addBox(buckets.ochre, cx, cTopY - 0.22, maxZ + 0.13, spanW * 0.62, 0.15, 0.04);
+      // Bacs à plantes encadrant l'entrée Sud
       for (const side of [-1, 1]) {
         const px = cx + side * (w * 0.5 - 0.42);
-        addBox(buckets.wood, px, cBaseY + 0.24, minZ - 0.38, 0.62, 0.46, 0.52);
-        addSphere(buckets.teal, px, cBaseY + 0.62, minZ - 0.38, 0.32, 8);
+        addBox(buckets.wood, px, cBaseY + 0.24, maxZ + 0.36, 0.58, 0.44, 0.48);
+        addSphere(buckets.teal, px, cBaseY + 0.58, maxZ + 0.36, 0.28, 8);
       }
 
-      // 1 cantine sur 2 reçoit un mange-debout ou une table à parasol sur le parvis Sud (z = maxZ + 1.15)
-      if (idx % 2 === 0 && maxZ > -47.0) {
-        const tz = maxZ + 1.12;
-        addCyl(buckets.steel, cx, cBaseY + 0.38, tz, 0.06, 0.18, 0.74, 8);
-        addCyl(buckets.wood, cx, cBaseY + 0.76, tz, 0.56, 0.56, 0.06, 12);
-        // Parasol de terrasse
-        addCyl(buckets.steel, cx, cBaseY + 1.45, tz, 0.035, 0.04, 2.15, 8);
-        const umb = new THREE.ConeGeometry(1.18, 0.48, 8);
-        umb.translate(cx, cBaseY + 2.48, tz);
-        accentBucket.push(umb);
-        for (const sx of [-0.68, 0.68]) {
-          addCyl(buckets.steel, cx + sx, cBaseY + 0.24, tz, 0.16, 0.18, 0.46, 8);
+      // 8c. Façade ARRIÈRE NORD (côté parking z = minZ ~ -51.33) :
+      //     STRICTEMENT RÉSERVÉE AUX RESTAURANTS (isResto) ; les boutiques standard ont le dos fermé et plein !
+      if (isResto) {
+        addBox(accentBucket, cx, cBaseY + 2.38, minZ - 0.58, spanW, 0.09, 1.16, 0.18, 0, 0);
+        addBox(buckets.white, cx, cBaseY + 2.41, minZ - 0.58, spanW * 0.52, 0.095, 1.17, 0.18, 0, 0);
+        addBox(buckets.steel, cx, cTopY - 0.22, minZ - 0.08, spanW * 0.72, 0.34, 0.1);
+        addBox(buckets.ochre, cx, cTopY - 0.22, minZ - 0.13, spanW * 0.62, 0.15, 0.04);
+        // Comptoir de service extérieur en bois côté parking pour les restos
+        addBox(buckets.wood, cx, cBaseY + 0.52, minZ - 0.24, spanW * 0.68, 0.98, 0.44);
+        addBox(buckets.white, cx, cBaseY + 1.04, minZ - 0.26, spanW * 0.72, 0.06, 0.52);
+
+        // Terrasse café avec table et tabourets sous l'auvent côté avenue Sud pour les restaurants (dégagée des arbres d'avenue)
+        if (maxZ > -47.0) {
+          const tz = maxZ + 1.02;
+          addCyl(buckets.steel, cx, cBaseY + 0.38, tz, 0.06, 0.18, 0.74, 8);
+          addCyl(buckets.wood, cx, cBaseY + 0.76, tz, 0.56, 0.56, 0.06, 12);
+          for (const sx of [-0.72, 0.72]) {
+            addCyl(buckets.steel, cx + sx, cBaseY + 0.24, tz, 0.16, 0.18, 0.46, 8);
+          }
         }
       }
     });
 
-    // 8d. Aménagement du Parking Nord : pergolas d'ombrage photovoltaïques, bornes de recharge VE, guérite d'accès & portiques
+    // 8d. Aménagement du Parking Nord : pergolas d'ombrage photovoltaïques (dégagées des arbres), bornes de recharge VE, guérites d'accès
     medians.forEach((med, mIdx) => {
       if (!med || med.length < 3) return;
       let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
@@ -819,21 +828,21 @@ export function buildActivityZones(scene, data) {
       const mz = (minZ + maxZ) * 0.5;
       const mBaseY = 0.44;
 
-      // Bornes de recharge électrique / horodateurs et arceaux aux extrémités des îlots plantés
+      // Bornes de recharge électrique / horodateurs aux extrémités des îlots plantés
       for (const side of [-1, 1]) {
-        const ex = side < 0 ? minX + 1.1 : maxX - 1.1;
+        const ex = side < 0 ? minX + 0.85 : maxX - 0.85;
         addBox(buckets.steel, ex, mBaseY + 0.58, mz, 0.36, 1.15, 0.26);
         addBox(mIdx % 2 === 0 ? buckets.teal : buckets.ochre, ex, mBaseY + 0.86, mz, 0.26, 0.34, 0.3);
       }
 
-      // Pergola bois/solaire d'ombrage piéton sur un îlot sur deux
+      // Pergola bois/solaire centrée sur un îlot sur deux (largeur 6.4 m, arbres décalés à ±5.8 m -> zéro collision)
       if (mIdx % 2 === 1) {
-        const pw = Math.min(8.4, (maxX - minX) * 0.58);
+        const pw = Math.min(6.4, (maxX - minX) * 0.46);
         for (const px of [-pw * 0.42, pw * 0.42]) {
           addCyl(buckets.steel, mx + px, mBaseY + 1.35, mz, 0.08, 0.1, 2.7, 8);
         }
-        addBox(buckets.wood, mx, mBaseY + 2.72, mz, pw + 0.6, 0.12, 1.55);
-        addBox(buckets.teal, mx, mBaseY + 2.8, mz, pw, 0.05, 1.25);
+        addBox(buckets.wood, mx, mBaseY + 2.72, mz, pw + 0.5, 0.12, 1.48);
+        addBox(buckets.teal, mx, mBaseY + 2.8, mz, pw, 0.05, 1.18);
       }
     });
 
