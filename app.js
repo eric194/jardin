@@ -2877,30 +2877,35 @@ async function init() {
           g.visible = false;
         });
 
-        if (twoPointEye && controls) {
-          // Vue personne normale (hauteur d'yeux ~1,70 m au-dessus du sol du parc +0,35 m = 2,05 m)
-          // avec perspective architecturale stricte à 2 points de fuite (horizon plat, verticales 100 % parallèles)
-          const tx = controls.target.x;
-          const tz = controls.target.z;
-          let dx = prevPos.x - tx;
-          let dz = prevPos.z - tz;
-          let dist = Math.hypot(dx, dz);
-          if (dist < 1.5) {
-            dx = 0;
-            dz = 22;
-            dist = 22;
+        if (twoPointEye) {
+          // Conserver EXACTEMENT la position (x, z) et la direction horizontale de regard de l'utilisateur !
+          // On abaisse uniquement la hauteur à 1,70 m au-dessus du sol (y = 2,05 m) et on redresse le regard à 0° (2 points de fuite stricts).
+          const fwd = new THREE.Vector3();
+          camera.getWorldDirection(fwd);
+          fwd.y = 0;
+          if (fwd.lengthSq() < 1e-5) {
+            fwd.set(0, 0, -1);
+          } else {
+            fwd.normalize();
           }
-          // Distance humaine réaliste (entre 14 m et 36 m du sujet visé) pour un cadrage grand-angle 28 mm
-          const clampedDist = THREE.MathUtils.clamp(dist, 14, 38);
-          const nx = dx / dist;
-          const nz = dz / dist;
-          camera.position.set(tx + nx * clampedDist, eyeHeight, tz + nz * clampedDist);
+
+          let camX = prevPos.x;
+          let camZ = prevPos.z;
+          // Si l'utilisateur était très haut en vue drone/aérienne (> 18 m), on se rapproche légèrement sur l'axe de vue
+          if (prevPos.y > 18 && controls) {
+            const dx = prevPos.x - controls.target.x;
+            const dz = prevPos.z - controls.target.z;
+            const d = Math.hypot(dx, dz) || 1;
+            const targetDist = Math.min(d, 38);
+            camX = controls.target.x + (dx / d) * targetDist;
+            camZ = controls.target.z + (dz / d) * targetDist;
+          }
+
+          camera.position.set(camX, eyeHeight, camZ);
           camera.near = 0.25;
-          camera.fov = 46;
           camera.updateProjectionMatrix();
           camera.up.set(0, 1, 0);
-          // Viser à la même hauteur exacte (eyeHeight) -> tangage 0° -> 2 points de fuite parfaits !
-          camera.lookAt(tx, eyeHeight, tz);
+          camera.lookAt(camX + fwd.x * 20, eyeHeight, camZ + fwd.z * 20);
         }
 
         renderer.render(scene, camera);
@@ -2927,35 +2932,46 @@ async function init() {
       },
       applyEyeLevelView() {
         if (!camera || !controls) return;
-        const tx = controls.target.x;
-        const tz = controls.target.z;
-        let dx = camera.position.x - tx;
-        let dz = camera.position.z - tz;
-        let dist = Math.hypot(dx, dz);
-        if (dist < 1.5) {
-          dx = 0;
-          dz = 24;
-          dist = 24;
-        }
-        const clampedDist = THREE.MathUtils.clamp(dist, 14, 34);
+        const fwd = new THREE.Vector3();
+        camera.getWorldDirection(fwd);
+        fwd.y = 0;
+        if (fwd.lengthSq() < 1e-5) fwd.set(0, 0, -1);
+        else fwd.normalize();
+
         const eyeY = 2.05;
         state.fly = null;
         stopAutoFly(false);
         stopWalkTour(true);
-        camera.position.set(tx + (dx / dist) * clampedDist, eyeY, tz + (dz / dist) * clampedDist);
-        controls.target.set(tx, eyeY, tz);
+        camera.position.y = eyeY;
+        controls.target.set(
+          camera.position.x + fwd.x * 16,
+          eyeY,
+          camera.position.z + fwd.z * 16
+        );
         camera.near = 0.25;
         camera.updateProjectionMatrix();
         controls.update();
       },
       getViewSnapshot(twoPointEye = false) {
+        let focusX = controls ? controls.target.x : 0;
+        let focusZ = controls ? controls.target.z : 0;
+        if (camera && twoPointEye) {
+          const fwd = new THREE.Vector3();
+          camera.getWorldDirection(fwd);
+          fwd.y = 0;
+          if (fwd.lengthSq() > 1e-5) {
+            fwd.normalize();
+            focusX = camera.position.x + fwd.x * 18;
+            focusZ = camera.position.z + fwd.z * 18;
+          }
+        }
         return {
           camPos: twoPointEye
             ? [camera ? camera.position.x : 0, 2.05, camera ? camera.position.z : 24]
             : camera
             ? camera.position.toArray()
             : [0, 30, 50],
-          targetPos: controls ? [controls.target.x, controls.target.z] : [0, 0],
+          targetPos: [focusX, focusZ],
           hour: state.timeOfDay,
           spaces: state.data?.spaces || [],
           twoPointEye,
