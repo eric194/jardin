@@ -35,6 +35,7 @@ import { buildActivityZones } from "./js/activity-zones.js";
 import { createDossierController } from "./js/dossier.js";
 import { createParkAudioController } from "./js/audio.js";
 import { renderSpaceHeroSvg, renderActivityCardsHtml } from "./js/activity-cards.js";
+import { createAiStudioController } from "./js/ai-studio.js";
 
 function getOverviewCam() {
   const aspect = window.innerWidth / Math.max(1, window.innerHeight);
@@ -142,6 +143,7 @@ function cacheDom() {
   dom.btnIntroNight = document.getElementById("btn-intro-night");
   dom.header = document.getElementById("site-header");
   dom.btnDevis = document.getElementById("btn-devis");
+  dom.btnAiCapture = document.getElementById("btn-ai-capture");
   dom.btnAudio = document.getElementById("btn-audio");
   dom.timeControl = document.getElementById("time-control");
   dom.btnTimePreset = document.getElementById("btn-time-preset");
@@ -316,6 +318,7 @@ let atmosphereCtrl;
 let contextCtrl;
 let dossierCtrl;
 let audioCtrl;
+let aiStudioCtrl;
 
 const raycaster = new THREE.Raycaster();
 const markerGroups = [];
@@ -2124,6 +2127,14 @@ function bindEvents() {
     closeMenu();
     dossierCtrl?.openDevis();
   });
+  dom.btnAiCapture?.addEventListener("click", () => {
+    state.hoveredSpaceId = null;
+    stopAutoFly(false);
+    stopWalkTour(true);
+    closeNavGuide();
+    closeMenu();
+    aiStudioCtrl?.open();
+  });
   dom.btnMenuDevis?.addEventListener("click", () => {
     state.hoveredSpaceId = null;
     closeNavGuide();
@@ -2300,7 +2311,9 @@ function bindEvents() {
   document.addEventListener("keydown", (e) => {
     const inInput = e.target?.tagName === "INPUT" || e.target?.tagName === "TEXTAREA";
     if (e.key === "Escape") {
-      if (state.walkTour) {
+      if (aiStudioCtrl?.isOpen()) {
+        aiStudioCtrl.close();
+      } else if (state.walkTour) {
         stopWalkTour(true);
       } else if (state.autoFly) {
         stopAutoFly(false);
@@ -2325,6 +2338,11 @@ function bindEvents() {
 
     if (e.key === "m" || e.key === "M") {
       audioCtrl?.toggle();
+      return;
+    }
+
+    if ((e.key === "c" || e.key === "C") && !state.isIntro && !dossierCtrl?.isOpen()) {
+      aiStudioCtrl?.open();
       return;
     }
 
@@ -2400,6 +2418,12 @@ function bindEvents() {
     },
     getSpaceCount: () => state.data?.spaces.length || 0,
     setNightMode,
+    setMarkersVisible(vis) {
+      state.hideMarkers = !vis;
+      markerGroups.forEach((g) => {
+        g.visible = vis;
+      });
+    },
     skipSatelliteIntro() {
       const introCam = getIntroCam();
       camera.position.set(...introCam.pos);
@@ -2734,7 +2758,7 @@ function animate(now) {
 
     const curOp = g.userData.curOp + (targetOp - g.userData.curOp) * smoothK;
     g.userData.curOp = curOp;
-    g.visible = camY < 600 && curOp > 0.04;
+    g.visible = !state.hideMarkers && camY < 600 && curOp > 0.04;
 
     if (g.visible) {
       g.userData.discMat.opacity = curOp;
@@ -2838,6 +2862,35 @@ async function init() {
       onShowSpaceIn3D: (id) => selectSpace(id),
     });
     dossierCtrl.preload().catch(() => {});
+    aiStudioCtrl = createAiStudioController({
+      captureClean3D() {
+        if (!renderer || !scene || !camera) return null;
+        const prevVis = markerGroups.map((g) => g.visible);
+        markerGroups.forEach((g) => {
+          g.visible = false;
+        });
+        renderer.render(scene, camera);
+        let dataUrl = null;
+        try {
+          dataUrl = renderer.domElement.toDataURL("image/png");
+        } catch (_) {
+          dataUrl = null;
+        }
+        markerGroups.forEach((g, i) => {
+          g.visible = prevVis[i];
+        });
+        renderer.render(scene, camera);
+        return dataUrl;
+      },
+      getViewSnapshot() {
+        return {
+          camPos: camera ? camera.position.toArray() : [0, 30, 50],
+          targetPos: controls ? [controls.target.x, controls.target.z] : [0, 0],
+          hour: state.timeOfDay,
+          spaces: state.data?.spaces || [],
+        };
+      },
+    });
     bindEvents();
 
     const applyHashRoute = () => {

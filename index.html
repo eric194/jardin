@@ -79,6 +79,15 @@
         <span>Devis</span>
       </button>
 
+      <button type="button" id="btn-ai-capture" class="devis-nav-btn ai-capture-btn" aria-label="Capture 3D vers Rendu IA ultra-réaliste (Nano Banana 2 / Pro)" title="Capture IA ultra-réaliste (C)">
+        <svg width="15" height="15" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <rect x="2.2" y="4.6" width="13.6" height="9.8" rx="2.1" stroke="currentColor" stroke-width="1.35"/>
+          <circle cx="9" cy="9.5" r="2.6" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M6.2 4.6 7.2 3h3.6l1 1.6" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+        </svg>
+        <span>Capture IA</span>
+      </button>
+
       <button type="button" id="btn-audio" class="icon-btn" aria-label="Activer l'ambiance sonore du parc" aria-pressed="false" title="Son du parc (M)">
         <svg class="icon-sound-off" width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
           <path d="M3.2 7.2h2.6l3.4-2.8v9.2L5.8 10.8H3.2V7.2Z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>
@@ -354,6 +363,9 @@
 
   <!-- Vue complète de consultation du devis -->
   <div id="devis-modal" class="dossier-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Consultation du devis estimatif et quantitatif"></div>
+
+  <!-- Studio Capture IA (Nano Banana 2 / Nano Banana Pro) -->
+  <div id="ai-studio-modal" class="ai-studio-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Studio Capture IA ultra-réaliste"></div>
 
   <!-- Minimap interactive du parc linéaire (500 m) -->
   <div id="park-minimap" class="park-minimap" aria-hidden="true" title="Cliquer pour déplacer la vue dans le parc">
