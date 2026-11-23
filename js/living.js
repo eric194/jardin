@@ -866,6 +866,38 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     return !forbiddenZones.some((fz) => isNearZone2D([x, z], fz, margin));
   };
 
+  // Deux allées diagonales (NO et NE) longeant le Bassin Central réservées aux arches lumineuses torsadées
+  const ARCH_CORRIDORS = [
+    {
+      ox: -10.16 - Math.SQRT1_2 * 2.15,
+      oz: -11.98 - Math.SQRT1_2 * 2.15,
+      dx: -Math.SQRT1_2,
+      dz: Math.SQRT1_2,
+      nx: -Math.SQRT1_2,
+      nz: -Math.SQRT1_2,
+    },
+    {
+      ox: 10.17 + Math.SQRT1_2 * 2.15,
+      oz: -11.98 - Math.SQRT1_2 * 2.15,
+      dx: Math.SQRT1_2,
+      dz: Math.SQRT1_2,
+      nx: Math.SQRT1_2,
+      nz: -Math.SQRT1_2,
+    },
+  ];
+  const isInArchCorridor = (x, z, pad = 2.55) =>
+    ARCH_CORRIDORS.some(
+      (c) =>
+        distToSegment2D(
+          x,
+          z,
+          c.ox + c.dx * 0.6,
+          c.oz + c.dz * 0.6,
+          c.ox + c.dx * 17.0,
+          c.oz + c.dz * 17.0
+        ) < pad
+    );
+
   // Registres d'espacement unifiés pour éviter toute redondance ou superposition visuelle
   const placedTallPoles = [];
   const placedBollards = [];
@@ -912,6 +944,7 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
 
   // 3. Lampadaires d'allées de parc & parking (espacés et décalés en quinconce par rapport aux avenues)
   const addParkPole = (x, z, h, rot, checkZones = true, minSep = 13.5) => {
+    if (isInArchCorridor(x, z)) return;
     if (checkZones && !isClearOfPoolsAndCourts(x, z, 1.8)) return;
     if (nearAny(placedTallPoles, x, z, minSep)) return;
     parkPoles.push([x, z, h, rot]);
@@ -941,6 +974,7 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
 
   // 4. Petits postes / bornes architecturales de jardin & abords des pelouses
   const addBollard = (x, z, checkZones = true, minPoleDist = 6.5, minBollardDist = 8.5) => {
+    if (isInArchCorridor(x, z)) return;
     if (checkZones && !isClearOfPoolsAndCourts(x, z, 1.1)) return;
     if (nearAny(placedTallPoles, x, z, minPoleDist)) return;
     if (nearAny(placedBollards, x, z, minBollardDist)) return;
@@ -1026,6 +1060,7 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
   const spotRng = makeSeeded(91426);
   const groundSpots = []; // [x, z, yBase]
   const addGroundSpot = (x, z, gy = 0.455, minSpotSep = 6.0) => {
+    if (isInArchCorridor(x, z)) return false;
     if (groundSpots.some(([sx, sz]) => Math.hypot(sx - x, sz - z) < minSpotSep)) return false;
     if (nearAny(placedBollards, x, z, 3.4)) return false;
     if (nearAny(placedTallPoles, x, z, 4.0)) return false;
@@ -1236,6 +1271,194 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
       lampHeads.push({ mesh: gsHead, idx, x, y: hy, z, rot: 0, delay, isDim: false });
     });
     scene.add(gsFrame, gsHead);
+  }
+
+  // 1c. Portiques sculpturaux lumineux en torsion géométrique (exclusivement sur les 2 allées NO & NE du Bassin Central)
+  const archDayLedCol = new THREE.Color(0xede6da);
+  const archDarkLedCol = new THREE.Color(0x555c69);
+  const archLitLedCol = new THREE.Color(0xfff4d4);
+  const archLedEntries = []; // { mat, delay }
+  {
+    const buildArchPolyline = (deg) => {
+      const rx = 1.9;
+      const ry = 1.92;
+      const cy = 2.12;
+      const halfW = 1.56;
+      const th = (deg * Math.PI) / 180;
+      const raw = [0, 1, 2, 3].map((j) => {
+        const a = ((j * 90 + 45) * Math.PI) / 180 + th;
+        return { u: rx * Math.cos(a), y: cy + ry * Math.sin(a) };
+      });
+      const upper = raw
+        .filter((p) => p.y >= 1.45)
+        .sort((a, b) => Math.atan2(b.y, b.u) - Math.atan2(a.y, a.u));
+      return [[-halfW, 0], ...upper.map((p) => [p.u, p.y]), [halfW, 0]];
+    };
+
+    const computeMiterOffsets = (pts, halfT) => {
+      const m = pts.length - 1;
+      const segs = [];
+      for (let i = 0; i < m; i++) {
+        const du = pts[i + 1][0] - pts[i][0];
+        const dy = pts[i + 1][1] - pts[i][1];
+        const len = Math.hypot(du, dy) || 1;
+        const tx = du / len;
+        const ty = dy / len;
+        segs.push({ tx, ty, ox: -ty, oy: tx });
+      }
+      const outer = new Array(pts.length);
+      const inner = new Array(pts.length);
+      const ty0 = Math.max(0.4, Math.abs(segs[0].ty)) * Math.sign(segs[0].ty || 1);
+      outer[0] = [pts[0][0] - halfT / ty0, 0];
+      inner[0] = [pts[0][0] + halfT / ty0, 0];
+      const tyL = Math.max(0.4, Math.abs(segs[m - 1].ty)) * Math.sign(segs[m - 1].ty || -1);
+      outer[m] = [pts[m][0] - halfT / tyL, 0];
+      inner[m] = [pts[m][0] + halfT / tyL, 0];
+      for (let i = 1; i < m; i++) {
+        const bx = segs[i - 1].ox + segs[i].ox;
+        const by = segs[i - 1].oy + segs[i].oy;
+        const bl = Math.hypot(bx, by) || 1;
+        const ux = bx / bl;
+        const uy = by / bl;
+        const denom = Math.max(0.45, ux * segs[i - 1].ox + uy * segs[i - 1].oy);
+        outer[i] = [pts[i][0] + ux * (halfT / denom), pts[i][1] + uy * (halfT / denom)];
+        inner[i] = [pts[i][0] - ux * (halfT / denom), pts[i][1] - uy * (halfT / denom)];
+      }
+      return { outer, inner, segs };
+    };
+
+    const pushQuadWorld = (arr, a, b, c, d, flip) => {
+      if (flip) {
+        arr.push(
+          a[0], a[1], a[2], c[0], c[1], c[2], b[0], b[1], b[2],
+          a[0], a[1], a[2], d[0], d[1], d[2], c[0], c[1], c[2]
+        );
+      } else {
+        arr.push(
+          a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2],
+          a[0], a[1], a[2], c[0], c[1], c[2], d[0], d[1], d[2]
+        );
+      }
+    };
+
+    const halfT = 0.13;
+    const halfDepth = 0.13;
+    const baseY = 0.35;
+    const archFramePos = [];
+    const ledPosByIndex = Array.from({ length: 8 }, () => []);
+
+    for (const cor of ARCH_CORRIDORS) {
+      const flip = cor.nx * cor.dz - cor.nz * cor.dx < 0;
+      for (let k = 0; k < 8; k++) {
+        const s = 1.25 + k * 2.1;
+        const deg = -22 + k * 10;
+        const cx = cor.ox + cor.dx * s;
+        const cz = cor.oz + cor.dz * s;
+        const toW = (u, y, w) => [
+          cx + cor.nx * u + cor.dx * w,
+          baseY + y,
+          cz + cor.nz * u + cor.dz * w,
+        ];
+
+        const pts = buildArchPolyline(deg);
+        const { outer, inner, segs } = computeMiterOffsets(pts, halfT);
+        const m = pts.length - 1;
+        const ledArr = ledPosByIndex[k];
+        const revealStripFrac = 0.042 / (2 * halfT);
+
+        for (let i = 0; i < m; i++) {
+          const iF0 = toW(inner[i][0], inner[i][1], halfDepth);
+          const iF1 = toW(inner[i + 1][0], inner[i + 1][1], halfDepth);
+          const oF1 = toW(outer[i + 1][0], outer[i + 1][1], halfDepth);
+          const oF0 = toW(outer[i][0], outer[i][1], halfDepth);
+
+          const iB0 = toW(inner[i][0], inner[i][1], -halfDepth);
+          const iB1 = toW(inner[i + 1][0], inner[i + 1][1], -halfDepth);
+          const oB1 = toW(outer[i + 1][0], outer[i + 1][1], -halfDepth);
+          const oB0 = toW(outer[i][0], outer[i][1], -halfDepth);
+
+          // Caisson acier anthracite : faces avant/arrière, extrados et intrados
+          pushQuadWorld(archFramePos, iF0, iF1, oF1, oF0, flip);
+          pushQuadWorld(archFramePos, oB0, oB1, iB1, iB0, flip);
+          pushQuadWorld(archFramePos, oF0, oF1, oB1, oB0, flip);
+          pushQuadWorld(archFramePos, iB0, iB1, iF1, iF0, flip);
+
+          // Bandeau LED continu encastré en intrados (orienté vers le passage intérieur)
+          const inNx = -segs[i].ox;
+          const inNy = -segs[i].oy;
+          const suf = 0.008;
+          const lSuf0F = toW(inner[i][0] + inNx * suf, inner[i][1] + inNy * suf, 0.048);
+          const lSuf1F = toW(inner[i + 1][0] + inNx * suf, inner[i + 1][1] + inNy * suf, 0.048);
+          const lSuf0B = toW(inner[i][0] + inNx * suf, inner[i][1] + inNy * suf, -0.048);
+          const lSuf1B = toW(inner[i + 1][0] + inNx * suf, inner[i + 1][1] + inNy * suf, -0.048);
+          pushQuadWorld(ledArr, lSuf0B, lSuf1B, lSuf1F, lSuf0F, flip);
+
+          // Liserés LED lumineux sur les arêtes internes avant et arrière (visibles en perspective & vue aérienne)
+          const r0u = inner[i][0] + (outer[i][0] - inner[i][0]) * revealStripFrac;
+          const r0y = inner[i][1] + (outer[i][1] - inner[i][1]) * revealStripFrac;
+          const r1u = inner[i + 1][0] + (outer[i + 1][0] - inner[i + 1][0]) * revealStripFrac;
+          const r1y = inner[i + 1][1] + (outer[i + 1][1] - inner[i + 1][1]) * revealStripFrac;
+
+          pushQuadWorld(
+            ledArr,
+            toW(inner[i][0], inner[i][1], halfDepth + 0.004),
+            toW(inner[i + 1][0], inner[i + 1][1], halfDepth + 0.004),
+            toW(r1u, r1y, halfDepth + 0.004),
+            toW(r0u, r0y, halfDepth + 0.004),
+            flip
+          );
+          pushQuadWorld(
+            ledArr,
+            toW(r0u, r0y, -halfDepth - 0.004),
+            toW(r1u, r1y, -halfDepth - 0.004),
+            toW(inner[i + 1][0], inner[i + 1][1], -halfDepth - 0.004),
+            toW(inner[i][0], inner[i][1], -halfDepth - 0.004),
+            flip
+          );
+        }
+
+        const delay = calcWaveDelay(cx, cz, 0.02 + k * 0.022);
+        lightPools.push({ x: cx, y: 0.372, z: cz, size: 5.8, delay });
+        for (const uFoot of [-1.48, 1.48]) {
+          lightPools.push({
+            x: cx + cor.nx * uFoot,
+            y: 0.372,
+            z: cz + cor.nz * uFoot,
+            size: 2.8,
+            delay,
+          });
+        }
+      }
+    }
+
+    if (archFramePos.length) {
+      const archFrameGeo = new THREE.BufferGeometry();
+      archFrameGeo.setAttribute("position", new THREE.Float32BufferAttribute(archFramePos, 3));
+      archFrameGeo.computeVertexNormals();
+      const archFrameMat = new THREE.MeshStandardMaterial({
+        color: 0x262a31,
+        roughness: 0.46,
+        metalness: 0.36,
+      });
+      const archFrameMesh = new THREE.Mesh(archFrameGeo, archFrameMat);
+      archFrameMesh.castShadow = true;
+      archFrameMesh.receiveShadow = true;
+      scene.add(archFrameMesh);
+    }
+
+    ledPosByIndex.forEach((posArr, k) => {
+      if (!posArr.length) return;
+      const ledGeo = new THREE.BufferGeometry();
+      ledGeo.setAttribute("position", new THREE.Float32BufferAttribute(posArr, 3));
+      ledGeo.computeVertexNormals();
+      const mat = new THREE.MeshBasicMaterial({ color: archDayLedCol.clone() });
+      const mesh = new THREE.Mesh(ledGeo, mat);
+      scene.add(mesh);
+      archLedEntries.push({
+        mat,
+        delay: calcWaveDelay(16, -9, 0.02 + k * 0.022),
+      });
+    });
   }
 
   // 2. Lampadaires d'allées de parc & parking (socle mouluré + mât fuselé + crosse galbée + abat-jour disque + globe chaud)
@@ -1784,6 +2007,16 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
 
       poolMat.opacity = isNightActive ? Math.min(1, f * 1.35) * 0.62 * pulse : 0;
       dimPoolMat.opacity = isNightActive ? Math.min(1, f * 1.25) * 0.22 * pulse : 0;
+
+      // Allumage progressif des arches LED torsadées du bassin central
+      for (let i = 0; i < archLedEntries.length; i++) {
+        const entry = archLedEntries[i];
+        const span = Math.max(0.24, 1 - entry.delay);
+        const lf = THREE.MathUtils.clamp((f - entry.delay) / span, 0, 1);
+        const sCurve = lf * lf * (3 - 2 * lf);
+        entry.mat.color.lerpColors(archDayLedCol, archDarkLedCol, Math.min(1, f * 1.35));
+        entry.mat.color.lerp(archLitLedCol, sCurve);
+      }
 
       // Allumage progressif des portes et fenêtres des bâtiments
       const winF = THREE.MathUtils.smoothstep(f, 0.15, 0.96);
