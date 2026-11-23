@@ -760,6 +760,7 @@ export function buildWaterAndFountains(scene, data, textures, extrudePoly, merge
           pos: z.centroid,
           isMain: nu.includes("BASSIN"),
           area: z.area,
+          poly: z.poly,
         });
       }
     } catch (_) {}
@@ -882,6 +883,7 @@ export function buildWaterAndFountains(scene, data, textures, extrudePoly, merge
   const rings = [];
   const nozzles = [];
   const underGlows = [...poolGlows];
+  const twinArcBasins = [];
   const ringGeo = new THREE.RingGeometry(0.45, 0.7, 24);
   ringGeo.rotateX(-Math.PI / 2);
   const ringMat = new THREE.MeshBasicMaterial({
@@ -944,8 +946,11 @@ export function buildWaterAndFountains(scene, data, textures, extrudePoly, merge
       rMesh.userData = { phase: fIdx * 0.3, maxScale: 4.2 };
       scene.add(rMesh);
       rings.push(rMesh);
+    } else if (f.area > 15 && f.poly && f.poly.length >= 12) {
+      // Deux bassins courbes jumelés au Sud du Bassin Central : réservés aux jets laminaires en arche lumineuse
+      twinArcBasins.push(f);
     } else if (f.area > 15) {
-      // Fontaines cintrées amphithéâtre : rampe chorégraphiée de 5 jets
+      // Fontaines cintrées amphithéâtre : rampe chorégraphiée de 5 jets (repli)
       [-5.6, -2.8, 0, 2.8, 5.6].forEach((ox, idx) => {
         jetSpecs.push({
           ox,
@@ -997,6 +1002,209 @@ export function buildWaterAndFountains(scene, data, textures, extrudePoly, merge
       }
     }
   });
+
+  // Jets d'eau laminaires en arche lumineuse reliant les deux bassins courbes jumelés
+  let laminarTex = null;
+  let laminarCoreMat = null;
+  let laminarAuraMat = null;
+  let laminarBloomMat = null;
+  let laminarBloomMesh = null;
+  let laminarGlowInst = null;
+  let laminarGlowMat = null;
+  if (twinArcBasins.length === 2) {
+    twinArcBasins.sort((a, b) => a.pos[1] - b.pos[1]);
+    const midCurve = (poly) => {
+      const pts = [];
+      for (let j = 0; j < 6; j++) {
+        const a = poly[6 - j];
+        const b = poly[(7 + j) % 12];
+        pts.push([(a[0] + b[0]) * 0.5, (a[1] + b[1]) * 0.5]);
+      }
+      return pts;
+    };
+    const sampleCurve = (pts, u) => {
+      const segLens = [0];
+      for (let i = 0; i < pts.length - 1; i++) {
+        segLens.push(segLens[i] + Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]));
+      }
+      const target = u * segLens[segLens.length - 1];
+      for (let i = 0; i < pts.length - 1; i++) {
+        if (target <= segLens[i + 1] || i === pts.length - 2) {
+          const t = (target - segLens[i]) / (segLens[i + 1] - segLens[i] || 1);
+          return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t];
+        }
+      }
+      return pts[0];
+    };
+
+    const curveN = midCurve(twinArcBasins[0].poly);
+    const curveS = midCurve(twinArcBasins[1].poly);
+    const coreGeoms = [];
+    const auraGeoms = [];
+    const bloomGeoms = [];
+    const laminarNozzles = []; // [x, z, ux, uz]
+    const laminarGlows = [];   // [x, y, z, size]
+    const arcCount = 12;
+    const tubSegs = isMobile ? 20 : 28;
+
+    for (let k = 0; k < arcCount; k++) {
+      const u = 0.04 + (k / (arcCount - 1)) * 0.92;
+      const a = sampleCurve(curveN, u);
+      const b = sampleCurve(curveS, u);
+      const [p0, p2] = k % 2 === 0 ? [a, b] : [b, a];
+      const y0 = 0.45;
+      const arcH = 2.25;
+      const curve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(p0[0], y0, p0[1]),
+        new THREE.Vector3((p0[0] + p2[0]) * 0.5, y0 + 2 * arcH, (p0[1] + p2[1]) * 0.5),
+        new THREE.Vector3(p2[0], y0, p2[1])
+      );
+
+      coreGeoms.push(new THREE.TubeGeometry(curve, tubSegs, 0.038, 7, false));
+      auraGeoms.push(new THREE.TubeGeometry(curve, tubSegs, 0.095, 7, false));
+      bloomGeoms.push(new THREE.TubeGeometry(curve, tubSegs, 0.185, 7, false));
+
+      const dx = p2[0] - p0[0];
+      const dz = p2[1] - p0[1];
+      const len = Math.hypot(dx, dz) || 1;
+      laminarNozzles.push([p0[0], p0[1], dx / len, dz / len]);
+      laminarNozzles.push([p2[0], p2[1], -dx / len, -dz / len]);
+
+      // Ondes concentriques serrées & éclaboussures à l'impact du jet dans le bassin receveur
+      const lRing = new THREE.Mesh(ringGeo, ringMat.clone());
+      lRing.position.set(p2[0], 0.492, p2[1]);
+      lRing.userData = { phase: k * 0.14, maxScale: 1.05 };
+      scene.add(lRing);
+      rings.push(lRing);
+
+      const splashCount = isMobile ? 3 : 5;
+      for (let i = 0; i < splashCount; i++) {
+        const ang = (i / splashCount) * Math.PI * 2 + k * 0.5;
+        droplets.push({
+          bx: p2[0],
+          bz: p2[1],
+          h: 0.24,
+          vx: Math.cos(ang) * 0.22,
+          vz: Math.sin(ang) * 0.22,
+          phase: i / splashCount + k * 0.09,
+          choreoPhase: k * 0.4,
+          speed: 1.15 + (i % 3) * 0.15,
+        });
+      }
+
+      laminarGlows.push([p0[0], 0.488, p0[1], 2.6]);
+      laminarGlows.push([p2[0], 0.488, p2[1], 2.6]);
+      laminarGlows.push([(p0[0] + p2[0]) * 0.5, 0.372, (p0[1] + p2[1]) * 0.5, 3.2]);
+    }
+
+    // Texture d'écoulement laminaire animée le long du tube
+    const ltCanvas = document.createElement("canvas");
+    ltCanvas.width = 256;
+    ltCanvas.height = 16;
+    const ltCtx = ltCanvas.getContext("2d");
+    const ltGrad = ltCtx.createLinearGradient(0, 0, 256, 0);
+    ltGrad.addColorStop(0.0, "#7deeff");
+    ltGrad.addColorStop(0.22, "#e8ffff");
+    ltGrad.addColorStop(0.45, "#a6f6ff");
+    ltGrad.addColorStop(0.7, "#ffffff");
+    ltGrad.addColorStop(1.0, "#7deeff");
+    ltCtx.fillStyle = ltGrad;
+    ltCtx.fillRect(0, 0, 256, 16);
+    laminarTex = new THREE.CanvasTexture(ltCanvas);
+    laminarTex.wrapS = THREE.RepeatWrapping;
+    laminarTex.wrapT = THREE.ClampToEdgeWrapping;
+    laminarTex.repeat.set(2.5, 1);
+
+    const mergedCore = mergeGeometries(coreGeoms);
+    if (mergedCore) {
+      laminarCoreMat = new THREE.MeshBasicMaterial({
+        map: laminarTex,
+        color: 0xc8f0ff,
+        transparent: true,
+        opacity: 0.85,
+      });
+      const coreMesh = new THREE.Mesh(mergedCore, laminarCoreMat);
+      coreMesh.renderOrder = 4;
+      scene.add(coreMesh);
+    }
+
+    const mergedAura = mergeGeometries(auraGeoms);
+    if (mergedAura) {
+      laminarAuraMat = new THREE.MeshBasicMaterial({
+        color: 0x1ee6ff,
+        transparent: true,
+        opacity: 0.14,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      const auraMesh = new THREE.Mesh(mergedAura, laminarAuraMat);
+      auraMesh.renderOrder = 5;
+      scene.add(auraMesh);
+    }
+
+    const mergedBloom = mergeGeometries(bloomGeoms);
+    if (mergedBloom) {
+      laminarBloomMat = new THREE.MeshBasicMaterial({
+        color: 0x0bc8ff,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      laminarBloomMesh = new THREE.Mesh(mergedBloom, laminarBloomMat);
+      laminarBloomMesh.visible = false;
+      laminarBloomMesh.renderOrder = 5;
+      scene.add(laminarBloomMesh);
+    }
+
+    if (laminarNozzles.length) {
+      const lNozGeo = new THREE.CylinderGeometry(0.055, 0.08, 0.2, 8);
+      const lNozMat = new THREE.MeshStandardMaterial({
+        color: 0xd6dce2,
+        roughness: 0.34,
+        metalness: 0.55,
+      });
+      const lNozInst = new THREE.InstancedMesh(lNozGeo, lNozMat, laminarNozzles.length);
+      const nd = new THREE.Object3D();
+      const upVec = new THREE.Vector3(0, 1, 0);
+      const aimVec = new THREE.Vector3();
+      laminarNozzles.forEach(([x, z, ux, uz], idx) => {
+        aimVec.set(ux * 0.38, 0.925, uz * 0.38).normalize();
+        nd.position.set(x, 0.465, z);
+        nd.quaternion.setFromUnitVectors(upVec, aimVec);
+        nd.scale.set(1, 1, 1);
+        nd.updateMatrix();
+        lNozInst.setMatrixAt(idx, nd.matrix);
+      });
+      scene.add(lNozInst);
+    }
+
+    if (laminarGlows.length) {
+      const lgGeo = new THREE.PlaneGeometry(1, 1);
+      lgGeo.rotateX(-Math.PI / 2);
+      laminarGlowMat = new THREE.MeshBasicMaterial({
+        map: textures.lightPool,
+        color: 0x26dcff,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -3,
+        polygonOffsetUnits: -3,
+      });
+      laminarGlowInst = new THREE.InstancedMesh(lgGeo, laminarGlowMat, laminarGlows.length);
+      laminarGlowInst.visible = false;
+      const gd = new THREE.Object3D();
+      laminarGlows.forEach(([x, y, z, sz], idx) => {
+        gd.position.set(x, y, z);
+        gd.scale.set(sz, 1, sz);
+        gd.updateMatrix();
+        laminarGlowInst.setMatrixAt(idx, gd.matrix);
+      });
+      scene.add(laminarGlowInst);
+    }
+  }
 
   // Buses visibles + halos subaquatiques doux en mode nuit
   if (nozzles.length) {
@@ -1066,6 +1274,8 @@ export function buildWaterAndFountains(scene, data, textures, extrudePoly, merge
   const nightWaterCol = new THREE.Color(0x244252);
   const dayPoolCol = new THREE.Color(0x5cc7d6);
   const nightPoolCol = new THREE.Color(0x1f6c82);
+  const dayLaminarCol = new THREE.Color(0xc8f0ff);
+  const nightLaminarCol = new THREE.Color(0xe8ffff);
 
   return {
     updateWater(dt, now, nightFactor, camY = 126) {
@@ -1082,10 +1292,34 @@ export function buildWaterAndFountains(scene, data, textures, extrudePoly, merge
       poolWhiteMat.emissiveIntensity = nightFactor * 0.28;
       ptsMat.color.setHex(nightFactor > 0.4 ? 0xffe4b8 : 0xf4fafc);
 
+      if (laminarTex) {
+        laminarTex.offset.x = (laminarTex.offset.x - dt * 0.95) % 1;
+      }
+      if (laminarCoreMat) {
+        laminarCoreMat.color.lerpColors(dayLaminarCol, nightLaminarCol, nightFactor);
+        laminarCoreMat.opacity = THREE.MathUtils.lerp(0.82, 0.98, nightFactor);
+      }
+      if (laminarAuraMat) {
+        laminarAuraMat.opacity = 0.12 + nightFactor * (0.44 + 0.05 * Math.sin(tSec * 2.6));
+      }
+      if (laminarBloomMesh && laminarBloomMat) {
+        const showBloom = nightFactor > 0.02;
+        if (laminarBloomMesh.visible !== showBloom) laminarBloomMesh.visible = showBloom;
+        if (showBloom) {
+          laminarBloomMat.opacity = nightFactor * (0.2 + 0.03 * Math.sin(tSec * 2.1 + 0.8));
+        }
+      }
+
       const showGlow = nightFactor > 0.01;
       if (ugInst && ugInst.visible !== showGlow) ugInst.visible = showGlow;
       if (showGlow) {
         underGlowMat.opacity = nightFactor * (0.44 + 0.06 * Math.sin(tSec * 2.1));
+      }
+      if (laminarGlowInst && laminarGlowMat) {
+        if (laminarGlowInst.visible !== showGlow) laminarGlowInst.visible = showGlow;
+        if (showGlow) {
+          laminarGlowMat.opacity = nightFactor * (0.48 + 0.05 * Math.sin(tSec * 2.3));
+        }
       }
 
       const showSpray = camY < 420;
