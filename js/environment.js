@@ -713,22 +713,29 @@ export function buildWaterAndFountains(scene, data, textures, extrudePoly, merge
         poolWaterGeoms.push(extrudePoly(z.poly, 0.04, yWater - 0.04));
 
         if (!isChild) {
-          // Piscine Adulte (profondeur 1,50 m) : 5 marches immergées sur la rive Nord droite (z = -10.12 -> -7.62)
-          const stepW = 9.2;
+          // Piscine Adulte (profondeur 1,50 m) : 5 marches immergées sur TOUTE la largeur de la rive Nord (x = -60.49 -> -39.51, élargies selon les biais latéraux à 45°)
           const treadD = 0.5;
           const stepCx = -50.0;
           const riser = 1.5 / 6; // 0.25 m par marche sur 1.50 m de dénivelé total
           for (let k = 0; k < 5; k++) {
             const stepTop = yDeck - (k + 1) * riser; // +0.05, -0.20, -0.45, -0.70, -0.95
             const h = stepTop - yFloor;
-            const sz = -10.12 + (k + 0.5) * treadD;
-            const sg = new THREE.BoxGeometry(stepW, h, treadD);
-            sg.translate(stepCx, yFloor + h * 0.5, sz);
-            poolTileGeoms.push(sg);
+            const zFront = -10.12 + k * treadD;
+            const zBack = zFront + treadD;
+            // Le bord Nord droit va de x = -60.49 à -39.51 (largeur 20.98 m) ; en descendant vers +Z les côtés s'écartent à 45°
+            const halfW0 = 10.48 + Math.max(0, k * treadD - 0.15) * 0.85;
+            const halfW1 = 10.48 + Math.max(0, (k + 1) * treadD - 0.15) * 0.85;
+            const stepPoly = [
+              [stepCx - halfW0, zFront],
+              [stepCx + halfW0, zFront],
+              [stepCx + halfW1, zBack],
+              [stepCx - halfW1, zBack],
+            ];
+            poolTileGeoms.push(extrudePoly(stepPoly, h, yFloor));
 
-            // Nez de marche antidérapant blanc (très lisible sous l'eau)
-            const ng = new THREE.BoxGeometry(stepW, 0.042, 0.075);
-            ng.translate(stepCx, stepTop - 0.01, sz + treadD * 0.5 - 0.036);
+            // Nez de marche antidérapant blanc pleine largeur (très lisible sous l'eau)
+            const ng = new THREE.BoxGeometry(halfW1 * 2 - 0.08, 0.042, 0.075);
+            ng.translate(stepCx, stepTop - 0.01, zBack - 0.036);
             poolWhiteGeoms.push(ng);
           }
 
@@ -782,22 +789,39 @@ export function buildWaterAndFountains(scene, data, textures, extrudePoly, merge
             poolGlows.push([px, -3.7, 13.5, yFloor + 0.06]);
           }
         } else {
-          // Piscine Enfant (profondeur 0,50 m) : 2 larges marches peu profondes sur la rive Sud (z = -11.56 -> -12.86)
-          const stepW = 8.4;
-          const treadD = 0.65;
-          const stepCx = -50.0;
-          const riser = 0.5 / 3; // ~0.167 m par marche sur 0.50 m de profondeur totale
-          for (let k = 0; k < 2; k++) {
-            const stepTop = yDeck - (k + 1) * riser; // +0.133, -0.033 (puis fond à -0.20)
-            const h = stepTop - yFloor;
-            const sz = -11.56 - (k + 0.5) * treadD;
-            const sg = new THREE.BoxGeometry(stepW, h, treadD);
-            sg.translate(stepCx, yFloor + h * 0.5, sz);
-            poolTileGeoms.push(sg);
+          // Piscine Enfant (profondeur 0,50 m) : 3 marches peu profondes sur la rive Nord-Est (côté opposé, longeant le bord oblique NE [-47.52,-18.96] -> [-41.82,-13.26])
+          const riser = 0.5 / 4; // 0.125 m par marche sur 0.50 m de profondeur totale
+          const treadD = 0.52;
+          // Vecteur unitaire le long de l'arête NE et normale intérieure pointant vers le centre du bassin (-X, +Z)
+          const ax = -47.52, az = -18.96;
+          const bx = -41.82, bz = -13.26;
+          const edgeLen = Math.hypot(bx - ax, bz - az);
+          const ux = (bx - ax) / edgeLen;
+          const uz = (bz - az) / edgeLen;
+          const nx = -Math.SQRT1_2;
+          const nz = Math.SQRT1_2;
 
-            // Nez de marche antidérapant blanc
-            const ng = new THREE.BoxGeometry(stepW, 0.038, 0.075);
-            ng.translate(stepCx, stepTop - 0.008, sz - treadD * 0.5 + 0.036);
+          for (let k = 0; k < 3; k++) {
+            const stepTop = yDeck - (k + 1) * riser;
+            const h = stepTop - yFloor;
+            const d0 = k * treadD;
+            const d1 = (k + 1) * treadD;
+            // Léger retrait aux extrémités pour rester strictement dans les congés d'angle arrondis du bassin
+            const trim0 = 0.35 + k * 0.18;
+            const trim1 = 0.35 + (k + 1) * 0.18;
+            const pA0 = [ax + ux * trim0 + nx * d0, az + uz * trim0 + nz * d0];
+            const pB0 = [bx - ux * trim0 + nx * d0, bz - uz * trim0 + nz * d0];
+            const pB1 = [bx - ux * trim1 + nx * d1, bz - uz * trim1 + nz * d1];
+            const pA1 = [ax + ux * trim1 + nx * d1, az + uz * trim1 + nz * d1];
+            poolTileGeoms.push(extrudePoly([pA0, pB0, pB1, pA1], h, yFloor));
+
+            // Nez de marche antidérapant blanc parallèle à l'arête NE
+            const noseW = Math.hypot(pB1[0] - pA1[0], pB1[1] - pA1[1]) - 0.06;
+            const midX = (pA1[0] + pB1[0]) * 0.5 - nx * 0.036;
+            const midZ = (pA1[1] + pB1[1]) * 0.5 - nz * 0.036;
+            const ng = new THREE.BoxGeometry(noseW, 0.038, 0.075);
+            ng.rotateY(-Math.atan2(uz, ux));
+            ng.translate(midX, stepTop - 0.008, midZ);
             poolWhiteGeoms.push(ng);
           }
           poolGlows.push([-52.8, -15.3, 8.8, yFloor + 0.06], [-47.2, -15.3, 8.8, yFloor + 0.06]);
