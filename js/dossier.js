@@ -342,7 +342,7 @@ export function createDossierController({
     if (!sp) return;
     viewState.spacePageId = sp.id;
 
-    const detail = devisData.spaceDetails[sp.id];
+    const detail = devisData.spaceDetails[sp.id] || devisData.spaceDetails[sp.dossierId];
     const dedicatedLines = (detail?.dedicatedLineIds || []).map((id) => lineById.get(id)).filter(Boolean);
     const sharedLines = (detail?.sharedLineIds || []).map((id) => lineById.get(id)).filter(Boolean);
     const dedicatedSum = dedicatedLines.reduce((acc, l) => acc + (l.total || 0), 0);

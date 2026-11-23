@@ -30,6 +30,7 @@ import {
 } from "./js/living.js";
 import { createDossierController } from "./js/dossier.js";
 import { createParkAudioController } from "./js/audio.js";
+import { renderSpaceHeroSvg, renderActivityCardsHtml } from "./js/activity-cards.js";
 
 function getOverviewCam() {
   const aspect = window.innerWidth / Math.max(1, window.innerHeight);
@@ -142,10 +143,11 @@ function cacheDom() {
   dom.spaceCard = document.getElementById("space-card");
   dom.cardIndex = document.getElementById("card-index");
   dom.cardCategory = document.getElementById("card-category");
+  dom.cardHero = document.getElementById("card-hero");
   dom.cardTitle = document.getElementById("card-title");
   dom.cardMetric = document.getElementById("card-metric");
   dom.cardSummary = document.getElementById("card-summary");
-  dom.cardHighlights = document.getElementById("card-highlights");
+  dom.cardActivities = document.getElementById("card-activities");
   dom.cardLot = document.getElementById("card-lot");
   dom.btnCloseCard = document.getElementById("btn-close-card");
   dom.btnBackToMap = document.getElementById("btn-back-to-map");
@@ -890,8 +892,8 @@ function buildScene(data, thiesMapTex) {
   pedestrianCtrl = buildPedestrians(scene);
   lightingCtrl = buildLightingNetwork(scene, data, textures, isMobile);
 
-  // 10. Zones cliquables + 12 repères terracotta
-  const zoneHitGeo = new THREE.CylinderGeometry(16, 16, 1.6, 16);
+  // 10. Zones cliquables + 23 repères terracotta granulaires
+  const zoneHitGeo = new THREE.CylinderGeometry(9.5, 9.5, 1.6, 16);
   const zoneHitMat = new THREE.MeshBasicMaterial({ visible: false });
   for (const sp of data.spaces) {
     const pad = new THREE.Mesh(zoneHitGeo, zoneHitMat);
@@ -941,15 +943,15 @@ function buildScene(data, thiesMapTex) {
 }
 
 function buildSpaceMarkers(spaces, isMobile = false) {
-  const discGeo = new THREE.CylinderGeometry(2.35, 2.35, 0.42, 24);
+  const discGeo = new THREE.CylinderGeometry(1.8, 1.8, 0.36, 24);
   discGeo.rotateX(Math.PI / 2);
-  const ringGeo = new THREE.TorusGeometry(2.45, 0.14, 8, 24);
-  const stemGeo = new THREE.CylinderGeometry(0.08, 0.08, 6.4, 6);
-  const baseDotGeo = new THREE.CircleGeometry(0.8, 16);
+  const ringGeo = new THREE.TorusGeometry(1.9, 0.12, 8, 24);
+  const stemGeo = new THREE.CylinderGeometry(0.07, 0.07, 5.6, 6);
+  const baseDotGeo = new THREE.CircleGeometry(0.65, 16);
   baseDotGeo.rotateX(-Math.PI / 2);
-  const pulseGeo = new THREE.RingGeometry(1.15, 1.48, 24);
+  const pulseGeo = new THREE.RingGeometry(0.95, 1.24, 24);
   pulseGeo.rotateX(-Math.PI / 2);
-  const hitGeo = new THREE.SphereGeometry(isMobile ? 9.6 : 8.4, 10, 10);
+  const hitGeo = new THREE.SphereGeometry(isMobile ? 7.0 : 5.8, 10, 10);
   const hitMat = new THREE.MeshBasicMaterial({ visible: false });
   const sharedRingMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
   const sharedStemMat = new THREE.MeshBasicMaterial({
@@ -962,7 +964,7 @@ function buildSpaceMarkers(spaces, isMobile = false) {
   spaces.forEach((sp, idx) => {
     const group = new THREE.Group();
     group.position.set(sp.pos[0], 0.44, sp.pos[1]);
-    group.userData = { spaceId: sp.id, phase: idx * 0.55 };
+    group.userData = { spaceId: sp.id, phase: idx * 0.45 };
 
     const discMat = new THREE.MeshStandardMaterial({
       color: 0xa64234,
@@ -972,13 +974,13 @@ function buildSpaceMarkers(spaces, isMobile = false) {
       metalness: 0.04,
     });
     const disc = new THREE.Mesh(discGeo, discMat);
-    disc.position.y = 7.2;
+    disc.position.y = 6.2;
 
     const ring = new THREE.Mesh(ringGeo, sharedRingMat);
     disc.add(ring);
 
     const stem = new THREE.Mesh(stemGeo, sharedStemMat);
-    stem.position.y = 3.4;
+    stem.position.y = 2.95;
 
     const baseDot = new THREE.Mesh(baseDotGeo, sharedDotMat);
     baseDot.position.y = 0.08;
@@ -994,7 +996,7 @@ function buildSpaceMarkers(spaces, isMobile = false) {
     pulseRing.position.y = 0.1;
 
     const hitProxy = new THREE.Mesh(hitGeo, hitMat);
-    hitProxy.position.y = 6.6;
+    hitProxy.position.y = 5.8;
     hitProxy.userData = { spaceId: sp.id, markerGroup: group };
 
     group.add(disc, stem, baseDot, pulseRing, hitProxy);
@@ -1136,11 +1138,14 @@ function selectSpace(spaceId) {
   const idxNum = state.data.spaces.findIndex((s) => s.id === sp.id) + 1;
   dom.cardIndex.textContent = `${String(idxNum).padStart(2, "0")} / ${state.data.spaces.length}`;
   dom.cardCategory.textContent = sp.category;
+  if (dom.cardHero) dom.cardHero.innerHTML = renderSpaceHeroSvg(sp);
   dom.cardTitle.textContent = sp.title;
   dom.cardMetric.textContent = sp.metric;
   dom.cardSummary.textContent = sp.summary;
-  dom.cardHighlights.innerHTML = sp.highlights.map((h) => `<li>${h}</li>`).join("");
+  if (dom.cardActivities) dom.cardActivities.innerHTML = renderActivityCardsHtml(sp);
   dom.cardLot.textContent = sp.lot;
+  const cardBody = dom.spaceCard.querySelector(".card-body");
+  if (cardBody) cardBody.scrollTop = 0;
 
   dom.spaceCard.classList.add("is-open");
   dom.spaceCard.setAttribute("aria-hidden", "false");
@@ -1309,7 +1314,10 @@ function buildMenu() {
         <li>
           <button type="button" class="menu-item-btn" data-space-id="${sp.id}">
             <span class="menu-item-num">${sp.index}</span>
-            <span>${sp.title}</span>
+            <span class="menu-item-text">
+              <span class="menu-item-title">${sp.title}</span>
+              <span class="menu-item-cat">${sp.category}</span>
+            </span>
           </button>
         </li>
       `
@@ -1495,7 +1503,7 @@ function syncSpaceLabels() {
       continue;
     }
 
-    _projVec.set(sp.pos[0], 11.2, sp.pos[1]);
+    _projVec.set(sp.pos[0], 9.8, sp.pos[1]);
     _projVec.project(camera);
 
     const sx = Math.round(((_projVec.x + 1) * 0.5) * w);
@@ -2029,7 +2037,7 @@ function animate(now) {
     );
     const sway = state.reducedMotion ? 0 : Math.sin(now * 0.0014 + g.userData.phase) * 0.24;
     g.userData.disc.rotation.y = faceAngle + sway;
-    const baseY = isSel ? 6.4 : 7.2;
+    const baseY = isSel ? 5.6 : 6.2;
     const bob = state.reducedMotion ? 0 : Math.sin(now * 0.0022 + g.userData.phase) * 0.48;
     g.userData.disc.position.y = baseY + bob;
 
