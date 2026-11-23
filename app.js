@@ -1023,7 +1023,21 @@ function buildScene(data, thiesMapTex) {
       return arr;
     };
 
-    // Tronçon 1 : de l'entrée Nord-Est (+12.5) -> courbe Est -> entrée Théâtre Sud (+10.5)
+    // Tronçon 1 : de l'entrée Nord-Est (+12.5) -> courbe Est -> arc courbe Sud du Théâtre (+8.0 -> -8.0) -> courbe Ouest -> entrée Nord-Ouest (-12.5)
+    const southCurveArc = [
+      [8.0, fenceZS],
+      [7.7, 22.86],
+      [6.83, 20.85],
+      [5.44, 19.16],
+      [3.65, 17.91],
+      [1.58, 17.18],
+      [-0.6, 17.05],
+      [-2.92, 17.58],
+      [-4.99, 18.78],
+      [-6.61, 20.52],
+      [-7.64, 22.67],
+      [-8.0, fenceZS],
+    ];
     fenceChains.push(
       buildChain([
         [12.5, fenceZN],
@@ -1034,6 +1048,8 @@ function buildScene(data, thiesMapTex) {
         [10.5, fenceZS],
       ])
     );
+    // Clôture courbée épousant l'arc du jardin au Sud du Bassin Central (x: +8.0 -> -8.0)
+    fenceChains.push(buildChain(southCurveArc, 2.2));
     // Tronçon 2 : de l'entrée Théâtre Sud-Ouest (-10.5) -> courbe Ouest -> entrée Nord-Ouest (-12.5)
     fenceChains.push(
       buildChain([
