@@ -1976,7 +1976,11 @@ export function buildVegetation(scene, data, textures, windUniforms) {
     scene.add(flInst);
   }
 
-  return { treeCount: treePositions.length };
+  return {
+    treeCount: treePositions.length,
+    trees: treePositions,
+    bushes: bushPositions,
+  };
 }
 
 export function buildDayAtmosphere(scene, textures, isMobile = false) {

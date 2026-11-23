@@ -28,6 +28,7 @@ import {
   buildPedestrians,
   buildLightingNetwork,
 } from "./js/living.js";
+import { buildGardenPlanterBenches } from "./js/garden-assets.js";
 import { createDossierController } from "./js/dossier.js";
 import { createParkAudioController } from "./js/audio.js";
 import { renderSpaceHeroSvg, renderActivityCardsHtml } from "./js/activity-cards.js";
@@ -1043,13 +1044,24 @@ function buildScene(data, thiesMapTex) {
   const vegStats = buildVegetation(scene, data, textures, windUniforms);
   state.stats.trees = vegStats?.treeCount || 0;
 
-  // 9. Vie du jardin : voitures garées, bancs alignés, trafic, piétons, éclairage & fenêtres nuit
+  // 9. Vie du jardin : voitures garées, bancs alignés, mobilier jardinières bois, trafic, piétons, éclairage & fenêtres nuit
   buildParkedCars(scene, data);
   const benchStats = buildBenches(scene, data);
-  state.stats.benches = benchStats?.benchCount || 0;
+  const gardenAssets = buildGardenPlanterBenches(scene, data, {
+    trees: vegStats?.trees || [],
+    bushes: vegStats?.bushes || [],
+    benches: benchStats?.spots || [],
+  });
+  state.stats.benches = (benchStats?.benchCount || 0) + (gardenAssets?.count || 0);
   trafficCtrl = buildMovingTraffic(scene, textures);
   pedestrianCtrl = buildPedestrians(scene);
-  lightingCtrl = buildLightingNetwork(scene, data, textures, isMobile);
+  lightingCtrl = buildLightingNetwork(
+    scene,
+    data,
+    textures,
+    isMobile,
+    gardenAssets?.footprints || []
+  );
 
   // 10. Zones cliquables + 23 repères terracotta granulaires
   const zoneHitGeo = new THREE.CylinderGeometry(9.5, 9.5, 1.6, 16);

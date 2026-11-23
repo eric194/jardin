@@ -362,7 +362,7 @@ export function buildBenches(scene, data) {
   });
 
   scene.add(legs, seats, backs);
-  return { benchCount: spots.length };
+  return { benchCount: spots.length, spots };
 }
 
 export function buildMovingTraffic(scene, textures) {
@@ -836,11 +836,14 @@ function pointNearPoly2D(pt, poly, margin) {
   return pointNearPolyEdge2D(pt, poly, margin);
 }
 
-export function buildLightingNetwork(scene, data, textures, isMobile = false) {
+export function buildLightingNetwork(scene, data, textures, isMobile = false, excludeDisks = []) {
   const bollards = [];
   const parkPoles = [];
   const sportMasts = [];
   const roadPoles = [];
+
+  const nearExcludeDisk = (x, z, extra = 0.75) =>
+    excludeDisks.some(([dx, dz, dr]) => Math.hypot(dx - x, dz - z) < dr + extra);
 
   const forbiddenZones = data.zones.filter(
     (z) =>
@@ -944,7 +947,7 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
 
   // 3. Lampadaires d'allées de parc & parking (espacés et décalés en quinconce par rapport aux avenues)
   const addParkPole = (x, z, h, rot, checkZones = true, minSep = 13.5) => {
-    if (isInArchCorridor(x, z)) return;
+    if (isInArchCorridor(x, z) || nearExcludeDisk(x, z, 0.9)) return;
     if (checkZones && !isClearOfPoolsAndCourts(x, z, 1.8)) return;
     if (nearAny(placedTallPoles, x, z, minSep)) return;
     parkPoles.push([x, z, h, rot]);
@@ -974,7 +977,7 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
 
   // 4. Petits postes / bornes architecturales de jardin & abords des pelouses
   const addBollard = (x, z, checkZones = true, minPoleDist = 6.5, minBollardDist = 8.5) => {
-    if (isInArchCorridor(x, z)) return;
+    if (isInArchCorridor(x, z) || nearExcludeDisk(x, z, 0.75)) return;
     if (checkZones && !isClearOfPoolsAndCourts(x, z, 1.1)) return;
     if (nearAny(placedTallPoles, x, z, minPoleDist)) return;
     if (nearAny(placedBollards, x, z, minBollardDist)) return;
@@ -1060,7 +1063,7 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
   const spotRng = makeSeeded(91426);
   const groundSpots = []; // [x, z, yBase]
   const addGroundSpot = (x, z, gy = 0.455, minSpotSep = 6.0) => {
-    if (isInArchCorridor(x, z)) return false;
+    if (isInArchCorridor(x, z) || nearExcludeDisk(x, z, 0.75)) return false;
     if (groundSpots.some(([sx, sz]) => Math.hypot(sx - x, sz - z) < minSpotSep)) return false;
     if (nearAny(placedBollards, x, z, 3.4)) return false;
     if (nearAny(placedTallPoles, x, z, 4.0)) return false;
@@ -1667,6 +1670,17 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
   ].forEach(([x, y, z, size]) => {
     lightPools.push({ x, y, z, size, delay: calcWaveDelay(x, z, 0.08) });
   });
+
+  // Lueur chaude rasante sous les bancs-jardinières en bois à travers le parc
+  for (const [dx, dz, dr, dBaseY = 0.35] of excludeDisks) {
+    lightPools.push({
+      x: dx,
+      y: dBaseY + 0.025,
+      z: dz,
+      size: dr * 2.4,
+      delay: calcWaveDelay(dx, dz, 0.04),
+    });
+  }
 
   // Halos lumineux au sol (AdditiveBlending, polygonOffset pour zéro Z-fighting)
   const poolMat = new THREE.MeshBasicMaterial({
