@@ -1461,6 +1461,11 @@ export function buildVegetation(scene, data, textures, windUniforms) {
   };
 
   // 1a. Jardins d'arbustes (JARDIN PLANTÉ — densité d'arbres renforcée) & pelouses intérieures
+  const roofPolys = (data.roofs || []).map((r) => r.poly).filter((p) => p && p.length >= 3);
+  const isUnderRoof = (x, z) =>
+    roofPolys.some((poly) => pointInPoly2D([x, z], poly)) ||
+    (Math.abs(x) < 15.8 && z > -25.2 && z < -11.8);
+
   const treeZones = data.zones.filter((z) => {
     const n = z.name.toUpperCase();
     return z.area > 35 && (n.includes("JARDIN PLANT") || n.includes("PELOUSE"));
@@ -1484,6 +1489,7 @@ export function buildVegetation(scene, data, textures, windUniforms) {
       const pz = minZ + rng() * (maxZ - minZ);
       if (!pointInPoly2D([px, pz], gz.poly)) continue;
       if (!isClearInner(px, pz)) continue;
+      if (isUnderRoof(px, pz)) continue;
       if (addTreeIfClear(px, pz, 0.78 + rng() * 0.58, 0.42, minSep)) added++;
     }
   }
@@ -1897,6 +1903,19 @@ export function buildVegetation(scene, data, textures, windUniforms) {
       added++;
     }
   }
+
+  // Parterre sous la toiture de l'Arcade d'Entrée (z[46]) : uniquement des buissons bas bien dégagés sous la couverture
+  [
+    [-5.8, -14.8, 0.78],
+    [-3.6, -15.6, 0.92],
+    [-1.4, -14.2, 0.72],
+    [1.6, -14.4, 0.85],
+    [3.8, -15.5, 0.9],
+    [5.8, -14.6, 0.74],
+    [0.0, -16.1, 0.68],
+  ].forEach(([bx, bz, sc]) => {
+    bushPositions.push([bx, bz, sc, 0.45]);
+  });
 
   // Décorations végétales (arbustes taillés) sur les paliers engazonnés du gradin triangulaire (entre Basket et Beach)
   const triGradin = data.zones.find((z) => z.kind === "gradin" && z.centroid[0] > -180);
