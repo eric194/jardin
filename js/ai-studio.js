@@ -32,7 +32,16 @@ function describeTimeFromHour(hour) {
   return AMBIENCE_PRESETS.day.prompt;
 }
 
-function buildSpatialContext(camPos, targetPos, hour, spaces, ambienceKey, extraNotes, lang = "fr") {
+function buildSpatialContext(
+  camPos,
+  targetPos,
+  hour,
+  spaces,
+  ambienceKey,
+  extraNotes,
+  lang = "en",
+  twoPointEye = false
+) {
   const tx = targetPos[0];
   const tz = targetPos[1];
   const camY = camPos[1];
@@ -100,19 +109,21 @@ function buildSpatialContext(camPos, targetPos, hour, spaces, ambienceKey, extra
     );
   }
 
-  const camDescEn =
-    camY < 4.5
-      ? "eye-level pedestrian architectural photograph"
-      : camY < 32
-      ? "elevated architectural perspective photograph (drone / terrace height)"
-      : "high-altitude aerial masterplan architectural photograph";
+  const camDescEn = twoPointEye
+    ? "strict 2-point architectural perspective photograph taken at human eye level (1.70m standing height, perfectly level horizon, strictly parallel vertical lines)"
+    : camY < 4.5
+    ? "eye-level pedestrian architectural photograph"
+    : camY < 32
+    ? "elevated architectural perspective photograph (drone / terrace height)"
+    : "high-altitude aerial masterplan architectural photograph";
 
-  const camDescFr =
-    camY < 4.5
-      ? "photographie architecturale à hauteur d'homme"
-      : camY < 32
-      ? "photographie architecturale en perspective surélevée (vue drone basse altitude)"
-      : "photographie aérienne architecturale d'ensemble";
+  const camDescFr = twoPointEye
+    ? "photographie architecturale en perspective stricte à 2 points de fuite prise à hauteur d'yeux d'une personne debout (1,70 m, horizon parfaitement horizontal, verticales 100 % parallèles)"
+    : camY < 4.5
+    ? "photographie architecturale à hauteur d'homme"
+    : camY < 32
+    ? "photographie architecturale en perspective surélevée (vue drone basse altitude)"
+    : "photographie aérienne architecturale d'ensemble";
 
   const lightingEn =
     ambienceKey === "auto"
@@ -174,7 +185,12 @@ function buildSpatialContext(camPos, targetPos, hour, spaces, ambienceKey, extra
   };
 }
 
-export function createAiStudioController({ captureClean3D, getViewSnapshot, onOpenChange }) {
+export function createAiStudioController({
+  captureClean3D,
+  applyEyeLevelView,
+  getViewSnapshot,
+  onOpenChange,
+}) {
   const modal = document.getElementById("ai-studio-modal");
   if (!modal) return null;
 
@@ -182,6 +198,7 @@ export function createAiStudioController({ captureClean3D, getViewSnapshot, onOp
   let lastCaptureUrl = "";
   let currentAmbience = "auto";
   let currentLang = "en";
+  let currentPerspective = "two-point"; // "two-point" (vue personne normale 2 pts de fuite) ou "current" (angle libre actuel)
 
   function renderModalSkeleton() {
     modal.innerHTML = `
@@ -207,12 +224,15 @@ export function createAiStudioController({ captureClean3D, getViewSnapshot, onOp
           <div class="ai-stage-col">
             <div class="ai-stage" id="ai-stage">
               <img id="ai-img-before" class="ai-img-base" alt="Capture 3D propre de la maquette sans interface" />
-              <span class="ai-badge ai-badge-left">Capture 3D propre (sans repères)</span>
+              <span id="ai-badge-mode" class="ai-badge ai-badge-left">Vue personne (1,70 m) · 2 points de fuite</span>
             </div>
 
             <div class="ai-stage-bar">
               <span id="ai-context-chip" class="ai-context-chip">Contexte détecté…</span>
               <div class="ai-download-group">
+                <button type="button" id="ai-btn-eye-nav" class="ai-sec-btn" title="Placer directement la caméra 3D à hauteur d'yeux (1,70 m)">
+                  Naviguer à 1,70 m
+                </button>
                 <button type="button" id="ai-btn-copy-img" class="ai-sec-btn" title="Copier l'image dans le presse-papiers pour Ctrl+V dans Google Flow">
                   Copier l'image
                 </button>
@@ -224,6 +244,14 @@ export function createAiStudioController({ captureClean3D, getViewSnapshot, onOp
           </div>
 
           <aside class="ai-controls-col">
+            <div class="ai-field">
+              <label class="ai-label">Perspective de la capture</label>
+              <div class="ai-pills" id="ai-persp-pills">
+                <button type="button" class="ai-pill is-active" data-persp="two-point">Vue personne · 2 pts de fuite</button>
+                <button type="button" class="ai-pill" data-persp="current">Angle actuel exact</button>
+              </div>
+            </div>
+
             <div class="ai-field">
               <label class="ai-label">Ambiance souhaitée sur le rendu final</label>
               <div class="ai-pills" id="ai-ambience-pills">
@@ -276,6 +304,20 @@ export function createAiStudioController({ captureClean3D, getViewSnapshot, onOp
       if (e.target === modal) close();
     });
     modal.querySelector("#ai-btn-recapture").addEventListener("click", refreshCapture);
+    modal.querySelector("#ai-btn-eye-nav")?.addEventListener("click", () => {
+      applyEyeLevelView?.();
+      close();
+    });
+
+    modal.querySelectorAll("#ai-persp-pills .ai-pill").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        currentPerspective = btn.dataset.persp;
+        modal.querySelectorAll("#ai-persp-pills .ai-pill").forEach((b) =>
+          b.classList.toggle("is-active", b === btn)
+        );
+        refreshCapture();
+      });
+    });
 
     modal.querySelectorAll("#ai-ambience-pills .ai-pill").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -326,7 +368,8 @@ export function createAiStudioController({ captureClean3D, getViewSnapshot, onOp
   }
 
   function updatePromptPreview() {
-    const snap = getViewSnapshot();
+    const isTwoPoint = currentPerspective === "two-point";
+    const snap = getViewSnapshot(isTwoPoint);
     const notes = modal.querySelector("#ai-extra-notes")?.value || "";
     const { prompt, nearbySummary } = buildSpatialContext(
       snap.camPos,
@@ -335,12 +378,19 @@ export function createAiStudioController({ captureClean3D, getViewSnapshot, onOp
       snap.spaces,
       currentAmbience,
       notes,
-      currentLang
+      currentLang,
+      isTwoPoint
     );
     const preview = modal.querySelector("#ai-prompt-preview");
     const chip = modal.querySelector("#ai-context-chip");
+    const badge = modal.querySelector("#ai-badge-mode");
     if (preview) preview.value = prompt;
     if (chip) chip.textContent = `Zone cadrée : ${nearbySummary}`;
+    if (badge) {
+      badge.textContent = isTwoPoint
+        ? "Vue personne (1,70 m) · 2 points de fuite"
+        : "Angle actuel exact (sans repères)";
+    }
   }
 
   function setStatus(msg, isError = false) {
@@ -351,7 +401,8 @@ export function createAiStudioController({ captureClean3D, getViewSnapshot, onOp
   }
 
   function refreshCapture() {
-    const dataUrl = captureClean3D();
+    const isTwoPoint = currentPerspective === "two-point";
+    const dataUrl = captureClean3D({ twoPointEye: isTwoPoint, eyeHeight: 2.05 });
     if (!dataUrl) {
       setStatus("Impossible de capturer la scène 3D.", true);
       return;

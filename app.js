@@ -417,10 +417,10 @@ function buildScene(data, thiesMapTex) {
   controls.zoomSpeed = 2.0;
   controls.panSpeed = 1.65;
   controls.rotateSpeed = isMobile ? 0.78 : 0.9;
-  controls.minDistance = 16;
+  controls.minDistance = 8;
   controls.maxDistance = 680;
   controls.minPolarAngle = 0.04;
-  controls.maxPolarAngle = Math.PI * 0.44;
+  controls.maxPolarAngle = Math.PI * 0.495;
   controls.enabled = false;
   controls.addEventListener("change", () => {
     state.lastActiveTime = performance.now();
@@ -2863,12 +2863,46 @@ async function init() {
     });
     dossierCtrl.preload().catch(() => {});
     aiStudioCtrl = createAiStudioController({
-      captureClean3D() {
+      captureClean3D(opts = {}) {
         if (!renderer || !scene || !camera) return null;
+        const { twoPointEye = false, eyeHeight = 2.05 } = opts;
+
+        const prevPos = camera.position.clone();
+        const prevQuat = camera.quaternion.clone();
+        const prevFov = camera.fov;
+        const prevNear = camera.near;
         const prevVis = markerGroups.map((g) => g.visible);
+
         markerGroups.forEach((g) => {
           g.visible = false;
         });
+
+        if (twoPointEye && controls) {
+          // Vue personne normale (hauteur d'yeux ~1,70 m au-dessus du sol du parc +0,35 m = 2,05 m)
+          // avec perspective architecturale stricte à 2 points de fuite (horizon plat, verticales 100 % parallèles)
+          const tx = controls.target.x;
+          const tz = controls.target.z;
+          let dx = prevPos.x - tx;
+          let dz = prevPos.z - tz;
+          let dist = Math.hypot(dx, dz);
+          if (dist < 1.5) {
+            dx = 0;
+            dz = 22;
+            dist = 22;
+          }
+          // Distance humaine réaliste (entre 14 m et 36 m du sujet visé) pour un cadrage grand-angle 28 mm
+          const clampedDist = THREE.MathUtils.clamp(dist, 14, 38);
+          const nx = dx / dist;
+          const nz = dz / dist;
+          camera.position.set(tx + nx * clampedDist, eyeHeight, tz + nz * clampedDist);
+          camera.near = 0.25;
+          camera.fov = 46;
+          camera.updateProjectionMatrix();
+          camera.up.set(0, 1, 0);
+          // Viser à la même hauteur exacte (eyeHeight) -> tangage 0° -> 2 points de fuite parfaits !
+          camera.lookAt(tx, eyeHeight, tz);
+        }
+
         renderer.render(scene, camera);
         let dataUrl = null;
         try {
@@ -2876,18 +2910,55 @@ async function init() {
         } catch (_) {
           dataUrl = null;
         }
+
+        // Restaurer la caméra et les repères immédiatement
+        if (twoPointEye) {
+          camera.position.copy(prevPos);
+          camera.quaternion.copy(prevQuat);
+          camera.fov = prevFov;
+          camera.near = prevNear;
+          camera.updateProjectionMatrix();
+        }
         markerGroups.forEach((g, i) => {
           g.visible = prevVis[i];
         });
         renderer.render(scene, camera);
         return dataUrl;
       },
-      getViewSnapshot() {
+      applyEyeLevelView() {
+        if (!camera || !controls) return;
+        const tx = controls.target.x;
+        const tz = controls.target.z;
+        let dx = camera.position.x - tx;
+        let dz = camera.position.z - tz;
+        let dist = Math.hypot(dx, dz);
+        if (dist < 1.5) {
+          dx = 0;
+          dz = 24;
+          dist = 24;
+        }
+        const clampedDist = THREE.MathUtils.clamp(dist, 14, 34);
+        const eyeY = 2.05;
+        state.fly = null;
+        stopAutoFly(false);
+        stopWalkTour(true);
+        camera.position.set(tx + (dx / dist) * clampedDist, eyeY, tz + (dz / dist) * clampedDist);
+        controls.target.set(tx, eyeY, tz);
+        camera.near = 0.25;
+        camera.updateProjectionMatrix();
+        controls.update();
+      },
+      getViewSnapshot(twoPointEye = false) {
         return {
-          camPos: camera ? camera.position.toArray() : [0, 30, 50],
+          camPos: twoPointEye
+            ? [camera ? camera.position.x : 0, 2.05, camera ? camera.position.z : 24]
+            : camera
+            ? camera.position.toArray()
+            : [0, 30, 50],
           targetPos: controls ? [controls.target.x, controls.target.z] : [0, 0],
           hour: state.timeOfDay,
           spaces: state.data?.spaces || [],
+          twoPointEye,
         };
       },
     });
