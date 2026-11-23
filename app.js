@@ -519,29 +519,171 @@ function buildScene(data, thiesMapTex) {
   }
 
   // 2. 352 immeubles voisins de Thiès : hauteurs normalisées à 3 m (1 niveau), 6 m (2 niveaux) ou 9 m (3 niveaux)
+  //    + décoration architecturale sobre : acrotères 1,00 m + cage d'escalier sur terrasses accessibles,
+  //      acrotères 0,30 m sur terrasses non accessibles, et balcons sobres sur certains R+1 / R+2.
   const buildingGeoms = [];
-  for (const b of data.buildings) {
+  const railingGeoms = [];
+  const doorGeoms = [];
+
+  const ptInPolyLocal = (pt, poly) => {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const xi = poly[i][0], yi = poly[i][1];
+      const xj = poly[j][0], yj = poly[j][1];
+      const intersect =
+        yi > pt[1] !== yj > pt[1] && pt[0] < ((xj - xi) * (pt[1] - yi)) / (yj - yi + 1e-9) + xi;
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  };
+
+  const addOrientedBox = (list, cx, cy, cz, w, h, d, rotY) => {
+    const g = new THREE.BoxGeometry(w, h, d);
+    if (rotY) g.rotateY(rotY);
+    g.translate(cx, cy, cz);
+    list.push(g);
+  };
+
+  data.buildings.forEach((b, bIdx) => {
     try {
-      const p0 = b.poly?.[0];
+      const poly = b.poly;
+      if (!poly || poly.length < 3) return;
+      const cx = poly.reduce((s, p) => s + p[0], 0) / poly.length;
+      const cz = poly.reduce((s, p) => s + p[1], 0) / poly.length;
       // Éviter de superposer les blocs bruts sur la Station-service Nord-Ouest (b[74]), la Station-service Ouest (b[87]) et la Banque (b[63])
-      if (p0) {
-        const cx = b.poly.reduce((s, p) => s + p[0], 0) / b.poly.length;
-        const cz = b.poly.reduce((s, p) => s + p[1], 0) / b.poly.length;
-        if (
-          Math.hypot(cx + 241.5, cz + 73.6) < 8 ||
-          Math.hypot(cx + 302.9, cz + 6.8) < 6 ||
-          Math.hypot(cx + 120.6, cz + 73.1) < 5
-        ) {
-          b.isContextSkip = true;
-          continue;
-        }
+      if (
+        Math.hypot(cx + 241.5, cz + 73.6) < 8 ||
+        Math.hypot(cx + 302.9, cz + 6.8) < 6 ||
+        Math.hypot(cx + 120.6, cz + 73.1) < 5
+      ) {
+        b.isContextSkip = true;
+        return;
       }
+
       const levels = b.h < 5.2 ? 1 : b.h < 6.8 ? 2 : 3;
       b.levels = levels;
       b.h = levels * 3.0;
-      buildingGeoms.push(extrudePoly(b.poly, b.h, 0.055));
+      const baseY = 0.055;
+      const roofY = baseY + b.h;
+      buildingGeoms.push(extrudePoly(poly, b.h, baseY));
+
+      // Surface approximative & plus longue arête du bâtiment
+      const area = Math.abs(signedArea2D(poly));
+      let bestLen = 0;
+      let bestEdge = null;
+      for (let i = 0; i < poly.length; i++) {
+        const a = poly[i];
+        const bPt = poly[(i + 1) % poly.length];
+        const len = Math.hypot(bPt[0] - a[0], bPt[1] - a[1]);
+        if (len > bestLen) {
+          bestLen = len;
+          bestEdge = [a, bPt, len];
+        }
+      }
+
+      // 2a. Acrotères en toiture : 1,00 m pour les terrasses accessibles (R+1/R+2 ou grands R+0), 0,30 m pour les non accessibles
+      const isAccessibleRoof = area >= 58 && (levels >= 2 ? bIdx % 5 !== 0 : bIdx % 3 === 0);
+      const parapetH = isAccessibleRoof ? 1.0 : 0.3;
+      const parapetT = 0.22;
+
+      for (let i = 0; i < poly.length; i++) {
+        const a = poly[i];
+        const bPt = poly[(i + 1) % poly.length];
+        const dx = bPt[0] - a[0];
+        const dz = bPt[1] - a[1];
+        const len = Math.hypot(dx, dz);
+        if (len < 0.8) continue;
+        const mx0 = (a[0] + bPt[0]) * 0.5;
+        const mz0 = (a[1] + bPt[1]) * 0.5;
+        let nx = -dz / len;
+        let nz = dx / len;
+        if (!ptInPolyLocal([mx0 + nx * 0.15, mz0 + nz * 0.15], poly)) {
+          nx = -nx;
+          nz = -nz;
+        }
+        const rotY = -Math.atan2(dz, dx);
+        addOrientedBox(
+          buildingGeoms,
+          mx0 + nx * (parapetT * 0.5),
+          roofY + parapetH * 0.5,
+          mz0 + nz * (parapetT * 0.5),
+          len,
+          parapetH,
+          parapetT,
+          rotY
+        );
+      }
+
+      // 2b. Cage d'escalier d'accès sur les terrasses accessibles (uniquement si le centre est bien dans le polygone)
+      if (isAccessibleRoof && bestEdge && ptInPolyLocal([cx, cz], poly)) {
+        const [ea, eb, elen] = bestEdge;
+        const rotY = -Math.atan2(eb[1] - ea[1], eb[0] - ea[0]);
+        const sw = Math.min(3.3, Math.max(2.1, elen * 0.24));
+        const sd = Math.min(2.5, Math.max(1.8, Math.sqrt(area) * 0.22));
+        const sh = 2.45;
+        // Vérifier que les 4 coins de la cage d'escalier restent bien dans le toit
+        const cR = Math.cos(rotY);
+        const sR = Math.sin(rotY);
+        const cornersIn = [
+          [-sw * 0.52, -sd * 0.52],
+          [sw * 0.52, -sd * 0.52],
+          [sw * 0.52, sd * 0.52],
+          [-sw * 0.52, sd * 0.52],
+        ].every(([lx, lz]) => ptInPolyLocal([cx + lx * cR + lz * sR, cz - lx * sR + lz * cR], poly));
+
+        if (cornersIn) {
+          addOrientedBox(buildingGeoms, cx, roofY + sh * 0.5, cz, sw, sh, sd, rotY);
+          // Petite casquette de toit sur la cage d'escalier
+          addOrientedBox(buildingGeoms, cx, roofY + sh + 0.08, cz, sw + 0.26, 0.16, sd + 0.26, rotY);
+          // Porte d'accès terrasse sur la face avant de la cage d'escalier
+          const doorX = cx + sR * (sd * 0.5 + 0.04);
+          const doorZ = cz + cR * (sd * 0.5 + 0.04);
+          addOrientedBox(doorGeoms, doorX, roofY + 1.05, doorZ, 0.92, 2.05, 0.06, rotY);
+        }
+      }
+
+      // 2c. Balcons sobres sur certains immeubles à étages (R+1 / R+2, ~42 % des bâtiments avec façade >= 6 m)
+      if (levels >= 2 && bestEdge && bestEdge[2] >= 6.0 && bIdx % 5 < 2) {
+        const [ea, eb, elen] = bestEdge;
+        const dx = eb[0] - ea[0];
+        const dz = eb[1] - ea[1];
+        const mx0 = (ea[0] + eb[0]) * 0.5;
+        const mz0 = (ea[1] + eb[1]) * 0.5;
+        let nx = -dz / elen;
+        let nz = dx / elen;
+        // Normale vers l'EXTÉRIEUR de la façade
+        if (ptInPolyLocal([mx0 + nx * 0.2, mz0 + nz * 0.2], poly)) {
+          nx = -nx;
+          nz = -nz;
+        }
+        const rotY = -Math.atan2(dz, dx);
+        const balcW = Math.min(4.6, elen * 0.46);
+        const balcD = 0.92;
+        const bx = mx0 + nx * (balcD * 0.5);
+        const bz = mz0 + nz * (balcD * 0.5);
+        const frontX = mx0 + nx * (balcD - 0.05);
+        const frontZ = mz0 + nz * (balcD - 0.05);
+
+        for (let lv = 1; lv < levels; lv++) {
+          const floorY = baseY + lv * 3.0;
+          // Dalle de balcon en porte-à-faux
+          addOrientedBox(buildingGeoms, bx, floorY + 0.08, bz, balcW, 0.16, balcD, rotY);
+          // Garde-corps bas plein (0,55 m) + main courante métallique sobre à 1,00 m
+          addOrientedBox(buildingGeoms, frontX, floorY + 0.44, frontZ, balcW, 0.56, 0.1, rotY);
+          addOrientedBox(railingGeoms, frontX, floorY + 0.96, frontZ, balcW, 0.06, 0.06, rotY);
+          // Retours latéraux du garde-corps
+          const tx = dx / elen;
+          const tz = dz / elen;
+          for (const side of [-1, 1]) {
+            const sx = bx + tx * (side * (balcW * 0.5 - 0.05));
+            const sz = bz + tz * (side * (balcW * 0.5 - 0.05));
+            addOrientedBox(buildingGeoms, sx, floorY + 0.44, sz, 0.1, 0.56, balcD, rotY);
+            addOrientedBox(railingGeoms, sx, floorY + 0.96, sz, 0.06, 0.06, balcD, rotY);
+          }
+        }
+      }
     } catch (_) {}
-  }
+  });
   let buildingMat;
   let buildingEdgesMat;
   const mergedBuildings = mergeGeometries(buildingGeoms);
@@ -562,6 +704,22 @@ function buildScene(data, thiesMapTex) {
       opacity: 0.65,
     });
     scene.add(new THREE.LineSegments(new THREE.EdgesGeometry(mergedBuildings, 28), buildingEdgesMat));
+  }
+  const mergedRailings = mergeGeometries(railingGeoms);
+  if (mergedRailings) {
+    const railMesh = new THREE.Mesh(
+      mergedRailings,
+      new THREE.MeshStandardMaterial({ color: 0x454a52, roughness: 0.55, metalness: 0.25 })
+    );
+    scene.add(railMesh);
+  }
+  const mergedDoors = mergeGeometries(doorGeoms);
+  if (mergedDoors) {
+    const doorMesh = new THREE.Mesh(
+      mergedDoors,
+      new THREE.MeshStandardMaterial({ color: 0x6f685f, roughness: 0.8 })
+    );
+    scene.add(doorMesh);
   }
 
   // 3. Socle du parc linéaire (500 x 50 m, top 0.300, évidé au droit des terrains et gradins enterrés)
