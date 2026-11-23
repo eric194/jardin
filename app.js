@@ -30,6 +30,7 @@ import {
 } from "./js/living.js";
 import { buildGardenPlanterBenches } from "./js/garden-assets.js";
 import { buildGardenPavilions } from "./js/garden-pavilions.js";
+import { buildActivityZones } from "./js/activity-zones.js";
 import { createDossierController } from "./js/dossier.js";
 import { createParkAudioController } from "./js/audio.js";
 import { renderSpaceHeroSvg, renderActivityCardsHtml } from "./js/activity-cards.js";
@@ -1040,8 +1041,9 @@ function buildScene(data, thiesMapTex) {
     scene.add(railInst);
   }
 
-  // 8. Tracés sportifs 3D visibles, Eau + Jets animés, Arbres périphériques & intérieurs avec vent
+  // 8. Tracés sportifs 3D visibles, agrès fitness/jeux sol dur, Eau + Jets animés, Arbres périphériques & intérieurs avec vent
   buildSportCourts(scene, data);
+  buildActivityZones(scene, data);
   waterCtrl = buildWaterAndFountains(scene, data, textures, extrudePoly, mergeGeometries, isMobile);
   const vegStats = buildVegetation(scene, data, textures, windUniforms);
   state.stats.trees = vegStats?.treeCount || 0;
