@@ -366,29 +366,39 @@ export function buildBenches(scene, data) {
 }
 
 export function buildMovingTraffic(scene, textures) {
+  // Voies de circulation strictement séparées à droite (code de la route Sénégal), hors piste rouge et hors bordures
   const routes = [
-    // Avenue Nord (voie Est-Ouest et Ouest-Est entre Parc et Parking)
-    { axis: "x", fixed: -32.8, min: -350, max: 350, dir: 1, speed: 9.8 },
-    { axis: "x", fixed: -32.8, min: -350, max: 350, dir: 1, speed: 11.4 },
-    { axis: "x", fixed: -32.8, min: -350, max: 350, dir: 1, speed: 8.9 },
-    { axis: "x", fixed: -32.8, min: -350, max: 350, dir: 1, speed: 10.6 },
-    { axis: "x", fixed: -32.8, min: -350, max: 350, dir: 1, speed: 12.1 },
-    { axis: "x", fixed: -38.8, min: -350, max: 350, dir: -1, speed: 10.8 },
-    { axis: "x", fixed: -38.8, min: -350, max: 350, dir: -1, speed: 9.4 },
-    { axis: "x", fixed: -38.8, min: -350, max: 350, dir: -1, speed: 11.6 },
-    { axis: "x", fixed: -38.8, min: -350, max: 350, dir: -1, speed: 10.1 },
-    // Rue Sud parallèle
-    { axis: "x", fixed: 30.6, min: -310, max: 310, dir: 1, speed: 8.6 },
-    { axis: "x", fixed: 30.6, min: -310, max: 310, dir: -1, speed: 9.1 },
-    { axis: "x", fixed: 30.6, min: -310, max: 310, dir: 1, speed: 9.5 },
-    { axis: "x", fixed: 30.6, min: -310, max: 310, dir: -1, speed: 8.2 },
-    // Axes transversaux Ouest & Est
-    { axis: "z", fixed: -261.5, min: -165, max: 145, dir: 1, speed: 9.2 },
-    { axis: "z", fixed: -264.8, min: -165, max: 145, dir: -1, speed: 10.2 },
-    { axis: "z", fixed: 265.0, min: -165, max: 145, dir: 1, speed: 9.4 },
-    { axis: "z", fixed: 268.2, min: -165, max: 145, dir: -1, speed: 8.7 },
-    { axis: "z", fixed: 268.2, min: -165, max: 145, dir: -1, speed: 9.8 },
+    // Avenue Nord (chaussée large z in [-40..-29]) : Est->Ouest au Nord (-37.2), Ouest->Est au Sud (-32.2)
+    { axis: "x", fixed: -32.2, min: -350, max: 350, dir: 1, speed: 9.8 },
+    { axis: "x", fixed: -32.2, min: -350, max: 350, dir: 1, speed: 11.2 },
+    { axis: "x", fixed: -32.2, min: -350, max: 350, dir: 1, speed: 9.1 },
+    { axis: "x", fixed: -32.2, min: -350, max: 350, dir: 1, speed: 10.6 },
+    { axis: "x", fixed: -37.2, min: -350, max: 350, dir: -1, speed: 10.8 },
+    { axis: "x", fixed: -37.2, min: -350, max: 350, dir: -1, speed: 9.4 },
+    { axis: "x", fixed: -37.2, min: -350, max: 350, dir: -1, speed: 11.5 },
+    { axis: "x", fixed: -37.2, min: -350, max: 350, dir: -1, speed: 10.1 },
+    // Rue Sud (strictement au Sud de la bande gazon z=28.43 et au Nord des îlots z=32.6) : Est->Ouest (-dir à z=29.7), Ouest->Est (+dir à z=31.6)
+    { axis: "x", fixed: 31.6, min: -310, max: 310, dir: 1, speed: 8.6 },
+    { axis: "x", fixed: 31.6, min: -310, max: 310, dir: 1, speed: 9.4 },
+    { axis: "x", fixed: 29.7, min: -310, max: 310, dir: -1, speed: 9.1 },
+    { axis: "x", fixed: 29.7, min: -310, max: 310, dir: -1, speed: 8.3 },
+    // Axe Ouest : Sud (+dir à x=-264.6) / Nord (-dir à x=-260.4)
+    { axis: "z", fixed: -264.6, min: -165, max: 145, dir: 1, speed: 9.2 },
+    { axis: "z", fixed: -264.6, min: -165, max: 145, dir: 1, speed: 10.0 },
+    { axis: "z", fixed: -260.4, min: -165, max: 145, dir: -1, speed: 10.2 },
+    // Axe Est : Sud (+dir à x=263.4) / Nord (-dir à x=267.6)
+    { axis: "z", fixed: 263.4, min: -165, max: 145, dir: 1, speed: 9.4 },
+    { axis: "z", fixed: 267.6, min: -165, max: 145, dir: -1, speed: 8.7 },
+    { axis: "z", fixed: 267.6, min: -165, max: 145, dir: -1, speed: 9.8 },
   ];
+
+  // Compter les véhicules par file pour un espacement initial sans collision
+  const laneBuckets = new Map();
+  routes.forEach((r, idx) => {
+    const key = `${r.axis}_${r.fixed}_${r.dir}`;
+    if (!laneBuckets.has(key)) laneBuckets.set(key, []);
+    laneBuckets.get(key).push(idx);
+  });
 
   const lampGeo = new THREE.BoxGeometry(0.3, 0.16, 0.12);
   const coneGeo = new THREE.PlaneGeometry(4.2, 8.5);
@@ -466,8 +476,10 @@ export function buildMovingTraffic(scene, textures) {
     scene.add(group);
 
     const span = r.max - r.min;
-    const progress = (idx / routes.length + 0.13 * idx) % 1;
-    const initPos = r.min + progress * span;
+    const key = `${r.axis}_${r.fixed}_${r.dir}`;
+    const bucket = laneBuckets.get(key);
+    const slot = bucket.indexOf(idx);
+    const initPos = r.min + ((slot + 0.35 + (idx % 3) * 0.12) / bucket.length) * span;
     if (r.axis === "x") {
       group.position.set(initPos, 0.08, r.fixed);
       group.rotation.y = r.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
@@ -479,26 +491,77 @@ export function buildMovingTraffic(scene, textures) {
       group,
       nightGroup,
       route: r,
+      laneKey: key,
       pos: initPos,
+      curSpeed: r.speed,
+      wx: r.axis === "x" ? initPos : r.fixed,
+      wz: r.axis === "x" ? r.fixed : initPos,
     };
   });
+
+  // Carrefours où la priorité à droite / détection de croisement s'applique
+  const intersections = [
+    [-262.5, -34.7],
+    [265.5, -34.7],
+    [-262.5, 30.6],
+    [265.5, 30.6],
+  ];
 
   return {
     update(dt, nightFactor, camY = 126) {
       const showNight = nightFactor > 0.01;
       if (showNight) beamMat.opacity = nightFactor * 0.42;
       if (camY > 460) return;
-      for (const c of cars) {
-        if (c.nightGroup.visible !== showNight) c.nightGroup.visible = showNight;
-        const r = c.route;
-        c.pos += r.dir * r.speed * dt;
-        if (c.pos > r.max) c.pos = r.min;
-        if (c.pos < r.min) c.pos = r.max;
 
+      for (let i = 0; i < cars.length; i++) {
+        const c = cars[i];
+        const r = c.route;
+        const span = r.max - r.min;
+        let targetSpeed = r.speed;
+
+        // 1. Distance de sécurité sur la même voie (jamais deux voitures ne se rentrent dedans)
+        for (let j = 0; j < cars.length; j++) {
+          if (i === j || cars[j].laneKey !== c.laneKey) continue;
+          let fwd = (cars[j].pos - c.pos) * r.dir;
+          if (fwd <= 0) fwd += span;
+          if (fwd > 0 && fwd < 16.0) {
+            const safeFactor = THREE.MathUtils.clamp((fwd - 8.0) / 8.0, 0, 1);
+            targetSpeed = Math.min(targetSpeed, r.speed * safeFactor);
+          }
+        }
+
+        // 2. Détection de collision aux 4 carrefours Nord/Sud ↔ Ouest/Est
+        for (const [jx, jz] of intersections) {
+          const toJunc = ((r.axis === "x" ? jx : jz) - c.pos) * r.dir;
+          const crossErr = Math.abs((r.axis === "x" ? jz : jx) - r.fixed);
+          if (crossErr < 6.0 && toJunc > 6.5 && toJunc < 16.5) {
+            for (let j = 0; j < cars.length; j++) {
+              const o = cars[j];
+              if (o.route.axis === r.axis) continue;
+              const dOther = Math.hypot(o.wx - jx, o.wz - jz);
+              if (dOther < 11.5 && dOther < toJunc + 1.5) {
+                targetSpeed = 0;
+                break;
+              }
+            }
+          }
+        }
+
+        const rate = targetSpeed < c.curSpeed ? 14.0 : 6.5;
+        c.curSpeed += (targetSpeed - c.curSpeed) * Math.min(1, rate * dt);
+        c.pos += r.dir * c.curSpeed * dt;
+        if (c.pos > r.max) c.pos -= span;
+        if (c.pos < r.min) c.pos += span;
+
+        if (c.nightGroup.visible !== showNight) c.nightGroup.visible = showNight;
         if (r.axis === "x") {
+          c.wx = c.pos;
+          c.wz = r.fixed;
           c.group.position.set(c.pos, 0.08, r.fixed);
           c.group.rotation.y = r.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
         } else {
+          c.wx = r.fixed;
+          c.wz = c.pos;
           c.group.position.set(r.fixed, 0.08, c.pos);
           c.group.rotation.y = r.dir > 0 ? 0 : Math.PI;
         }
@@ -521,33 +584,39 @@ export function buildPedestrians(scene) {
   const PISTE_ARC = Math.PI * 0.5 * PISTE_R;
   const PISTE_PERIM = 2 * PISTE_SX + 2 * PISTE_SZ + 4 * PISTE_ARC;
 
-  // 1. 14 coureurs sur la PISTE rouge extérieure à vitesse réaliste (2,1 à 2,95 m/s ≈ 7,5 à 10,5 km/h)
+  // 1. 14 coureurs sur la PISTE rouge extérieure : sens de marche séparés (droite = intérieur horaire -0.52 / extérieur anti-horaire +0.52)
   for (let i = 0; i < 14; i++) {
+    const dir = i % 2 === 0 ? 1 : -1;
     walkers.push({
       kind: "loop",
       t: i / 14 + (rng() - 0.5) * 0.02,
-      speedMps: 2.1 + rng() * 0.85,
-      laneOffset: i % 2 === 0 ? -0.45 : 0.45,
-      dir: i % 2 === 0 ? 1 : -1,
+      baseSpeed: 2.0 + rng() * 0.85,
+      laneOffset: dir > 0 ? -0.52 : 0.52,
+      passOffset: 0,
+      dir,
       phase: rng() * Math.PI * 2,
       strideSpeed: 5.0 + rng() * 0.9,
       bobAmp: 0.065,
       colorIdx: i % 5,
+      px: 0,
+      pz: 0,
+      vx: 0,
+      vz: 0,
     });
   }
 
-  // 2. 28 promeneurs à allure de marche naturelle (0,85 à 1,25 m/s ≈ 3,1 à 4,5 km/h) sur allées sûres
+  // 2. 28 promeneurs strictement cantonnés aux allées dallées vérifiées sans aucun obstacle ni bassin/terrain
   const segments = [
-    [[-240, -21.0], [-24, -21.0]],
-    [[24, -21.0], [240, -21.0]],
-    [[-240, 21.0], [-24, 21.0]],
-    [[24, 21.0], [240, 21.0]],
-    [[-18, -18.5], [18, -18.5]],
-    [[26, -15], [64, 15]],
-    [[78, -15], [122, 15]],
-    [[138, -15], [198, 15]],
-    [[-45, -45.4], [295, -45.4]], // promenade devant cantines nord
-    [[10, -45.4], [195, -45.4]],
+    [[-168, -21.8], [-104, -21.8]], // promenade Nord-Ouest
+    [[-166, 21.8], [-102, 21.8]],   // promenade Sud-Ouest
+    [[-68, 4.0], [-26, 4.0]],       // promenade Sud des piscines
+    [[-18, -19.5], [18, -19.5]],    // parvis Entrée Principale
+    [[-22, 6.2], [22, 6.2]],        // promenade Théâtre / Bassin central
+    [[24, 9.8], [46, 19.6]],        // allée Kiosques Est -> Jeux
+    [[72, 5.0], [134, 2.5]],        // promenade Pétanque -> Pelouses
+    [[136, 2.2], [200, 2.2]],       // allée centrale Jardins Est -> Fontaine
+    [[-44, -45.5], [118, -45.5]],   // esplanade Cantines Nord Ouest/Centre
+    [[145, -45.5], [295, -45.5]],   // esplanade Cantines Nord Est
   ];
 
   for (let i = 0; i < 28; i++) {
@@ -565,12 +634,17 @@ export function buildPedestrians(scene) {
       bz,
       segLen,
       t: rng(),
-      dir: rng() > 0.5 ? 1 : -1,
-      speedMps: 0.85 + rng() * 0.4,
+      dir: i % 2 === 0 ? 1 : -1,
+      baseSpeed: 0.85 + rng() * 0.4,
+      passOffset: 0,
       phase: rng() * Math.PI * 2,
       strideSpeed: 3.1 + rng() * 0.6,
       bobAmp: 0.04,
       colorIdx: (i + 2) % 5,
+      px: ax,
+      pz: az,
+      vx: 0,
+      vz: 0,
     });
   }
 
@@ -644,18 +718,48 @@ export function buildPedestrians(scene) {
       }
       if (!vis) return;
       const tSec = now * 0.001;
+
       walkers.forEach((w, idx) => {
-        let px, pz, dx, dz;
+        let speedScale = 1.0;
+        let targetPass = 0.0;
 
         if (w.kind === "loop") {
-          w.t += w.dir * (w.speedMps / PISTE_PERIM) * dt;
-          const [lx, lz, vx, vz] = sampleLoopPoint(w.t, w.laneOffset);
-          px = lx;
-          pz = lz;
-          dx = vx * w.dir;
-          dz = vz * w.dir;
+          // Détection de collision entre coureurs sur la même file de la piste
+          for (let j = 0; j < walkers.length; j++) {
+            const o = walkers[j];
+            if (j === idx || o.kind !== "loop" || o.dir !== w.dir) continue;
+            let du = (((o.t - w.t) * w.dir) % 1 + 1) % 1;
+            const arcDist = du * PISTE_PERIM;
+            if (arcDist > 0 && arcDist < 2.2) {
+              speedScale = Math.min(speedScale, THREE.MathUtils.clamp((arcDist - 0.8) / 1.4, 0.35, 1));
+              targetPass = w.dir > 0 ? -0.28 : 0.28;
+            }
+          }
+          w.passOffset += (targetPass - w.passOffset) * Math.min(1, 4 * dt);
+          w.t += w.dir * ((w.baseSpeed * speedScale) / PISTE_PERIM) * dt;
+          const [lx, lz, vx, vz] = sampleLoopPoint(w.t, w.laneOffset + w.passOffset);
+          w.px = lx;
+          w.pz = lz;
+          w.vx = vx * w.dir;
+          w.vz = vz * w.dir;
         } else {
-          w.t += w.dir * (w.speedMps / w.segLen) * dt;
+          // Détection d'approche + écart latéral sur allées piétonnes (marche à droite)
+          for (let j = 0; j < walkers.length; j++) {
+            const o = walkers[j];
+            if (j === idx || o.kind !== "seg") continue;
+            const relX = o.px - w.px;
+            const relZ = o.pz - w.pz;
+            const distSq = relX * relX + relZ * relZ;
+            if (distSq < 2.4 && distSq > 1e-4) {
+              const fwdDot = (relX * w.vx + relZ * w.vz) / Math.sqrt(distSq);
+              if (fwdDot > 0.25) {
+                speedScale = Math.min(speedScale, 0.45);
+                targetPass = 0.35;
+              }
+            }
+          }
+          w.passOffset += (targetPass - w.passOffset) * Math.min(1, 5 * dt);
+          w.t += w.dir * ((w.baseSpeed * speedScale) / w.segLen) * dt;
           if (w.t > 1) {
             w.t = 1;
             w.dir = -1;
@@ -663,22 +767,26 @@ export function buildPedestrians(scene) {
             w.t = 0;
             w.dir = 1;
           }
-          px = w.ax + (w.bx - w.ax) * w.t;
-          pz = w.az + (w.bz - w.az) * w.t;
-          dx = (w.bx - w.ax) * w.dir;
-          dz = (w.bz - w.az) * w.dir;
+          const tx = (w.bx - w.ax) / w.segLen;
+          const tz = (w.bz - w.az) / w.segLen;
+          w.vx = tx * w.dir;
+          w.vz = tz * w.dir;
+          // Tenir sa droite sur l'allée : normale droite = (-vz, vx)
+          const laneShift = 0.42 + w.passOffset;
+          w.px = w.ax + (w.bx - w.ax) * w.t + -w.vz * laneShift;
+          w.pz = w.az + (w.bz - w.az) * w.t + w.vx * laneShift;
         }
 
         const bob = Math.abs(Math.sin(tSec * w.strideSpeed + w.phase)) * w.bobAmp;
-        const rotY = Math.atan2(dx, dz);
+        const rotY = Math.atan2(w.vx, w.vz);
 
-        dummy.position.set(px, 0.41 + 0.52 + bob, pz);
+        dummy.position.set(w.px, 0.41 + 0.52 + bob, w.pz);
         dummy.rotation.set(0, rotY, Math.sin(tSec * w.strideSpeed + w.phase) * 0.04);
         dummy.scale.set(1, 1, 1);
         dummy.updateMatrix();
         torsos.setMatrixAt(idx, dummy.matrix);
 
-        dummy.position.set(px, 0.41 + 1.18 + bob, pz);
+        dummy.position.set(w.px, 0.41 + 1.18 + bob, w.pz);
         dummy.rotation.set(0, rotY, 0);
         dummy.scale.set(1, 1, 1);
         dummy.updateMatrix();

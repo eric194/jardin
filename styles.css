@@ -2295,7 +2295,8 @@ body.is-card-open .park-minimap {
   box-shadow: 0 0 0 4px rgba(166, 66, 52, 0.22);
 }
 
-.fly-stop-btn {
+.fly-stop-btn,
+.fly-next-btn {
   appearance: none;
   border: 1px solid var(--border);
   background: var(--surface-solid);
@@ -2307,9 +2308,15 @@ body.is-card-open .park-minimap {
   cursor: pointer;
 }
 
-.fly-stop-btn:hover {
+.fly-stop-btn:hover,
+.fly-next-btn:hover {
   background: var(--ink);
   color: var(--bg);
+}
+
+body.is-card-open .fly-banner {
+  top: 16px;
+  bottom: auto;
 }
 
 .copy-toast {

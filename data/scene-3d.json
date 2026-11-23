@@ -25236,20 +25236,39 @@
       "index": "23",
       "id": "parking",
       "dossierId": "parking",
-      "title": "Parking Nord & 43 Cantines",
-      "category": "Mobilité & Commerce",
-      "metric": "192 places · 43 cantines",
+      "title": "Parking Nord",
+      "category": "Mobilité",
+      "metric": "192 places · Îlots boisés",
       "pos": [
-        129.73,
-        -53.53
+        168.0,
+        -58.5
       ],
       "camOffset": [
-        20,
-        34,
-        48
+        16,
+        40,
+        56
       ],
-      "lot": "Lot 3 & 4 — Parking & Commerces",
-      "summary": "Grande aire de stationnement paysagée de 192 places longeant 43 cantines commerciales animées."
+      "lot": "Lot 1 & 3 — Voirie & Parking",
+      "summary": "Grande aire de stationnement paysagée de 192 places en épis et bataille avec accès rapide vers le jardin."
+    },
+    {
+      "index": "24",
+      "id": "cantines",
+      "dossierId": "parking",
+      "title": "43 Cantines & Commerces",
+      "category": "Services",
+      "metric": "43 cantines · Galerie nord",
+      "pos": [
+        88.0,
+        -45.5
+      ],
+      "camOffset": [
+        12,
+        26,
+        38
+      ],
+      "lot": "Lot 4 — Bâtiments & Cantines",
+      "summary": "Galerie marchande de 43 cantines commerciales animées longeant la promenade Nord du parc."
     }
   ]
 }

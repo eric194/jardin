@@ -274,18 +274,20 @@ export function createCloudTexture() {
   return tex;
 }
 
-export function applyWindShader(material, windUniforms, amplitude = 0.22) {
+export function applyWindShader(material, windUniforms, amplitude = 0.22, radialAnchor = false) {
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uWindTime = windUniforms.uWindTime;
     shader.uniforms.uWindStrength = windUniforms.uWindStrength;
     shader.uniforms.uWindAmp = { value: amplitude };
+    shader.uniforms.uRadialAnchor = { value: radialAnchor ? 1.0 : 0.0 };
 
     shader.vertexShader = shader.vertexShader.replace(
       "#include <common>",
       `#include <common>
       uniform float uWindTime;
       uniform float uWindStrength;
-      uniform float uWindAmp;`
+      uniform float uWindAmp;
+      uniform float uRadialAnchor;`
     );
 
     shader.vertexShader = shader.vertexShader.replace(
@@ -296,9 +298,19 @@ export function applyWindShader(material, windUniforms, amplitude = 0.22) {
       #else
         float windPhase = position.x * 0.21 + position.z * 0.19;
       #endif
-      float windHeight = clamp((position.y + 0.8) * 0.45, 0.0, 1.4);
-      transformed.x += sin(uWindTime * 1.85 + windPhase) * uWindStrength * uWindAmp * windHeight;
-      transformed.z += cos(uWindTime * 1.38 + windPhase * 1.27) * uWindStrength * uWindAmp * 0.65 * windHeight;`
+      if (uRadialAnchor > 0.5) {
+        // Cœur du palmier strictement ancré au stipe : seules les extrémités des palmes ondulent
+        float frondDist = length(position.xz - vec2(0.22, 0.0));
+        float frondMask = smoothstep(0.32, 2.25, frondDist);
+        float tipWave = sin(uWindTime * 2.35 + windPhase + frondDist * 1.45);
+        transformed.y += tipWave * uWindStrength * uWindAmp * 0.68 * frondMask;
+        transformed.x += sin(uWindTime * 1.65 + windPhase) * uWindStrength * uWindAmp * 0.42 * frondMask;
+        transformed.z += cos(uWindTime * 1.45 + windPhase * 1.2) * uWindStrength * uWindAmp * 0.36 * frondMask;
+      } else {
+        float windHeight = smoothstep(1.5, 4.6, position.y);
+        transformed.x += sin(uWindTime * 1.85 + windPhase) * uWindStrength * uWindAmp * windHeight;
+        transformed.z += cos(uWindTime * 1.38 + windPhase * 1.27) * uWindStrength * uWindAmp * 0.65 * windHeight;
+      }`
     );
   };
 }

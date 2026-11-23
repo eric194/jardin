@@ -99,6 +99,7 @@ const state = {
   audioEnabled: false,
   isTiltShift: false,
   autoFly: null,
+  walkTour: null,
   reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   fly: null,
   pointerDownPos: null,
@@ -139,6 +140,7 @@ function cacheDom() {
   dom.btnViewMode = document.getElementById("btn-view-mode");
   dom.btnTiltshift = document.getElementById("btn-tiltshift");
   dom.btnFly = document.getElementById("btn-fly");
+  dom.btnWalk = document.getElementById("btn-walk");
   dom.btnShare = document.getElementById("btn-share");
   dom.btnReset = document.getElementById("btn-reset");
   dom.btnGuide = document.getElementById("btn-guide");
@@ -152,6 +154,7 @@ function cacheDom() {
   dom.minimapFov = document.getElementById("minimap-fov");
   dom.flyBanner = document.getElementById("fly-banner");
   dom.flyLabel = document.getElementById("fly-label");
+  dom.btnFlyNext = document.getElementById("btn-fly-next");
   dom.btnFlyStop = document.getElementById("btn-fly-stop");
   dom.copyToast = document.getElementById("copy-toast");
   dom.spaceCard = document.getElementById("space-card");
@@ -566,6 +569,32 @@ function buildScene(data, thiesMapTex) {
   // Dalle de fond continue du pôle enterré (-0.36 m) sous Basket + Gradin central + Beach (zéro mur interne)
   pushKindGeom("paving", extrudePoly(SUNKEN_BOWL_POLY, 0.08, -0.44));
 
+  // Paroi verticale périphérique continue scellant le vide blanc entre la dalle enterrée (-0.44) et le plateau supérieur (+0.298)
+  {
+    const sbWallPos = [];
+    for (let i = 0; i < SUNKEN_BOWL_POLY.length; i++) {
+      const a = SUNKEN_BOWL_POLY[i];
+      const b = SUNKEN_BOWL_POLY[(i + 1) % SUNKEN_BOWL_POLY.length];
+      sbWallPos.push(
+        a[0], -0.46, a[1],
+        b[0], -0.46, b[1],
+        b[0], 0.298, b[1],
+        a[0], -0.46, a[1],
+        b[0], 0.298, b[1],
+        a[0], 0.298, a[1]
+      );
+    }
+    const sbWallGeo = new THREE.BufferGeometry();
+    sbWallGeo.setAttribute("position", new THREE.Float32BufferAttribute(sbWallPos, 3));
+    sbWallGeo.computeVertexNormals();
+    const sbWallMesh = new THREE.Mesh(
+      sbWallGeo,
+      new THREE.MeshStandardMaterial({ color: 0xe4dcd0, roughness: 0.9, side: THREE.DoubleSide })
+    );
+    sbWallMesh.receiveShadow = true;
+    scene.add(sbWallMesh);
+  }
+
   for (const z of data.zones) {
     try {
       if (z.kind === "water") continue;
@@ -883,21 +912,129 @@ function buildScene(data, thiesMapTex) {
         )
       );
     }
+
+    // Allée piétonne et bordure de séparation physique entre les 43 cantines (Sud) et les voies du parking Nord
+    const cantineSepWalk = new THREE.Mesh(
+      new THREE.BoxGeometry(386, 0.08, 1.35),
+      new THREE.MeshStandardMaterial({ color: 0xe6ddd0, roughness: 0.9 })
+    );
+    cantineSepWalk.position.set(129, 0.31, -51.35);
+    cantineSepWalk.receiveShadow = true;
+    scene.add(cantineSepWalk);
+
+    const sepPostXs = [];
+    for (let sx = -58; sx <= 320; sx += 11.5) sepPostXs.push(sx);
+    const sepPostGeo = new THREE.CylinderGeometry(0.11, 0.13, 0.72, 8);
+    const sepPostMat = new THREE.MeshStandardMaterial({ color: 0x4c4f54, roughness: 0.58 });
+    const sepInst = new THREE.InstancedMesh(sepPostGeo, sepPostMat, sepPostXs.length);
+    const sepDummy = new THREE.Object3D();
+    sepPostXs.forEach((sx, i) => {
+      sepDummy.position.set(sx, 0.35 + 0.36, -51.85);
+      sepDummy.updateMatrix();
+      sepInst.setMatrixAt(i, sepDummy.matrix);
+    });
+    sepInst.castShadow = true;
+    scene.add(sepInst);
   }
 
-  // 7. Poteaux de clôture (339)
-  if (data.posts && data.posts.length) {
-    const postGeo = new THREE.BoxGeometry(0.24, 1.85, 0.24);
+  // 7. Clôture complète ceinturant tout le jardin (poteaux + double lisse métallique y compris courbes Est & Ouest)
+  {
+    const fenceHalfX = 249.6;
+    const fenceZN = -24.87;
+    const fenceZS = 24.93;
+    const fenceR = 4.9;
+    const cxE = fenceHalfX - fenceR; // 244.7
+    const cxW = -fenceHalfX + fenceR; // -244.7
+    const czN = fenceZN + fenceR; // -19.97
+    const czS = fenceZS - fenceR; // 20.03
+
+    const fenceChains = [];
+    const buildChain = (pts, spacing = 4.0) => {
+      const out = [];
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i];
+        const b = pts[i + 1];
+        const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        const steps = Math.max(1, Math.round(len / spacing));
+        for (let k = i === 0 ? 0 : 1; k <= steps; k++) {
+          const u = k / steps;
+          out.push([a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u]);
+        }
+      }
+      return out;
+    };
+    const arcPts = (cx, cz, r, a0, a1, n = 5) => {
+      const arr = [];
+      for (let i = 0; i <= n; i++) {
+        const a = a0 + ((a1 - a0) * i) / n;
+        arr.push([cx + Math.cos(a) * r, cz + Math.sin(a) * r]);
+      }
+      return arr;
+    };
+
+    // Tronçon 1 : de l'entrée Nord-Est (+12.5) -> courbe Est -> entrée Théâtre Sud (+10.5)
+    fenceChains.push(
+      buildChain([
+        [12.5, fenceZN],
+        [cxE, fenceZN],
+        ...arcPts(cxE, czN, fenceR, -Math.PI * 0.5, 0, 5),
+        [fenceHalfX, czS],
+        ...arcPts(cxE, czS, fenceR, 0, Math.PI * 0.5, 5),
+        [10.5, fenceZS],
+      ])
+    );
+    // Tronçon 2 : de l'entrée Théâtre Sud-Ouest (-10.5) -> courbe Ouest -> entrée Nord-Ouest (-12.5)
+    fenceChains.push(
+      buildChain([
+        [-10.5, fenceZS],
+        [cxW, fenceZS],
+        ...arcPts(cxW, czS, fenceR, Math.PI * 0.5, Math.PI, 5),
+        [-fenceHalfX, czN],
+        ...arcPts(cxW, czN, fenceR, Math.PI, Math.PI * 1.5, 5),
+        [-12.5, fenceZN],
+      ])
+    );
+
+    const postPts = [];
+    const railSegs = [];
+    for (const ch of fenceChains) {
+      for (let i = 0; i < ch.length; i++) {
+        postPts.push(ch[i]);
+        if (i < ch.length - 1) railSegs.push([ch[i], ch[i + 1]]);
+      }
+    }
+
+    const postGeo = new THREE.BoxGeometry(0.24, 1.75, 0.24);
     const postMat = new THREE.MeshStandardMaterial({ color: 0xd8cfc2, roughness: 0.88 });
-    const postInst = new THREE.InstancedMesh(postGeo, postMat, data.posts.length);
+    const postInst = new THREE.InstancedMesh(postGeo, postMat, postPts.length);
     const dummy = new THREE.Object3D();
-    data.posts.forEach(([px, pz], idx) => {
+    postPts.forEach(([px, pz], idx) => {
       dummy.position.set(px, 1.15, pz);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(1, 1, 1);
       dummy.updateMatrix();
       postInst.setMatrixAt(idx, dummy.matrix);
     });
     postInst.castShadow = true;
     scene.add(postInst);
+
+    const railGeo = new THREE.BoxGeometry(0.06, 0.055, 1.0);
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x5c5a55, roughness: 0.58, metalness: 0.35 });
+    const railInst = new THREE.InstancedMesh(railGeo, railMat, railSegs.length * 2);
+    railSegs.forEach(([a, b], idx) => {
+      const mx = (a[0] + b[0]) * 0.5;
+      const mz = (a[1] + b[1]) * 0.5;
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const yaw = Math.atan2(b[0] - a[0], b[1] - a[1]);
+      for (let tier = 0; tier < 2; tier++) {
+        dummy.position.set(mx, tier === 0 ? 0.86 : 1.72, mz);
+        dummy.rotation.set(0, yaw, 0);
+        dummy.scale.set(1, 1, len);
+        dummy.updateMatrix();
+        railInst.setMatrixAt(idx * 2 + tier, dummy.matrix);
+      }
+    });
+    scene.add(railInst);
   }
 
   // 8. Tracés sportifs 3D visibles, Eau + Jets animés, Arbres périphériques & intérieurs avec vent
@@ -965,15 +1102,15 @@ function buildScene(data, thiesMapTex) {
 }
 
 function buildSpaceMarkers(spaces, isMobile = false) {
-  const discGeo = new THREE.CylinderGeometry(1.38, 1.38, 0.3, 24);
+  const discGeo = new THREE.CylinderGeometry(0.78, 0.78, 0.22, 24);
   discGeo.rotateX(Math.PI / 2);
-  const ringGeo = new THREE.TorusGeometry(1.45, 0.1, 8, 24);
-  const stemGeo = new THREE.CylinderGeometry(0.055, 0.055, 4.7, 6);
-  const baseDotGeo = new THREE.CircleGeometry(0.48, 16);
+  const ringGeo = new THREE.TorusGeometry(0.83, 0.06, 8, 24);
+  const stemGeo = new THREE.CylinderGeometry(0.036, 0.036, 3.1, 6);
+  const baseDotGeo = new THREE.CircleGeometry(0.3, 16);
   baseDotGeo.rotateX(-Math.PI / 2);
-  const pulseGeo = new THREE.RingGeometry(0.75, 1.0, 24);
+  const pulseGeo = new THREE.RingGeometry(0.45, 0.64, 24);
   pulseGeo.rotateX(-Math.PI / 2);
-  const hitGeo = new THREE.SphereGeometry(isMobile ? 6.4 : 5.2, 10, 10);
+  const hitGeo = new THREE.SphereGeometry(isMobile ? 5.6 : 4.8, 10, 10);
   const hitMat = new THREE.MeshBasicMaterial({ visible: false });
 
   spaces.forEach((sp, idx) => {
@@ -991,7 +1128,7 @@ function buildSpaceMarkers(spaces, isMobile = false) {
       opacity: 1,
     });
     const disc = new THREE.Mesh(discGeo, discMat);
-    disc.position.y = 5.2;
+    disc.position.y = 3.55;
 
     const ringMat = new THREE.MeshBasicMaterial({
       color: 0xffffff,
@@ -1004,16 +1141,16 @@ function buildSpaceMarkers(spaces, isMobile = false) {
     const stemMat = new THREE.MeshBasicMaterial({
       color: 0x8f887d,
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.48,
       depthWrite: false,
     });
     const stem = new THREE.Mesh(stemGeo, stemMat);
-    stem.position.y = 2.45;
+    stem.position.y = 1.65;
 
     const dotMat = new THREE.MeshBasicMaterial({
       color: 0xa64234,
       transparent: true,
-      opacity: 0.9,
+      opacity: 0.85,
       depthWrite: false,
     });
     const baseDot = new THREE.Mesh(baseDotGeo, dotMat);
@@ -1022,7 +1159,7 @@ function buildSpaceMarkers(spaces, isMobile = false) {
     const pulseMat = new THREE.MeshBasicMaterial({
       color: 0xa64234,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.3,
       side: THREE.DoubleSide,
       depthWrite: false,
     });
@@ -1030,7 +1167,7 @@ function buildSpaceMarkers(spaces, isMobile = false) {
     pulseRing.position.y = 0.1;
 
     const hitProxy = new THREE.Mesh(hitGeo, hitMat);
-    hitProxy.position.y = 5.0;
+    hitProxy.position.y = 3.4;
     hitProxy.userData = { spaceId: sp.id, markerGroup: group };
 
     group.add(disc, stem, baseDot, pulseRing, hitProxy);
@@ -1152,27 +1289,8 @@ function enterExperience() {
   flyTo(ov.pos, ov.target, 1400);
 }
 
-function selectSpace(spaceId) {
-  const sp = state.data.spaces.find((s) => s.id === spaceId);
-  if (!sp) return;
-  stopAutoFly();
-
-  if (state.isIntro) {
-    state.isIntro = false;
-    if (!state.satDone) finishSatelliteIntro();
-    dom.intro.classList.remove("is-visible");
-    dom.intro.setAttribute("aria-hidden", "true");
-    dom.spaceLabels.classList.add("is-visible");
-    dom.spaceLabels.setAttribute("aria-hidden", "false");
-    dom.distanceHud.classList.add("is-visible");
-    dom.parkMinimap?.classList.add("is-visible");
-    dom.parkMinimap?.setAttribute("aria-hidden", "false");
-    controls.enabled = true;
-  }
-
-  dismissGestureHint();
-  closeNavGuide();
-  closeMenu();
+function populateSpaceCard(sp, hideHeader = true) {
+  if (!sp || !state.data?.spaces?.length) return;
   state.selectedSpaceId = sp.id;
   state.isPlanView = false;
   dom.btnViewMode.setAttribute("aria-pressed", "false");
@@ -1192,13 +1310,38 @@ function selectSpace(spaceId) {
 
   dom.spaceCard.classList.add("is-open");
   dom.spaceCard.setAttribute("aria-hidden", "false");
-  dom.header.classList.add("is-hidden");
+  if (hideHeader) dom.header.classList.add("is-hidden");
 
   markerGroups.forEach((g) => {
     const active = g.userData.spaceId === sp.id;
     g.userData.discMat.color.setHex(active ? 0xc85544 : 0xa64234);
     g.userData.discMat.emissiveIntensity = active ? 0.55 : 0.35;
   });
+}
+
+function selectSpace(spaceId) {
+  const sp = state.data.spaces.find((s) => s.id === spaceId);
+  if (!sp) return;
+  stopAutoFly(true);
+  stopWalkTour(false);
+
+  if (state.isIntro) {
+    state.isIntro = false;
+    if (!state.satDone) finishSatelliteIntro();
+    dom.intro.classList.remove("is-visible");
+    dom.intro.setAttribute("aria-hidden", "true");
+    dom.spaceLabels.classList.add("is-visible");
+    dom.spaceLabels.setAttribute("aria-hidden", "false");
+    dom.distanceHud.classList.add("is-visible");
+    dom.parkMinimap?.classList.add("is-visible");
+    dom.parkMinimap?.setAttribute("aria-hidden", "false");
+    controls.enabled = true;
+  }
+
+  dismissGestureHint();
+  closeNavGuide();
+  closeMenu();
+  populateSpaceCard(sp, true);
 
   const desktopShiftX = window.innerWidth > 768 ? -6 : 0;
   const targetPos = [sp.pos[0] + desktopShiftX, 1.4, sp.pos[1]];
@@ -1211,6 +1354,7 @@ function selectSpace(spaceId) {
 }
 
 function closeSpaceCard() {
+  stopAutoFly(true);
   if (!state.selectedSpaceId) return;
   state.selectedSpaceId = null;
   document.body.classList.remove("is-card-open");
@@ -1238,6 +1382,7 @@ function stepSpace(delta) {
 function togglePlanView() {
   dismissGestureHint();
   stopAutoFly();
+  stopWalkTour(false);
   if (state.selectedSpaceId) {
     state.selectedSpaceId = null;
     document.body.classList.remove("is-card-open");
@@ -1258,6 +1403,7 @@ function togglePlanView() {
 function resetView() {
   dismissGestureHint();
   stopAutoFly();
+  stopWalkTour(false);
   state.isPlanView = false;
   dom.btnViewMode.setAttribute("aria-pressed", "false");
   if (state.selectedSpaceId) {
@@ -1278,12 +1424,14 @@ function toggleTiltShift(forceState = null) {
 const AUTO_FLY_STOPS = [
   "football",
   "basket",
+  "arts-martiaux",
   "piscine-adulte",
   "bassin",
   "theatre",
   "loisirs-enfants",
   "pelouse-pique-nique",
   "fontaine-est",
+  "cantines",
   "parking",
 ];
 
@@ -1292,17 +1440,136 @@ function flyToAutoStop(idx) {
   const id = AUTO_FLY_STOPS[idx % AUTO_FLY_STOPS.length];
   const sp = state.data.spaces.find((s) => s.id === id) || state.data.spaces[0];
   if (!sp) return;
-  if (dom.flyLabel) dom.flyLabel.textContent = `Survol · ${sp.title}`;
-  const target = [sp.pos[0], 1.2, sp.pos[1]];
+  populateSpaceCard(sp, true);
+  if (dom.flyLabel) {
+    dom.flyLabel.textContent = `Survol ${idx + 1}/${AUTO_FLY_STOPS.length} · ${sp.title}`;
+  }
+  const desktopShiftX = window.innerWidth > 768 ? -6 : 0;
+  const target = [sp.pos[0] + desktopShiftX, 1.3, sp.pos[1]];
   const camPos = [
-    sp.pos[0] + sp.camOffset[0] * 1.15,
-    Math.max(26, sp.camOffset[1] * 1.05),
-    sp.pos[1] + sp.camOffset[2] * 1.15,
+    sp.pos[0] + sp.camOffset[0] + desktopShiftX,
+    sp.camOffset[1],
+    sp.pos[1] + sp.camOffset[2],
   ];
-  flyTo(camPos, target, 2400);
+  flyTo(camPos, target, 2000);
 }
 
 function startAutoFly() {
+  stopWalkTour(false);
+  if (state.isIntro) enterExperience();
+  closeMenu();
+  closeNavGuide();
+  dismissGestureHint();
+  state.isPlanView = false;
+  dom.btnViewMode.setAttribute("aria-pressed", "false");
+  state.autoFly = { idx: 0, nextStepTime: performance.now() + 5200 };
+  dom.btnFly?.setAttribute("aria-pressed", "true");
+  if (dom.btnFlyNext) dom.btnFlyNext.style.display = "inline-flex";
+  dom.flyBanner?.classList.add("is-visible");
+  dom.flyBanner?.setAttribute("aria-hidden", "false");
+  flyToAutoStop(0);
+}
+
+function stopAutoFly(keepCard = false) {
+  if (!state.autoFly) return;
+  state.autoFly = null;
+  dom.btnFly?.setAttribute("aria-pressed", "false");
+  if (!state.walkTour) {
+    dom.flyBanner?.classList.remove("is-visible");
+    dom.flyBanner?.setAttribute("aria-hidden", "true");
+  }
+  if (!keepCard && state.selectedSpaceId) {
+    state.selectedSpaceId = null;
+    document.body.classList.remove("is-card-open");
+    dom.spaceCard.classList.remove("is-open");
+    dom.spaceCard.setAttribute("aria-hidden", "true");
+    dom.header.classList.add("is-visible");
+    dom.header.classList.remove("is-hidden");
+    markerGroups.forEach((g) => {
+      g.userData.discMat.color.setHex(0xa64234);
+      g.userData.discMat.emissiveIntensity = 0.35;
+    });
+  }
+}
+
+function toggleAutoFly() {
+  if (state.autoFly) stopAutoFly(false);
+  else startAutoFly();
+}
+
+// Circuit piéton vérifié 100 % sur allées dallées dégagées (niveau des yeux 1,88 m, hors colonnes du parvis)
+const WALK_LOOP = [
+  [-2, -16],
+  [-11, -13],
+  [-24, -2],
+  [-36, 4],
+  [-50, 4],
+  [-62, 4],
+  [-74, 2],
+  [-86, 10],
+  [-98, 22],
+  [-122, 22],
+  [-146, 22],
+  [-158, 18],
+  [-170, 6],
+  [-180, -4],
+  [-168, -6],
+  [-156, -18],
+  [-144, -22],
+  [-108, -22],
+  [-96, -20],
+  [-84, -8],
+  [-72, 0],
+  [-60, 4],
+  [-24, 4],
+  [-12, 10],
+  [0, 6],
+  [24, 10],
+  [36, 10],
+  [48, 20],
+  [60, 16],
+  [72, 4],
+  [108, 6],
+  [132, 2],
+  [168, 2],
+  [198, 0],
+  [212, 12],
+  [188, 14],
+  [176, 2],
+  [140, 2],
+  [116, 6],
+  [68, 6],
+  [56, 18],
+  [44, 20],
+  [32, 8],
+  [18, -5],
+  [6, -15],
+];
+
+const walkSegs = [];
+let walkTotalLen = 0;
+for (let i = 0; i < WALK_LOOP.length; i++) {
+  const a = WALK_LOOP[i];
+  const b = WALK_LOOP[(i + 1) % WALK_LOOP.length];
+  const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  walkSegs.push({ a, b, len, cumStart: walkTotalLen });
+  walkTotalLen += len;
+}
+
+function sampleWalkLoop(dist) {
+  const d = ((dist % walkTotalLen) + walkTotalLen) % walkTotalLen;
+  for (let i = 0; i < walkSegs.length; i++) {
+    const s = walkSegs[i];
+    if (d <= s.cumStart + s.len || i === walkSegs.length - 1) {
+      const u = Math.max(0, Math.min(1, (d - s.cumStart) / (s.len || 1)));
+      return [s.a[0] + (s.b[0] - s.a[0]) * u, s.a[1] + (s.b[1] - s.a[1]) * u];
+    }
+  }
+  return WALK_LOOP[0];
+}
+
+function startWalkTour() {
+  stopAutoFly(false);
   if (state.isIntro) enterExperience();
   if (state.selectedSpaceId) {
     state.selectedSpaceId = null;
@@ -1316,30 +1583,57 @@ function startAutoFly() {
   closeNavGuide();
   dismissGestureHint();
   state.isPlanView = false;
+  state.fly = null;
   dom.btnViewMode.setAttribute("aria-pressed", "false");
-  state.autoFly = { idx: 0, nextStepTime: performance.now() + 4600 };
-  dom.btnFly?.setAttribute("aria-pressed", "true");
+  const [p0x, p0z] = sampleWalkLoop(0);
+  const [l0x, l0z] = sampleWalkLoop(15);
+  state.walkTour = {
+    dist: 0,
+    lookPos: new THREE.Vector3(l0x, 1.72, l0z),
+    lastLabelCheck: 0,
+  };
+  camera.position.set(p0x, 1.88, p0z);
+  controls.target.copy(state.walkTour.lookPos);
+  camera.lookAt(state.walkTour.lookPos);
+  dom.btnWalk?.setAttribute("aria-pressed", "true");
+  if (dom.btnFlyNext) dom.btnFlyNext.style.display = "none";
+  if (dom.flyLabel) dom.flyLabel.textContent = "Visite piéton · Entrée Principale";
   dom.flyBanner?.classList.add("is-visible");
   dom.flyBanner?.setAttribute("aria-hidden", "false");
-  flyToAutoStop(0);
 }
 
-function stopAutoFly() {
-  if (!state.autoFly) return;
-  state.autoFly = null;
-  dom.btnFly?.setAttribute("aria-pressed", "false");
-  dom.flyBanner?.classList.remove("is-visible");
-  dom.flyBanner?.setAttribute("aria-hidden", "true");
+function stopWalkTour(liftCamera = true) {
+  if (!state.walkTour) return;
+  const lastLook = state.walkTour.lookPos.clone();
+  const curPos = camera.position.clone();
+  state.walkTour = null;
+  dom.btnWalk?.setAttribute("aria-pressed", "false");
+  if (!state.autoFly) {
+    dom.flyBanner?.classList.remove("is-visible");
+    dom.flyBanner?.setAttribute("aria-hidden", "true");
+  }
+  if (camera) {
+    camera.near = 1;
+    camera.updateProjectionMatrix();
+    if (liftCamera) {
+      const back = curPos.clone().sub(lastLook).setY(0).normalize();
+      if (back.lengthSq() < 0.01) back.set(0, 0, 1);
+      const nextPos = lastLook.clone().addScaledVector(back, 28);
+      nextPos.y = 24;
+      flyTo([nextPos.x, nextPos.y, nextPos.z], [lastLook.x, 1.0, lastLook.z], 750);
+    }
+  }
 }
 
-function toggleAutoFly() {
-  if (state.autoFly) stopAutoFly();
-  else startAutoFly();
+function toggleWalkTour() {
+  if (state.walkTour) stopWalkTour(true);
+  else startWalkTour();
 }
 
 function jumpToMinimapClientXY(clientX, clientY) {
   if (!dom.minimapSvg || state.isIntro) return;
-  stopAutoFly();
+  stopAutoFly(false);
+  stopWalkTour(false);
   dismissGestureHint();
   const rect = dom.minimapSvg.getBoundingClientRect();
   if (rect.width < 1 || rect.height < 1) return;
@@ -1759,7 +2053,17 @@ function bindEvents() {
   dom.btnViewMode.addEventListener("click", togglePlanView);
   dom.btnTiltshift?.addEventListener("click", () => toggleTiltShift());
   dom.btnFly?.addEventListener("click", toggleAutoFly);
-  dom.btnFlyStop?.addEventListener("click", stopAutoFly);
+  dom.btnWalk?.addEventListener("click", toggleWalkTour);
+  dom.btnFlyNext?.addEventListener("click", () => {
+    if (!state.autoFly) return;
+    state.autoFly.idx = (state.autoFly.idx + 1) % AUTO_FLY_STOPS.length;
+    state.autoFly.nextStepTime = performance.now() + 5200;
+    flyToAutoStop(state.autoFly.idx);
+  });
+  dom.btnFlyStop?.addEventListener("click", () => {
+    stopAutoFly(false);
+    stopWalkTour(true);
+  });
   dom.btnShare?.addEventListener("click", shareCurrentView);
   dom.btnReset.addEventListener("click", resetView);
   dom.btnGuide?.addEventListener("click", toggleNavGuide);
@@ -1834,7 +2138,8 @@ function bindEvents() {
   dom.canvas.addEventListener("pointerdown", (e) => {
     state.pointerDownPos = { x: e.clientX, y: e.clientY };
     if (state.fly) state.fly = null;
-    stopAutoFly();
+    stopAutoFly(false);
+    stopWalkTour(true);
   });
 
   dom.canvas.addEventListener("pointermove", (e) => {
@@ -1896,7 +2201,8 @@ function bindEvents() {
     () => {
       if (!state.isIntro) {
         dismissGestureHint();
-        stopAutoFly();
+        stopAutoFly(false);
+        stopWalkTour(true);
       }
     },
     { passive: true }
@@ -1905,8 +2211,10 @@ function bindEvents() {
   document.addEventListener("keydown", (e) => {
     const inInput = e.target?.tagName === "INPUT" || e.target?.tagName === "TEXTAREA";
     if (e.key === "Escape") {
-      if (state.autoFly) {
-        stopAutoFly();
+      if (state.walkTour) {
+        stopWalkTour(true);
+      } else if (state.autoFly) {
+        stopAutoFly(false);
       } else if (dossierCtrl?.isOpen()) {
         dossierCtrl.closeAll();
       } else if (state.guideOpen) {
@@ -1938,6 +2246,11 @@ function bindEvents() {
 
     if ((e.key === "f" || e.key === "F") && !state.isIntro && !dossierCtrl?.isOpen()) {
       toggleAutoFly();
+      return;
+    }
+
+    if ((e.key === "v" || e.key === "V") && !state.isIntro && !dossierCtrl?.isOpen()) {
+      toggleWalkTour();
       return;
     }
 
@@ -2006,6 +2319,7 @@ function bindEvents() {
         audioEnabled: state.audioEnabled,
         isTiltShift: state.isTiltShift,
         autoFlyActive: Boolean(state.autoFly),
+        walkTourActive: Boolean(state.walkTour),
         minimapVisible: dom.parkMinimap?.classList.contains("is-visible") || false,
         nightFactor: Number(state.nightFactor.toFixed(2)),
         selectedSpaceId: state.selectedSpaceId,
@@ -2194,7 +2508,8 @@ function animate(now) {
   }
 
   if (state.navVel.lengthSq() > 0.01) {
-    stopAutoFly();
+    stopAutoFly(false);
+    stopWalkTour(true);
     camera.position.x += state.navVel.x * dt;
     camera.position.z += state.navVel.y * dt;
     controls.target.x += state.navVel.x * dt;
@@ -2202,14 +2517,41 @@ function animate(now) {
     state.navVel.multiplyScalar(Math.pow(0.015, dt));
   }
 
-  // Visite guidée automatique (« Survol »)
+  // Visite guidée automatique (« Survol ») avec fiches descriptives
   if (state.autoFly && now >= state.autoFly.nextStepTime) {
     state.autoFly.idx = (state.autoFly.idx + 1) % AUTO_FLY_STOPS.length;
-    state.autoFly.nextStepTime = now + 4800;
+    state.autoFly.nextStepTime = now + 5200;
     flyToAutoStop(state.autoFly.idx);
   }
 
-  if (!state.isIntro) {
+  // Visite piéton immersive au niveau du sol (1,88 m) sur le circuit dallé
+  if (state.walkTour) {
+    state.walkTour.dist = (state.walkTour.dist + 6.4 * dt) % walkTotalLen;
+    const [wx, wz] = sampleWalkLoop(state.walkTour.dist);
+    const [lx, lz] = sampleWalkLoop(state.walkTour.dist + 16);
+    const stepBob = state.reducedMotion ? 0 : Math.abs(Math.sin(now * 0.0046)) * 0.045;
+    camera.position.set(wx, 1.88 + stepBob, wz);
+    const lk = state.reducedMotion ? 1 : 1 - Math.exp(-4.5 * dt);
+    state.walkTour.lookPos.lerp(new THREE.Vector3(lx, 1.7, lz), lk);
+    controls.target.copy(state.walkTour.lookPos);
+    camera.lookAt(state.walkTour.lookPos);
+
+    if (now - state.walkTour.lastLabelCheck > 320 && state.data?.spaces?.length) {
+      state.walkTour.lastLabelCheck = now;
+      let nearSp = null;
+      let bestD = Infinity;
+      for (const sp of state.data.spaces) {
+        const d = Math.hypot(sp.pos[0] - wx, sp.pos[1] - wz);
+        if (d < bestD) {
+          bestD = d;
+          nearSp = sp;
+        }
+      }
+      if (nearSp && dom.flyLabel) {
+        dom.flyLabel.textContent = `Visite piéton · ${nearSp.title}`;
+      }
+    }
+  } else if (!state.isIntro) {
     controls.update();
     controls.target.x = THREE.MathUtils.clamp(controls.target.x, -260, 260);
     controls.target.z = THREE.MathUtils.clamp(controls.target.z, -120, 120);
@@ -2217,7 +2559,7 @@ function animate(now) {
 
   // Adapter la distance de brouillard, la précision Z et l'opacité de la carte de Thiès à l'altitude
   const camY = camera.position.y;
-  const targetNear = camY > 400 ? Math.min(80, camY * 0.012) : 1;
+  const targetNear = state.walkTour ? 0.25 : camY > 400 ? Math.min(80, camY * 0.012) : 1;
   if (Math.abs(camera.near - targetNear) > 0.25) {
     camera.near = targetNear;
     camera.updateProjectionMatrix();
@@ -2240,9 +2582,9 @@ function animate(now) {
     if (pedestrianCtrl) pedestrianCtrl.update(dt, now, camY);
   }
 
-  // Disques 3D terracotta orientés face caméra + estompage fluide selon la distance au point ciblé + anneau pulsant
+  // Disques 3D terracotta compacts et discrets + estompage fluide selon la distance
   const smoothK = state.reducedMotion ? 1 : 1 - Math.exp(-10 * dt);
-  const overviewFloor = THREE.MathUtils.clamp((camY - 90) / 140, 0, 1) * 0.36 + 0.16;
+  const overviewFloor = THREE.MathUtils.clamp((camY - 90) / 140, 0, 1) * 0.26 + 0.12;
   markerGroups.forEach((g) => {
     const isSel = g.userData.spaceId === state.selectedSpaceId;
     const isHov = g.userData.spaceId === state.hoveredSpaceId;
@@ -2254,12 +2596,17 @@ function animate(now) {
       targetOp = 1;
     } else if (isSel) {
       // Adoucit légèrement le repère en très gros plan pour ne jamais gêner les détails (marches, bassins...)
-      targetOp = THREE.MathUtils.clamp((distCam - 11) / 18, 0.22, 0.92);
+      targetOp = THREE.MathUtils.clamp((distCam - 11) / 18, 0.18, 0.88);
     } else if (state.selectedSpaceId) {
-      targetOp = THREE.MathUtils.clamp(0.42 - distFocus / 220, 0.06, 0.36);
+      targetOp = THREE.MathUtils.clamp(0.38 - distFocus / 200, 0.05, 0.32);
+    } else if (state.walkTour) {
+      // En visite piéton au ras du sol, repères très discrets à l'approche seulement
+      const farFade = 1 - THREE.MathUtils.smoothstep(distFocus, 28, 75);
+      const nearFade = THREE.MathUtils.clamp((distCam - 7) / 10, 0.08, 0.72);
+      targetOp = Math.min(farFade * 0.75, nearFade);
     } else {
-      const farFade = 1 - THREE.MathUtils.smoothstep(distFocus, 48, 175) * (1 - overviewFloor);
-      const nearCamFade = THREE.MathUtils.clamp((distCam - 8) / 13, 0.18, 1.0);
+      const farFade = 1 - THREE.MathUtils.smoothstep(distFocus, 38, 145) * (1 - overviewFloor);
+      const nearCamFade = THREE.MathUtils.clamp((distCam - 8) / 13, 0.15, 1.0);
       targetOp = Math.min(farFade, nearCamFade);
     }
 
@@ -2271,11 +2618,11 @@ function animate(now) {
       g.userData.discMat.opacity = curOp;
       g.userData.discMat.depthWrite = curOp > 0.72;
       if (g.userData.ringMat) g.userData.ringMat.opacity = curOp;
-      if (g.userData.stemMat) g.userData.stemMat.opacity = curOp * 0.52;
-      if (g.userData.dotMat) g.userData.dotMat.opacity = curOp * 0.88;
+      if (g.userData.stemMat) g.userData.stemMat.opacity = curOp * 0.48;
+      if (g.userData.dotMat) g.userData.dotMat.opacity = curOp * 0.85;
     }
 
-    const targetScale = isHov ? 1.18 : isSel ? 0.74 : 0.72 + curOp * 0.28;
+    const targetScale = isHov ? 1.2 : isSel ? 0.82 : 0.74 + curOp * 0.26;
     const s = g.userData.disc.scale.x + (targetScale - g.userData.disc.scale.x) * smoothK;
     g.userData.disc.scale.set(s, s, s);
     const faceAngle = Math.atan2(
@@ -2284,8 +2631,8 @@ function animate(now) {
     );
     const sway = state.reducedMotion ? 0 : Math.sin(now * 0.0014 + g.userData.phase) * 0.24;
     g.userData.disc.rotation.y = faceAngle + sway;
-    const baseY = isSel ? 4.8 : 5.2;
-    const bob = state.reducedMotion ? 0 : Math.sin(now * 0.0022 + g.userData.phase) * 0.36;
+    const baseY = isSel ? 3.2 : 3.55;
+    const bob = state.reducedMotion ? 0 : Math.sin(now * 0.0022 + g.userData.phase) * 0.26;
     g.userData.disc.position.y = baseY + bob;
 
     if (g.userData.pulseRing && g.userData.pulseMat) {

@@ -186,6 +186,9 @@ export function buildSportCourts(scene, data) {
     const postGeo = new THREE.CylinderGeometry(0.07, 0.07, height, 6);
     const barGeo = new THREE.CylinderGeometry(0.07, 0.07, width, 6);
     barGeo.rotateZ(Math.PI / 2);
+    const depthBarGeo = new THREE.CylinderGeometry(0.045, 0.045, depth, 6);
+    depthBarGeo.rotateX(Math.PI / 2);
+    const rearPostGeo = new THREE.CylinderGeometry(0.045, 0.045, height, 6);
 
     const pL = new THREE.Mesh(postGeo, propMat);
     pL.position.set(-width / 2, height / 2, 0);
@@ -194,9 +197,38 @@ export function buildSportCourts(scene, data) {
     const top = new THREE.Mesh(barGeo, propMat);
     top.position.set(0, height, 0);
 
+    // Cage arrière complète reliant la barre frontale aux filets extérieurs
+    for (const sx of [-width / 2, width / 2]) {
+      for (const sy of [0.04, height]) {
+        const dBar = new THREE.Mesh(depthBarGeo, propMat);
+        dBar.position.set(sx, sy, -depth / 2);
+        g.add(dBar);
+      }
+      const rPost = new THREE.Mesh(rearPostGeo, propMat);
+      rPost.position.set(sx, height / 2, -depth);
+      g.add(rPost);
+    }
+    const rearTop = new THREE.Mesh(barGeo, propMat);
+    rearTop.position.set(0, height, -depth);
+    rearTop.scale.set(1, 0.72, 0.72);
+    const rearBot = new THREE.Mesh(barGeo, propMat);
+    rearBot.position.set(0, 0.04, -depth);
+    rearBot.scale.set(1, 0.72, 0.72);
+    g.add(rearTop, rearBot);
+
     const netBack = new THREE.Mesh(new THREE.PlaneGeometry(width, height), netMat);
     netBack.position.set(0, height / 2, -depth);
-    g.add(pL, pR, top, netBack);
+    const netTop = new THREE.Mesh(new THREE.PlaneGeometry(width, depth), netMat);
+    netTop.rotation.x = -Math.PI / 2;
+    netTop.position.set(0, height, -depth / 2);
+    const netL = new THREE.Mesh(new THREE.PlaneGeometry(depth, height), netMat);
+    netL.rotation.y = Math.PI / 2;
+    netL.position.set(-width / 2, height / 2, -depth / 2);
+    const netR = new THREE.Mesh(new THREE.PlaneGeometry(depth, height), netMat);
+    netR.rotation.y = Math.PI / 2;
+    netR.position.set(width / 2, height / 2, -depth / 2);
+
+    g.add(pL, pR, top, netBack, netTop, netL, netR);
     scene.add(g);
   };
 
@@ -214,8 +246,8 @@ export function buildSportCourts(scene, data) {
   rbSport.addRect(fx + 24.0 - 1.6, fz, 3.2, 7.6, 0.18);
   rbSport.addArc(fx - 24.0 + 6.2, fz, 4.0, -0.75, 0.75, 14, 0.18);
   rbSport.addArc(fx + 24.0 - 6.2, fz, 4.0, Math.PI - 0.75, Math.PI + 0.75, 14, 0.18);
-  addGoalFrame(fx - 24.0, fz, 5.2, 2.1, 1.3, -Math.PI / 2, 0.425);
-  addGoalFrame(fx + 24.0, fz, 5.2, 2.1, 1.3, Math.PI / 2, 0.425);
+  addGoalFrame(fx - 24.0, fz, 5.2, 2.1, 1.3, Math.PI / 2, 0.425);
+  addGoalFrame(fx + 24.0, fz, 5.2, 2.1, 1.3, -Math.PI / 2, 0.425);
 
   // 2. Piste de Sprint (6 couloirs nets de 1,20 m, lignes de départ et d'arrivée)
   const spX0 = -244.0;
@@ -246,8 +278,8 @@ export function buildSportCourts(scene, data) {
   rbBeach.addSegment(hx - bw / 2, hz, hx + bw / 2, hz, 0.14);
   rbBeach.addSegment(hx - bw / 2, hz - 11.2, hx + bw / 2, hz - 11.2, 0.12);
   rbBeach.addSegment(hx - bw / 2, hz + 11.2, hx + bw / 2, hz + 11.2, 0.12);
-  addGoalFrame(hx, hz - bd / 2, 3.0, 2.0, 0.9, Math.PI, sunkenY);
-  addGoalFrame(hx, hz + bd / 2, 3.0, 2.0, 0.9, 0, sunkenY);
+  addGoalFrame(hx, hz - bd / 2, 3.0, 2.0, 0.9, 0, sunkenY);
+  addGoalFrame(hx, hz + bd / 2, 3.0, 2.0, 0.9, Math.PI, sunkenY);
 
   // Filet central de Beach Volleyball (12 m de large, posé à -0.35 m)
   const bvPoleGeo = new THREE.CylinderGeometry(0.06, 0.06, 2.45, 8);
@@ -1440,28 +1472,32 @@ export function buildVegetation(scene, data, textures, windUniforms) {
         geoms: buildPalmGeoms(),
         trunkCol: 0xa69680,
         map: null,
-        wind: 0.26,
+        wind: 0.22,
+        radialAnchor: true,
         palette: [0x6f944e, 0x7ea15b, 0x628545, 0x89aa64],
       },
       acacia: {
         geoms: buildAcaciaGeoms(),
         trunkCol: 0x8d7b66,
         map: textures.grass,
-        wind: 0.2,
+        wind: 0.11,
+        radialAnchor: false,
         palette: [0x7e955f, 0x8ea36c, 0x6f8754, 0x839962, 0xd4623f, 0xde784b],
       },
       shade: {
         geoms: buildShadeGeoms(),
         trunkCol: 0x978671,
         map: textures.grass,
-        wind: 0.22,
+        wind: 0.12,
+        radialAnchor: false,
         palette: [0x6d8e59, 0x7c9c67, 0x8aa773, 0x5f7e4d, 0x93ae78],
       },
       cypress: {
         geoms: buildCypressGeoms(),
         trunkCol: 0x847462,
         map: null,
-        wind: 0.14,
+        wind: 0.09,
+        radialAnchor: false,
         palette: [0x4f6f44, 0x5a7b4e, 0x45633c, 0x648356],
       },
     };
@@ -1509,7 +1545,7 @@ export function buildVegetation(scene, data, textures, windUniforms) {
         map: spec.map || null,
         roughness: 0.86,
       });
-      applyWindShader(crownMat, windUniforms, spec.wind);
+      applyWindShader(crownMat, windUniforms, spec.wind, Boolean(spec.radialAnchor));
 
       const trunks = new THREE.InstancedMesh(spec.geoms.trunk, trunkMat, list.length);
       const crowns = new THREE.InstancedMesh(spec.geoms.crown, crownMat, list.length);

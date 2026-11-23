@@ -540,10 +540,27 @@ export const SPACE_ACTIVITIES = {
         desc: "Grande aire de stationnement en épis et bataille séparée du boulevard Nord par des îlots boisés.",
       },
       {
+        icon: "walk",
+        title: "Dépose-minute & accès direct au jardin",
+        tag: "Mobilité",
+        desc: "Cheminements piétons larges et sécurisés reliant les places de parking à l'entrée Nord du parc.",
+      },
+    ],
+  },
+  cantines: {
+    heroKind: "cantines",
+    activities: [
+      {
         icon: "market",
-        title: "43 cantines commerciales & artisanat",
+        title: "43 cantines commerciales & boutiques",
         tag: "Commerces",
-        desc: "Allée marchande animée de 43 modules offrant restauration rapide, boutiques de quartier et produits locaux.",
+        desc: "Galerie marchande de 43 modules alignés offrant artisanat, services de proximité et rafraîchissements.",
+      },
+      {
+        icon: "kiosk",
+        title: "Restauration & promenade animée",
+        tag: "Convivialité",
+        desc: "Esplanade éclairée la nuit longeant toute la façade des cantines face au boulevard urbain Nord.",
       },
     ],
   },
@@ -734,18 +751,29 @@ export function renderSpaceHeroSvg(space) {
       <rect x="280" y="48" width="28" height="10" rx="2" fill="#c5a882"/>`,
     parking: `
       <rect width="360" height="118" fill="#efe9df"/>
-      <rect x="24" y="22" width="312" height="32" rx="4" fill="#d9cfc0"/>
-      <rect x="24" y="64" width="312" height="32" rx="4" fill="#c6b9a5"/>
-      <rect x="42" y="28" width="16" height="20" rx="3" fill="#464b52"/>
-      <rect x="70" y="28" width="16" height="20" rx="3" fill="#f7f5f0"/>
-      <rect x="98" y="28" width="16" height="20" rx="3" fill="#8c4d43"/>
-      <rect x="136" y="28" width="16" height="20" rx="3" fill="#5d7082"/>
-      <rect x="184" y="28" width="16" height="20" rx="3" fill="#464b52"/>
-      <rect x="234" y="28" width="16" height="20" rx="3" fill="#d6b265"/>
-      <rect x="44" y="70" width="44" height="20" rx="2" fill="#e5d9c6" stroke="#8a7c6a" stroke-width="1.2"/>
-      <rect x="96" y="70" width="44" height="20" rx="2" fill="#c67360"/>
-      <rect x="148" y="70" width="44" height="20" rx="2" fill="#90a674"/>
-      <rect x="200" y="70" width="44" height="20" rx="2" fill="#e5d9c6" stroke="#8a7c6a" stroke-width="1.2"/>`,
+      <rect x="24" y="24" width="312" height="70" rx="6" fill="#d9cfc0" stroke="#c3b49d" stroke-width="1.4"/>
+      <path d="M58 24v26M94 24v26M130 24v26M166 24v26M202 24v26M238 24v26M274 24v26M310 24v26" stroke="#f7f4ee" stroke-width="1.4"/>
+      <rect x="34" y="30" width="18" height="22" rx="3" fill="#464b52"/>
+      <rect x="70" y="30" width="18" height="22" rx="3" fill="#f7f5f0"/>
+      <rect x="106" y="30" width="18" height="22" rx="3" fill="#5d7082"/>
+      <rect x="178" y="30" width="18" height="22" rx="3" fill="#8c4d43"/>
+      <rect x="214" y="30" width="18" height="22" rx="3" fill="#464b52"/>
+      <rect x="250" y="30" width="18" height="22" rx="3" fill="#d6b265"/>
+      <circle cx="144" cy="74" r="10" fill="#7f9665"/>
+      <circle cx="290" cy="74" r="10" fill="#90a674"/>`,
+    cantines: `
+      <rect width="360" height="118" fill="#f2ece2"/>
+      <rect x="26" y="28" width="308" height="64" rx="5" fill="#d8ccb8"/>
+      <rect x="36" y="38" width="46" height="44" rx="3" fill="#e5d9c6" stroke="#8a7c6a" stroke-width="1.4"/>
+      <rect x="36" y="38" width="46" height="10" rx="2" fill="#c67360"/>
+      <rect x="92" y="38" width="46" height="44" rx="3" fill="#e5d9c6" stroke="#8a7c6a" stroke-width="1.4"/>
+      <rect x="92" y="38" width="46" height="10" rx="2" fill="#7f9665"/>
+      <rect x="148" y="38" width="46" height="44" rx="3" fill="#e5d9c6" stroke="#8a7c6a" stroke-width="1.4"/>
+      <rect x="148" y="38" width="46" height="10" rx="2" fill="#d8a35a"/>
+      <rect x="204" y="38" width="46" height="44" rx="3" fill="#e5d9c6" stroke="#8a7c6a" stroke-width="1.4"/>
+      <rect x="204" y="38" width="46" height="10" rx="2" fill="#c67360"/>
+      <rect x="260" y="38" width="64" height="44" rx="3" fill="#e5d9c6" stroke="#8a7c6a" stroke-width="1.4"/>
+      <rect x="260" y="38" width="64" height="10" rx="2" fill="#5d7082"/>`,
   };
 
   const inner = scenes[kind] || scenes.bassin;
