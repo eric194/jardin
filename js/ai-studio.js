@@ -279,12 +279,12 @@ export function createAiStudioController({
       <div class="ai-studio-shell" role="document">
         <header class="ai-studio-head">
           <div>
-            <p class="ai-studio-kicker">CAPTURE 3D + CONTEXTE · NANO BANANA / GOOGLE FLOW</p>
-            <h2 class="ai-studio-title">Exporter la capture & le prompt architectural</h2>
+            <p class="ai-studio-kicker">CAPTURE HD 16:9 · 1920×1080</p>
+            <h2 class="ai-studio-title">Capture & description de la vue</h2>
           </div>
           <div class="ai-studio-head-actions">
-            <button type="button" id="ai-btn-recapture" class="ai-sec-btn" title="Refaire une capture de l'angle actuel">
-              Nouvelle capture
+            <button type="button" id="ai-btn-recapture" class="ai-sec-btn" title="Refaire la capture">
+              Recapturer
             </button>
             <button type="button" id="ai-btn-close" class="icon-btn" aria-label="Fermer la fenêtre de capture">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -296,13 +296,13 @@ export function createAiStudioController({
 
         <div class="ai-presets-bar">
           <div class="ai-presets-head">
-            <span class="ai-label">Angles photo (16:9 HD · 1920×1080) — cliquer pour cadrer</span>
+            <span class="ai-label">Angles enregistrés</span>
             <div class="ai-presets-tools">
-              <button type="button" id="ai-preset-add" class="ai-mini-btn" title="Enregistrer votre angle actuel comme nouveau point de vue">+ Enregistrer cet angle</button>
-              <button type="button" id="ai-preset-update" class="ai-mini-btn" title="Remplacer l'angle sélectionné par votre cadrage actuel" hidden>Mettre à jour</button>
-              <button type="button" id="ai-preset-rename" class="ai-mini-btn" title="Renommer l'angle sélectionné" hidden>Renommer</button>
-              <button type="button" id="ai-preset-delete" class="ai-mini-btn ai-mini-btn--danger" title="Supprimer l'angle sélectionné" hidden>Supprimer</button>
-              <button type="button" id="ai-preset-reset" class="ai-mini-btn" title="Restaurer les 6 angles par défaut">Réinitialiser</button>
+              <button type="button" id="ai-preset-add" class="ai-mini-btn">+ Enregistrer</button>
+              <button type="button" id="ai-preset-update" class="ai-mini-btn" hidden>Mettre à jour</button>
+              <button type="button" id="ai-preset-rename" class="ai-mini-btn" hidden>Renommer</button>
+              <button type="button" id="ai-preset-delete" class="ai-mini-btn ai-mini-btn--danger" hidden>Supprimer</button>
+              <button type="button" id="ai-preset-reset" class="ai-mini-btn">Réinitialiser</button>
             </div>
           </div>
           <div id="ai-presets-list" class="ai-pills"></div>
@@ -311,17 +311,17 @@ export function createAiStudioController({
         <div class="ai-studio-grid">
           <div class="ai-stage-col">
             <div class="ai-stage" id="ai-stage">
-              <img id="ai-img-before" class="ai-img-base" alt="Capture 3D propre de la maquette sans interface" />
-              <span id="ai-badge-mode" class="ai-badge ai-badge-left">Vue personne (1,70 m) · 2 points de fuite</span>
+              <img id="ai-img-before" class="ai-img-base" alt="Capture 3D HD de la maquette" />
+              <span id="ai-badge-mode" class="ai-badge ai-badge-left">1920×1080 · Vue personne 1,70 m</span>
             </div>
 
             <div class="ai-stage-bar">
-              <span id="ai-context-chip" class="ai-context-chip">Contexte détecté…</span>
+              <span id="ai-context-chip" class="ai-context-chip">Zone cadrée…</span>
               <div class="ai-download-group">
-                <button type="button" id="ai-btn-eye-nav" class="ai-sec-btn" title="Placer directement la caméra 3D à hauteur d'yeux (1,70 m)">
-                  Naviguer à 1,70 m
+                <button type="button" id="ai-btn-eye-nav" class="ai-sec-btn" title="Descendre la caméra à hauteur d'yeux (1,70 m)">
+                  Vue 1,70 m
                 </button>
-                <button type="button" id="ai-btn-copy-img" class="ai-sec-btn" title="Copier l'image dans le presse-papiers pour Ctrl+V dans Google Flow">
+                <button type="button" id="ai-btn-copy-img" class="ai-sec-btn">
                   Copier l'image
                 </button>
                 <a id="ai-dl-3d" class="ai-pri-btn" download="jardin-grand-standing-thies-capture.png">
@@ -333,39 +333,16 @@ export function createAiStudioController({
 
           <aside class="ai-controls-col">
             <div class="ai-field">
-              <label class="ai-label">Perspective de la capture</label>
+              <label class="ai-label">Perspective</label>
               <div class="ai-pills" id="ai-persp-pills">
-                <button type="button" class="ai-pill is-active" data-persp="two-point">Vue personne · 2 pts de fuite</button>
-                <button type="button" class="ai-pill" data-persp="current">Angle actuel exact</button>
+                <button type="button" class="ai-pill is-active" data-persp="two-point">Vue personne · 2 pts</button>
+                <button type="button" class="ai-pill" data-persp="current">Angle actuel</button>
               </div>
             </div>
 
             <div class="ai-field">
-              <label class="ai-label">Ambiance souhaitée sur le rendu final</label>
-              <div class="ai-pills" id="ai-ambience-pills">
-                <button type="button" class="ai-pill is-active" data-amb="auto">Auto (heure 3D)</button>
-                <button type="button" class="ai-pill" data-amb="golden">Heure dorée</button>
-                <button type="button" class="ai-pill" data-amb="day">Plein jour</button>
-                <button type="button" class="ai-pill" data-amb="night">Nuit LED</button>
-              </div>
-            </div>
-
-            <div class="ai-field">
-              <label class="ai-label">Langue du prompt</label>
-              <div class="ai-pills" id="ai-lang-pills">
-                <button type="button" class="ai-pill is-active" data-lang="en">Anglais (recommandé Nano Banana)</button>
-                <button type="button" class="ai-pill" data-lang="fr">Français</button>
-              </div>
-            </div>
-
-            <div class="ai-field">
-              <label class="ai-label" for="ai-extra-notes">Détails à ajouter au prompt (optionnel)</label>
-              <input type="text" id="ai-extra-notes" class="ai-input" placeholder="Ex. : beaucoup de visiteurs, ciel légèrement nuageux, reflets d'eau…" />
-            </div>
-
-            <div class="ai-field">
-              <label class="ai-label" for="ai-prompt-preview">Prompt + Contexte du Jardin (modifiable)</label>
-              <textarea id="ai-prompt-preview" class="ai-textarea ai-textarea--code" rows="9"></textarea>
+              <label class="ai-label" for="ai-prompt-preview">Description & contexte de la vue</label>
+              <textarea id="ai-prompt-preview" class="ai-textarea ai-textarea--code" rows="11"></textarea>
             </div>
 
             <p id="ai-status" class="ai-status" role="status" aria-live="polite"></p>
@@ -376,11 +353,8 @@ export function createAiStudioController({
                   <rect x="6" y="6" width="9" height="9" rx="1.6" stroke="currentColor" stroke-width="1.4"/>
                   <path d="M12 6V4.6A1.6 1.6 0 0 0 10.4 3H4.6A1.6 1.6 0 0 0 3 4.6v5.8A1.6 1.6 0 0 0 4.6 12H6" stroke="currentColor" stroke-width="1.4"/>
                 </svg>
-                <span>Copier le prompt + contexte</span>
+                <span>Copier la description</span>
               </button>
-              <a href="https://labs.google/fx/tools/flow" target="_blank" rel="noopener noreferrer" class="ai-sec-btn ai-flow-link">
-                Ouvrir Google Flow ↗
-              </a>
             </div>
           </aside>
         </div>
@@ -477,38 +451,16 @@ export function createAiStudioController({
 
     renderPresetsList();
 
-    modal.querySelectorAll("#ai-ambience-pills .ai-pill").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        currentAmbience = btn.dataset.amb;
-        modal.querySelectorAll("#ai-ambience-pills .ai-pill").forEach((b) =>
-          b.classList.toggle("is-active", b === btn)
-        );
-        updatePromptPreview();
-      });
-    });
-
-    modal.querySelectorAll("#ai-lang-pills .ai-pill").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        currentLang = btn.dataset.lang;
-        modal.querySelectorAll("#ai-lang-pills .ai-pill").forEach((b) =>
-          b.classList.toggle("is-active", b === btn)
-        );
-        updatePromptPreview();
-      });
-    });
-
-    modal.querySelector("#ai-extra-notes").addEventListener("input", updatePromptPreview);
-
     modal.querySelector("#ai-btn-copy-prompt").addEventListener("click", async () => {
       const txt = modal.querySelector("#ai-prompt-preview")?.value || "";
       try {
         await navigator.clipboard.writeText(txt);
-        setStatus("Prompt + contexte copiés ! Collez-le dans Google Flow avec la capture.");
+        setStatus("Description copiée dans le presse-papiers.");
       } catch (_) {
         const area = modal.querySelector("#ai-prompt-preview");
         area?.select();
         document.execCommand("copy");
-        setStatus("Prompt + contexte copiés dans le presse-papiers.");
+        setStatus("Description copiée dans le presse-papiers.");
       }
     });
 
@@ -518,9 +470,9 @@ export function createAiStudioController({
         const res = await fetch(lastCaptureUrl);
         const blob = await res.blob();
         await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-        setStatus("Capture 3D copiée ! Vous pouvez faire Ctrl+V directement dans Google Flow.");
+        setStatus("Image copiée dans le presse-papiers.");
       } catch (_) {
-        setStatus("Copie d'image directe bloquée par le navigateur : cliquez sur « Télécharger PNG ».", true);
+        setStatus("Copie directe non supportée : cliquez sur « Télécharger PNG ».", true);
       }
     });
   }
@@ -602,7 +554,7 @@ export function createAiStudioController({
     if (beforeImg) beforeImg.src = dataUrl;
     if (dl3d) dl3d.href = dataUrl;
     updatePromptPreview();
-    setStatus("Capture 3D prête ! Téléchargez ou copiez l'image + le prompt pour Google Flow / Nano Banana.");
+    setStatus("Capture 1920×1080 prête.");
   }
 
   function open() {
