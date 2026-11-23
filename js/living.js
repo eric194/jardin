@@ -974,10 +974,7 @@ export function buildLightingNetwork(
     parkPoles.push([x, z, h, rot]);
     placedTallPoles.push([x, z]);
   };
-  for (let x = -50; x <= 316; x += 28) {
-    addParkPole(x, -53.5, 8.0, 0, false, 16.0); // mâts centraux parking nord (sans double rangée devant cantines)
-  }
-  // Lampadaires dédiés sur le parvis de la Banque et les pistes des 2 Stations-service
+  // Lampadaires dédiés sur le parvis de la Banque et les pistes des 2 Stations-service (voies du parking Nord laissées dégagées)
   [
     [-133.2, -64.2, 6.2, 0],
     [-108.0, -64.2, 6.2, 0],
