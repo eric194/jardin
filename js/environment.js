@@ -2018,11 +2018,114 @@ export function buildVegetation(scene, data, textures, windUniforms) {
     scene.add(bushInst);
   }
 
-  // 3. Fleurs (~460 bouquets sobres) dans les PARTERRE FLEURI, massifs et sur les terrasses du gradin triangulaire
+  // 2b. Haies basses taillées au contour des jardins (JARDIN PLANTÉ & PARTERRE FLEURI, HORS PELOUSE DÉTENTE / pique-nique)
+  const hedgeZones = data.zones.filter((z) => {
+    if (z.kind !== "green" || z.area < 14 || z.area > 1200) return false;
+    if (z.holes && z.holes.length) return false;
+    const n = z.name.toUpperCase();
+    if (n.includes("PELOUSE") || n.includes("BANDE") || n.includes("HERBE") || n.includes("BORDURE")) {
+      return false;
+    }
+    return n.includes("JARDIN PLANT") || n.includes("PARTERRE");
+  });
+
+  const hedgeSegs = []; // { x, z, len, rotY }
+  const hedgeCorners = []; // [x, z]
+  for (const hz of hedgeZones) {
+    const poly = hz.poly;
+    if (!poly || poly.length < 3) continue;
+    let cx = 0, cz = 0;
+    for (const [px, pz] of poly) {
+      cx += px;
+      cz += pz;
+    }
+    cx /= poly.length;
+    cz /= poly.length;
+
+    const inset = 0.24;
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i];
+      const b = poly[(i + 1) % poly.length];
+      const dx = b[0] - a[0];
+      const dz = b[1] - a[1];
+      const len = Math.hypot(dx, dz);
+      if (len < 1.2) continue;
+
+      // Normale intérieure vers le centre du massif
+      let nx = -dz / len;
+      let nz = dx / len;
+      const mx0 = (a[0] + b[0]) * 0.5;
+      const mz0 = (a[1] + b[1]) * 0.5;
+      if (!pointInPoly2D([mx0 + nx * 0.3, mz0 + nz * 0.3], poly)) {
+        nx = -nx;
+        nz = -nz;
+      }
+      if (!pointInPoly2D([mx0 + nx * 0.3, mz0 + nz * 0.3], poly)) continue;
+
+      const trim = Math.min(0.28, len * 0.14);
+      const effLen = len - trim * 2;
+      if (effLen < 0.7) continue;
+      const mx = mx0 + nx * inset;
+      const mz = mz0 + nz * inset;
+      const rotY = -Math.atan2(dz, dx);
+      hedgeSegs.push({ x: mx, z: mz, len: effLen, rotY });
+      hedgeCorners.push([a[0] + (dx / len) * trim + nx * inset, a[1] + (dz / len) * trim + nz * inset]);
+    }
+  }
+
+  if (hedgeSegs.length) {
+    const hedgeGeo = new THREE.BoxGeometry(1, 0.44, 0.38);
+    const hedgeMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      map: textures.grass,
+      roughness: 0.9,
+      metalness: 0,
+    });
+    const hedgeInst = new THREE.InstancedMesh(hedgeGeo, hedgeMat, hedgeSegs.length);
+    hedgeInst.castShadow = true;
+    hedgeInst.receiveShadow = true;
+    const hedgePalette = [
+      new THREE.Color(0x4b703d),
+      new THREE.Color(0x557b45),
+      new THREE.Color(0x426636),
+    ];
+    const hDummy = new THREE.Object3D();
+    hedgeSegs.forEach((s, idx) => {
+      hDummy.position.set(s.x, 0.455 + 0.22, s.z);
+      hDummy.rotation.set(0, s.rotY, 0);
+      hDummy.scale.set(s.len, 1, 1);
+      hDummy.updateMatrix();
+      hedgeInst.setMatrixAt(idx, hDummy.matrix);
+      hedgeInst.setColorAt(idx, hedgePalette[idx % hedgePalette.length]);
+    });
+    hedgeInst.instanceColor.needsUpdate = true;
+    scene.add(hedgeInst);
+
+    // Potelets végétaux arrondis aux angles pour des jonctions continues et propres
+    if (hedgeCorners.length) {
+      const capGeo = new THREE.CylinderGeometry(0.19, 0.2, 0.44, 8);
+      const capInst = new THREE.InstancedMesh(capGeo, hedgeMat, hedgeCorners.length);
+      capInst.castShadow = true;
+      capInst.receiveShadow = true;
+      hedgeCorners.forEach(([kx, kz], idx) => {
+        hDummy.position.set(kx, 0.455 + 0.22, kz);
+        hDummy.rotation.set(0, 0, 0);
+        hDummy.scale.set(1, 1, 1);
+        hDummy.updateMatrix();
+        capInst.setMatrixAt(idx, hDummy.matrix);
+        capInst.setColorAt(idx, hedgePalette[idx % hedgePalette.length]);
+      });
+      capInst.instanceColor.needsUpdate = true;
+      scene.add(capInst);
+    }
+  }
+
+  // 3. Fleurs (~900 bouquets colorés) dans les PARTERRE FLEURI, BORDURE PLANTÉE et à l'intérieur des JARDIN PLANTÉ (HORS pelouses de pique-nique)
   const flowerPositions = [];
   const flowerZones = data.zones.filter((z) => {
     const n = z.name.toUpperCase();
-    return n.includes("PARTERRE") || n.includes("BORDURE PLANT");
+    if (n.includes("PELOUSE") || n.includes("BANDE") || n.includes("HERBE")) return false;
+    return n.includes("PARTERRE") || n.includes("BORDURE PLANT") || n.includes("JARDIN PLANT");
   });
   for (const fz of flowerZones) {
     let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
@@ -2032,14 +2135,17 @@ export function buildVegetation(scene, data, textures, windUniforms) {
       if (z < minZ) minZ = z;
       if (z > maxZ) maxZ = z;
     }
-    const target = Math.min(28, Math.max(6, Math.round(fz.area / 4.2)));
+    const isJardin = fz.name.toUpperCase().includes("JARDIN PLANT");
+    const target = isJardin
+      ? Math.min(34, Math.max(8, Math.round(fz.area / 12.0)))
+      : Math.min(28, Math.max(6, Math.round(fz.area / 4.2)));
     let added = 0;
     for (let tries = 0; tries < target * 8 && added < target; tries++) {
       const px = minX + rng() * (maxX - minX);
       const pz = minZ + rng() * (maxZ - minZ);
       if (!pointInPoly2D([px, pz], fz.poly)) continue;
       if (!isClearInner(px, pz)) continue;
-      flowerPositions.push([px, pz, 0.7 + rng() * 0.55, 0.5]);
+      flowerPositions.push([px, pz, 0.72 + rng() * 0.56, 0.5]);
       added++;
     }
   }
