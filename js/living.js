@@ -1598,7 +1598,7 @@ export function buildLightingNetwork(
     scene.add(sPost, sHead);
   }
 
-  // Helper pour lampadaires urbains à crosse aérodynamique (avenues principales & rues secondaires)
+  // Helper pour lampadaires urbains à DOUBLE crosse LED symétrique (avenues principales & rues secondaires)
   const buildUrbanLuminaire = (list, h, armReach, hoodW, hoodL, rTop, rBot, yBase, matBulb, poolArr, poolY, poolSize, delayBase, isDimFlag) => {
     if (!list.length) return;
     const uParts = [];
@@ -1608,25 +1608,34 @@ export function buildLightingNetwork(
     const mast = new THREE.CylinderGeometry(rTop, rBot, h, 10);
     mast.translate(0, h * 0.5, 0);
     uParts.push(mast);
-    // Crosse inclinée vers +Z
+
+    // Double crosse inclinée symétrique (+Z et -Z) avec double capot LED aérodynamique
     const armLen = Math.hypot(armReach, 0.44);
-    const armSlope = new THREE.CylinderGeometry(rTop * 0.72, rTop * 0.92, armLen, 8);
-    armSlope.rotateX(Math.atan2(armReach, 0.44));
-    armSlope.translate(0, h + 0.18, armReach * 0.46);
-    uParts.push(armSlope);
-    // Tête profilée / capot LED sombre au bout de la crosse
-    const hood = new THREE.BoxGeometry(hoodW, 0.12, hoodL);
-    hood.translate(0, h + 0.42, armReach);
-    uParts.push(hood);
-    const hoodNose = new THREE.CylinderGeometry(0.06, 0.06, hoodW * 0.92, 8);
-    hoodNose.rotateZ(Math.PI / 2);
-    hoodNose.translate(0, h + 0.42, armReach + hoodL * 0.48);
-    uParts.push(hoodNose);
+    const armTilt = Math.atan2(armReach, 0.44);
+    const lensParts = [];
+    for (const dir of [-1, 1]) {
+      const armSlope = new THREE.CylinderGeometry(rTop * 0.72, rTop * 0.92, armLen, 8);
+      armSlope.rotateX(dir * armTilt);
+      armSlope.translate(0, h + 0.18, dir * armReach * 0.46);
+      uParts.push(armSlope);
+
+      const hood = new THREE.BoxGeometry(hoodW, 0.12, hoodL);
+      hood.translate(0, h + 0.42, dir * armReach);
+      uParts.push(hood);
+
+      const hoodNose = new THREE.CylinderGeometry(0.06, 0.06, hoodW * 0.92, 8);
+      hoodNose.rotateZ(Math.PI / 2);
+      hoodNose.translate(0, h + 0.42, dir * (armReach + hoodL * 0.48));
+      uParts.push(hoodNose);
+
+      const lens = new THREE.BoxGeometry(hoodW * 0.78, 0.08, hoodL * 0.74);
+      lens.translate(0, 0, dir * armReach);
+      lensParts.push(lens);
+    }
 
     const uPost = new THREE.InstancedMesh(mergeUnitGeoms(uParts), poleMat, list.length);
     uPost.castShadow = true;
-    const lensGeo = new THREE.BoxGeometry(hoodW * 0.78, 0.08, hoodL * 0.74);
-    const uHead = new THREE.InstancedMesh(lensGeo, matBulb, list.length);
+    const uHead = new THREE.InstancedMesh(mergeUnitGeoms(lensParts), matBulb, list.length);
 
     list.forEach(([x, z, rot], idx) => {
       dummy.position.set(x, yBase, z);
@@ -1635,15 +1644,13 @@ export function buildLightingNetwork(
       dummy.updateMatrix();
       uPost.setMatrixAt(idx, dummy.matrix);
 
-      const hx = x + Math.sin(rot) * armReach;
       const hy = yBase + h + 0.35;
-      const hz = z + Math.cos(rot) * armReach;
-      dummy.position.set(hx, hy, hz);
+      dummy.position.set(x, hy, z);
       dummy.updateMatrix();
       uHead.setMatrixAt(idx, dummy.matrix);
       const delay = calcWaveDelay(x, z, delayBase);
       poolArr.push({ x, y: poolY, z, size: poolSize, delay });
-      lampHeads.push({ mesh: uHead, idx, x: hx, y: hy, z: hz, rot, delay, isDim: isDimFlag });
+      lampHeads.push({ mesh: uHead, idx, x, y: hy, z, rot, delay, isDim: isDimFlag });
     });
     scene.add(uPost, uHead);
   };
