@@ -820,8 +820,7 @@ function distToSegment2D(px, pz, ax, az, bx, bz) {
   return Math.hypot(px - (ax + t * dx), pz - (az + t * dz));
 }
 
-function pointNearPoly2D(pt, poly, margin) {
-  if (pointInPoly2D(pt, poly)) return true;
+function pointNearPolyEdge2D(pt, poly, margin) {
   if (margin <= 0) return false;
   const [px, pz] = pt;
   for (let i = 0; i < poly.length; i++) {
@@ -830,6 +829,11 @@ function pointNearPoly2D(pt, poly, margin) {
     if (distToSegment2D(px, pz, a[0], a[1], b[0], b[1]) < margin) return true;
   }
   return false;
+}
+
+function pointNearPoly2D(pt, poly, margin) {
+  if (pointInPoly2D(pt, poly)) return true;
+  return pointNearPolyEdge2D(pt, poly, margin);
 }
 
 export function buildLightingNetwork(scene, data, textures, isMobile = false) {
@@ -852,11 +856,8 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
   const isNearZone2D = (pt, z, margin) => {
     if (inZone2D(pt, z)) return true;
     if (margin <= 0) return false;
-    const inHoles = z.holes && z.holes.some((h) => pointInPoly2D(pt, h));
-    if (!inHoles && pointNearPoly2D(pt, z.poly, margin)) return true;
-    if (pointInPoly2D(pt, z.poly) && z.holes && z.holes.some((h) => pointNearPoly2D(pt, h, margin))) {
-      return true;
-    }
+    if (pointNearPolyEdge2D(pt, z.poly, margin)) return true;
+    if (z.holes && z.holes.some((h) => pointNearPolyEdge2D(pt, h, margin))) return true;
     return false;
   };
   const isClearOfPoolsAndCourts = (x, z, margin = 1.4) => {
@@ -938,27 +939,79 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     [-298.5, -1.2, 6.0, 0],
   ].forEach(([px, pz, ph, prot]) => addParkPole(px, pz, ph, prot, false, 10.0));
 
-  // 4. Bornes basses architecturales de jardin (nettoyées des zones exiguës et des doublons)
-  const addBollard = (x, z, checkZones = true, minPoleDist = 8.5, minBollardDist = 10.5) => {
-    if (checkZones && !isClearOfPoolsAndCourts(x, z, 1.3)) return;
+  // 4. Petits postes / bornes architecturales de jardin & abords des pelouses
+  const addBollard = (x, z, checkZones = true, minPoleDist = 6.5, minBollardDist = 8.5) => {
+    if (checkZones && !isClearOfPoolsAndCourts(x, z, 1.1)) return;
     if (nearAny(placedTallPoles, x, z, minPoleDist)) return;
     if (nearAny(placedBollards, x, z, minBollardDist)) return;
     bollards.push([x, z]);
     placedBollards.push([x, z]);
   };
   for (const [lx, lz] of data.lights || []) {
-    addBollard(lx, lz, true, 7.0, 8.0);
+    addBollard(lx, lz, true, 6.5, 8.0);
   }
-  for (let x = -228; x <= 232; x += 26) {
-    addBollard(x, -4.5, true, 9.0, 12.0);
-    addBollard(x, 4.5, true, 9.0, 12.0);
+  for (let x = -232; x <= 232; x += 18) {
+    addBollard(x, -4.5, true, 7.2, 9.5);
+    addBollard(x, 4.5, true, 7.2, 9.5);
   }
-  for (let a = 0; a < 8; a++) {
-    const ang = (a / 8) * Math.PI * 2;
-    const bx = Math.cos(ang) * 20;
-    const bz = -1.6 + Math.sin(ang) * 14.5;
-    addBollard(bx, bz, true, 8.0, 10.0);
+  // Pourtour du bassin central et de la fontaine Est
+  for (let a = 0; a < 12; a++) {
+    const ang = (a / 12) * Math.PI * 2;
+    addBollard(Math.cos(ang) * 20, -1.6 + Math.sin(ang) * 14.5, true, 6.5, 8.2);
   }
+  for (let a = 0; a < 6; a++) {
+    const ang = (a / 6) * Math.PI * 2;
+    addBollard(213.2 + Math.cos(ang) * 10.5, 1.9 + Math.sin(ang) * 9.0, true, 6.5, 8.2);
+  }
+
+  // Petits postes de jardin répartis en lisière des pelouses et massifs fleuris
+  const gardenZones = data.zones.filter(
+    (z) =>
+      z.kind === "green" &&
+      z.area > 15 &&
+      z.area < 3600 &&
+      !z.name.toUpperCase().includes("BANDE DE GAZON") &&
+      !(z.holes && z.holes.length)
+  );
+  for (const gz of gardenZones) {
+    const poly = gz.poly;
+    if (!poly || poly.length < 3) continue;
+    let cx = 0;
+    let cz = 0;
+    for (const [px, pz] of poly) {
+      cx += px;
+      cz += pz;
+    }
+    cx /= poly.length;
+    cz /= poly.length;
+
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i];
+      const b = poly[(i + 1) % poly.length];
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (len < 7.5) continue;
+      const steps = len > 24 ? 2 : 1;
+      for (let k = 1; k <= steps; k++) {
+        const u = k / (steps + 1);
+        const mx = a[0] + (b[0] - a[0]) * u;
+        const mz = a[1] + (b[1] - a[1]) * u;
+        const dx = b[0] - a[0];
+        const dz = b[1] - a[1];
+        let nx = -dz / len;
+        let nz = dx / len;
+        if ((cx - mx) * nx + (cz - mz) * nz < 0) {
+          nx = -nx;
+          nz = -nz;
+        }
+        const bx = mx + nx * 0.72;
+        const bz = mz + nz * 0.72;
+        if (pointInPoly2D([bx, bz], poly)) {
+          addBollard(bx, bz, true, 6.5, 9.0);
+        }
+      }
+    }
+  }
+
   for (let x = -42; x <= 298; x += 34) {
     addBollard(x, -44.6, false, 9.0, 14.0);
   }
@@ -968,6 +1021,54 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
     [-131.5, -83.6],
     [-109.7, -83.6],
   ].forEach(([bx, bz]) => addBollard(bx, bz, false, 7.0, 8.0));
+
+  // 4c. Spots encastrés au sol sur les pelouses, jardins d'arbustes et parterres fleuris
+  const spotRng = makeSeeded(91426);
+  const groundSpots = []; // [x, z, yBase]
+  const addGroundSpot = (x, z, gy = 0.455, minSpotSep = 6.0) => {
+    if (groundSpots.some(([sx, sz]) => Math.hypot(sx - x, sz - z) < minSpotSep)) return false;
+    if (nearAny(placedBollards, x, z, 3.4)) return false;
+    if (nearAny(placedTallPoles, x, z, 4.0)) return false;
+    groundSpots.push([x, z, gy]);
+    return true;
+  };
+  for (const gz of gardenZones) {
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const [px, pz] of gz.poly) {
+      if (px < minX) minX = px;
+      if (px > maxX) maxX = px;
+      if (pz < minZ) minZ = pz;
+      if (pz > maxZ) maxZ = pz;
+    }
+    const target = Math.min(8, Math.max(1, Math.round(gz.area / 75)));
+    let added = 0;
+    if (
+      gz.centroid &&
+      inZone2D(gz.centroid, gz) &&
+      isClearOfPoolsAndCourts(gz.centroid[0], gz.centroid[1], 0.85) &&
+      addGroundSpot(gz.centroid[0], gz.centroid[1], 0.455, 6.0)
+    ) {
+      added++;
+    }
+    for (let tries = 0; tries < target * 14 && added < target; tries++) {
+      const px = minX + spotRng() * (maxX - minX);
+      const pz = minZ + spotRng() * (maxZ - minZ);
+      if (!inZone2D([px, pz], gz)) continue;
+      if (!isClearOfPoolsAndCourts(px, pz, 0.85)) continue;
+      if (addGroundSpot(px, pz, 0.455, 6.0)) added++;
+    }
+  }
+  // Spots architecturaux autour du flamboyant sur le sommet du gradin triangulaire & parvis Entrée
+  for (let a = 0; a < 4; a++) {
+    const ang = (a / 4) * Math.PI * 2 + Math.PI * 0.25;
+    addGroundSpot(-146.27 + Math.cos(ang) * 2.15, 10.02 + Math.sin(ang) * 2.15, 0.96, 1.5);
+  }
+  [
+    [-16.5, -21.0, 0.455],
+    [16.5, -21.0, 0.455],
+    [-18.0, 12.8, 0.455],
+    [18.0, 12.8, 0.455],
+  ].forEach(([sx, sz, sy]) => addGroundSpot(sx, sz, sy, 4.0));
 
   // 4b. Quelques lampadaires à faible luminosité dans les rues secondaires des quartiers voisins
   const streetPoles = [];
@@ -1111,6 +1212,30 @@ export function buildLightingNetwork(scene, data, textures, isMobile = false) {
       lampHeads.push({ mesh: bHead, idx, x, y: hy, z, rot: 0, delay, isDim: false });
     });
     scene.add(bPost, bHead);
+  }
+
+  // 1b. Spots encastrés au sol sur pelouses et jardins (collerette métallique + optique lumineuse + halo doux au sol)
+  if (groundSpots.length) {
+    const gsBezelMat = new THREE.MeshStandardMaterial({ color: 0x52565d, roughness: 0.42, metalness: 0.35 });
+    const gsFrame = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.26, 0.30, 0.045, 12), gsBezelMat, groundSpots.length);
+    const gsHead = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.18, 0.18, 0.048, 12), bulbMat, groundSpots.length);
+    groundSpots.forEach(([x, z, gy], idx) => {
+      dummy.position.set(x, gy + 0.018, z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      gsFrame.setMatrixAt(idx, dummy.matrix);
+
+      const hy = gy + 0.028;
+      dummy.position.set(x, hy, z);
+      dummy.updateMatrix();
+      gsHead.setMatrixAt(idx, dummy.matrix);
+
+      const delay = calcWaveDelay(x, z, 0.03);
+      lightPools.push({ x, y: gy + 0.032, z, size: 7.4, delay });
+      lampHeads.push({ mesh: gsHead, idx, x, y: hy, z, rot: 0, delay, isDim: false });
+    });
+    scene.add(gsFrame, gsHead);
   }
 
   // 2. Lampadaires d'allées de parc & parking (socle mouluré + mât fuselé + crosse galbée + abat-jour disque + globe chaud)
